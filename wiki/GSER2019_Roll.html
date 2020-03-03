@@ -1,0 +1,141 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>wzxhzdk:1公开处刑wzxhzdk:2</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1"><button id="but">公开处刑</button></h1>
+<p><textarea id="roll-data" style="visibility:hidden; height:0;" >
+X X X | X X X X X 
+X X X | X X X X X | X X X 
+X X X | X X X X X | X X X 
+X X X | X X X X X | X X X 
+X X X | X X X X X | X X X 
+X X X | X X X X X | X X X 
+X X X | X X X X X 
+</textarea></p>
+<p><center>(讲台/投影仪)</center></p>
+<p><center>
+<div class="roll-area" id="roll-area">
+</div>
+</center></p>
+<script>
+var text = $("#roll-data").val();
+var layout = text.trim().split("\n");
+
+for (var i = 0; i < layout.length; i++) {
+  for (var j = 0; j < layout[i].length; j++) {
+    var c = layout[i][j];
+    if (c.toUpperCase() == "X") {
+      $("#roll-area").append("<div class=\"roll\"></div>");
+    }
+    if (c == "|") {
+      $("#roll-area").append("<div class=\"sep\"></div>");
+    }
+  }
+  $("#roll-area").append("<br/>");
+}
+
+function roll() {
+  var rolls = $(".roll");
+  var idx = Math.floor(Math.random() * rolls.length);
+  rolls.css("background-color", "white");
+  rolls.eq(idx).css("background-color", "red");
+}
+
+$("#but").click(function() {
+  roll();
+});
+//roll();
+//roll();
+</script>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

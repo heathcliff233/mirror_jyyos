@@ -1,0 +1,175 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>文件系统API</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="api">文件系统API</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a>第39章 (同上一讲)。</p>
+</div>
+<p>从概念上，文件系统是“路径”到“虚拟磁盘”的映射——每一个路径，例如：</p>
+<ul>
+<li><code>/proc/1234/maps</code>映射到一组文本数据，标记了pid = 1234进程的内存映射情况；</li>
+<li><code>dev/sda</code>映射到实际的物理磁盘；</li>
+<li><code>/home/jyy/Projects/wiki/server.py</code>映射到文件系统中的一个文件(虚拟磁盘)。</li>
+</ul>
+<p>在实际的操作系统中，到底是用怎样的API管理这些文件系统的？</p>
+<h2 id="_2">文件系统管理</h2>
+<p>我们看到，文件系统虽然只有一个“根”路径<code>/</code>，但路径中有各式各样的文件。有些文件对应了操作系统的内部状态；有些文件对应了物理设备；有些文件则是磁盘上保存的一个虚拟磁盘。为了能自由地支持各种文件系统(包括未来新加入的各种文件系统)，Linux内核在启动时，会加载一个“initramfs”，正确的断句方式是“init-ram-fs”——在初始化时内存中加载的文件系统。与之类似，Lab2中有“initrd” ramdisk设备。</p>
+<p>initramfs包含了系统启动必要的程序：</p>
+<ul>
+<li>必要的内核模块(例如设备驱动、文件系统等)。内核模块可以理解成操作系统内核运行时需要加载的动态链接库。模块的卸载机制还可以用于内核代码的更新。</li>
+<li>配置文件、启动系统所需的二进制文件(如bash)、动态链接库(如libc)等。</li>
+</ul>
+<p>在<code>/boot/</code>目录中可以看到initrd.img文件，里面有几十MB的数据——同学们在更新系统遇到Linux内核或一些相关更新的时候，都会遭遇Generate initramfs这一耗时操作，就是为了更新这个初始的文件系统。</p>
+<div class="fenced fenced-green">
+<h4 id="initrdimg">想知道initrd.img里有什么？</h4>
+<p><code>initrd.img</code>是个cpio archive (实际是cpio archive拼接而成的)。如果你有兴趣看看Linux初始文件系统中包含哪些文件，请STFW。</p>
+</div>
+<p>Linux启动后，initramfs系统被Linux内核挂载。此时，系统中并没有大家熟悉的<code>/proc</code>, <code>/dev</code>, <code>/sys</code>，甚至也没有<code>/home</code>…。这些文件系统都是init和之后的应用程序使用mount系统调用挂载的。mount完成的工作是<strong>把一个设备和一个文件系统实现联系起来，在设备上创建一个文件系统实例，并且把创建的文件系统“放置”到文件系统中的一个路径里</strong>。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/mount-illustration.png" width="400px" /></center></p>
+<p>首先可以使用</p>
+<pre class="codehilite"><code class="language-bash">mount -l</code></pre>
+
+
+<p>命令查看系统中挂载的文件系统。<code>mount</code>系统的描述：</p>
+<pre class="codehilite"><code class="language-c">int mount(const char *source, const char *target,
+          const char *filesystemtype, unsigned long mountflags,
+          const void *data);</code></pre>
+
+
+<blockquote>
+<p><code>mount()</code>  attaches  the filesystem specified by source (which is often a pathname referring to a device, but can also be the pathname of a directory or file, or a dummy string) to the location (a directory or file) specified by the pathname in target.</p>
+</blockquote>
+<p>例如，<code>mount /dev/sdb1 /mnt</code>可以将某个磁盘设备(通常是USB)挂载到<code>/mnt</code>。mount也可以把一个文件直接挂载到文件系统中，不过是通过创建一个loopback device实现的，我们可以通过strace观察mount命令的行为：</p>
+<pre class="codehilite"><code>openat(AT_FDCWD, &quot;/dev/loop-control&quot;, O_RDWR|O_CLOEXEC) = 3
+ioctl(3, LOOP_CTL_GET_FREE)                             = 3
+...
+mount(&quot;/dev/loop3&quot;, &quot;/mnt&quot;, &quot;ext4&quot;, MS_MGC_VAL, NULL)   = 0</code></pre>
+
+
+<p>在loop(4)的手册中：</p>
+<blockquote>
+<p><code>LOOP_CTL_GET_FREE</code>: Allocate or find a free loop device for use.  On success, the device number is returned as the result of the call.  This operation takes no argument.</p>
+</blockquote>
+<p><code>ioctl</code>()返回了一个新的loopback device编号(3)。之后的系统调用序列自动检测文件系统的类型为ext4，然后使用<code>mount</code>系统调用完成挂载。</p>
+<h2 id="_3">目录/文件管理</h2>
+<p>有了完整的文件系统树，目录操作大家就非常熟悉了——在Windows“资源管理器”、Linux发行版中的“文件管理器”中，我们已经对目录完成各种操作：创建目录、删除目录、重命名……Linux提供了一系列的系统调用来管理文件系统中的目录和文件。这些系统调用会被Linux系统转发给具体的文件系统实现，请大家阅读教科书学习相关的内容。</p>
+<h2 id="_4">文件描述符管理</h2>
+<p>对于一个文件描述符，也就是一个虚拟磁盘/操作系统中的对象，很自然可以支持数据访问的操作：</p>
+<ul>
+<li>mmap，将文件数据映射到地址空间中的连续一段；</li>
+<li>read，读取数据并更新偏移量；</li>
+<li>write，写入数据并更新偏移量；</li>
+<li>lseek，修改文件描述符偏移量。使用<code>SEEK_CUR</code>, <code>SEEK_SET</code>和<code>SEEK_END</code>分别从当前位置、文件头部、文件尾部更新偏移量。</li>
+</ul>
+<p>文件描述符管理中，比较令人困惑的部分是文件描述符在fork()/execve()之后的行为。为了让父进程能灵活配置子进程的输入输出文件，UNIX系统很自然地设计execve()系统调用的行为是继承进程原先的文件描述符(自然也继承偏移量)。但fork之后，文件描述符的行为就没有那么简单了：</p>
+<ul>
+<li>系统中如果有多个<code>O_APPEND</code>的进程，它们将始终写入文件的末尾。<code>O_APPEND</code>可以特殊实现(系统中只保留一份偏移量，等于文件大小)。</li>
+<li>父子进程输出到同一文件描述符。例如父子进程都用<code>printf()</code>打印日志。当<code>some-program &gt; some-program.log</code>时，父子进程需要共享偏移量以保证它们的日志不会互相覆盖。</li>
+</ul>
+<p>另一个麻烦之处是<code>dup()</code>复制的文件描述符，它似乎也应该和原先的文件描述符共享偏移量：我们可以用dup实现文件描述符的备份(例如stdout)：</p>
+<pre class="codehilite"><code class="language-c">int stdout_fd_bak = dup(STDOUT_FILENO); // 备份
+fflush(stdout):
+
+freopen(..., stdout); // 替换stdout对应的文件描述符
+...
+fclose(stdout);
+
+dup2(stdout_fd_bak, STDOUT_FILENO); // 恢复</code></pre>
+
+
+<p>关于这些细节，也请大家阅读教科书第39章内容。</p>
+<p>最后，目录/文件管理API (尤其是目录管理和数据存储API)的使用并没有大家想得那么简单。除了bug之外，系统非预期的崩溃也可能导致持久数据的损坏。大家可以参考Remzi (OSTEP教科书作者)的研究小组在OSDI'14上发表的论文“<a href="https://www.usenix.org/system/files/conference/osdi14/osdi14-paper-pillai.pdf">All file systems are not created equal: On the complexity of crafting crash-consistent applications</a>”，以及<a href="https://zhuanlan.zhihu.com/p/25188921">我们的工作</a>。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

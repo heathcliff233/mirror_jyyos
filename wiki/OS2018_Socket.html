@@ -1,0 +1,202 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>网络与套接字</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">网络与套接字</h1>
+<h2 id="_2">计算机网络</h2>
+<p>计算机网络的内容非常丰富，上课介绍的只是非常少的一部分知识，也值得大家用一学期的时间上好一门网络课。</p>
+<h2 id="_3">套接字：通用的进程间通信</h2>
+<div class="fenced fenced-green">
+<h4 id="_4">思考题：实现进程间通信</h4>
+<p>之前我们已经使用管道实现过进程间的通信，但管道也有一些问题：</p>
+<ul>
+<li>读/写口分离，有些行为也比较诡异(例如SIGPIPE)；</li>
+<li>共享的管道需要额外的协议来保证并发访问的正确性；</li>
+<li>阻塞(blocking)的访问方式难以管理多个连接(non-blocking管道缓解了这个问题)。</li>
+</ul>
+<p>如果我们希望能更好地实现进程间通信(甚至位于另一台计算机上的进程之间的通信)，应该设计怎样的API？</p>
+</div>
+<p>如果在网络上搜索“socket”，会得到这样的结果：</p>
+<p><img alt="" src="../static/wiki/os/2018/img/socket.jpg" /></p>
+<p>Socket的意思是“插座、插口”，在计算机中名为“套接字”。一个套接字是操作系统中的一个对象，它代表了一个通信信道的<strong>一端</strong>——用一个(虚拟的)线路把两个套接字连接起来，就能实现它们时间的通信。套接字可以看作是对进程间通信的一个抽象——套接字对象的访问与实际的连接方式是无关的(本地操作系统中的一个缓存，或是经过网络)，只要用适当的方式将套接字连接起来，它们就能互相通信。</p>
+<div class="fenced fenced-blue">
+<h4 id="vs">套接字 vs 文件描述符</h4>
+<p>套接字看起来和文件描述符很像——进程间通信的一端，我们对它最主要的操作就是读和写。没错，套接字也是用文件描述符表示的！</p>
+<p>看看Linux Kernel里的代码：</p>
+<pre class="codehilite"><code class="language-c">struct socket *sock_from_file(struct file *file, int *err)
+{
+  if (file-&gt;f_op == &amp;socket_file_ops)
+    return file-&gt;private_data;  /* set in sock_map_fd */
+  *err = -ENOTSOCK;
+  return NULL;
+}</code></pre>
+
+
+<p><code>socket_file_ops</code>和OSLab2中的虚拟文件系统实现非常像：</p>
+<pre class="codehilite"><code class="language-c">static const struct file_operations socket_file_ops = {
+        .owner =        THIS_MODULE,
+        .llseek =       no_llseek,
+        .read_iter =    sock_read_iter,
+        .write_iter =   sock_write_iter,
+        .poll =         sock_poll,
+        .unlocked_ioctl = sock_ioctl,
+#ifdef CONFIG_COMPAT
+        .compat_ioctl = compat_sock_ioctl,
+#endif
+        .mmap =         sock_mmap,
+        .release =      sock_close,
+        .fasync =       sock_fasync,
+        .sendpage =     sock_sendpage,
+        .splice_write = generic_splice_sendpage,
+        .splice_read =  sock_splice_read,
+};</code></pre>
+
+
+<p>所以当一个文件描述符支持的操作恰好是<code>socket_file_ops</code>，它就表示了一个套接字，其中的<code>private_data</code>域保存了<code>struct socket</code>的指针。</p>
+</div>
+<p>当然，把套接字连接起来也不算是太简单，需要几个步骤：</p>
+<h3 id="_5">创建</h3>
+<p>我们已经知道套接字代表了连接的“一端”，创建它是相当容易的：</p>
+<pre class="codehilite"><code class="language-c">int socket(int domain, int type, int protocol);</code></pre>
+
+
+<p>在创建时要描述套接字接口的类型(就像插座的类型一样)。常用的类型(domain)有：</p>
+<ul>
+<li><code>AF_INET</code>, ipv4地址(地址、端口)</li>
+<li><code>AF_INET6</code>, ipv6地址</li>
+<li><code>AF_LOCAL</code>, 本地的一个文件，用于进程间通信，类似命名管道。</li>
+</ul>
+<p>以及要指定套接字的传输类型：</p>
+<ul>
+<li><code>SOCK_STREAM</code>，与管道类似的数据流；</li>
+<li><code>SOCK_DGRAM</code>，数据报；</li>
+<li><code>SOCK_RAW</code>，不指定协议，直接处理收到的数据包(可以用来hacking，例如监听所有路由器上的数据)。</li>
+<li>...</li>
+</ul>
+<p>protocol为0表示使用默认的协议，例如<code>AF_INET</code>, <code>SOCK_STREAM</code>默认使用TCP传输。创建成功后，会返回套接字的文件描述符——正如之前所说的那样，套接字通过文件描述符访问。</p>
+<h3 id="_6">连接管理</h3>
+<p>创建好套接字以后，用这些函数实现套接字的连接：</p>
+<pre class="codehilite"><code class="language-c">int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+int listen(int sockfd, int backlog);
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);</code></pre>
+
+
+<p>其中bind, listen, accept是服务端使用的，connect则是客户端使用的。因为计算机之间可能的连接多种多样(IP地址/端口只是其中的一种，所以套接字的API就使用了传入一个结构体的方式)，这也是引起新手困惑的地方——地址的描述也需要两个结构体，哦有点复杂，你需要一点时间RTFM弄清楚其中的概念。</p>
+<pre class="codehilite"><code class="language-c">struct sockaddr_in {
+    sa_family_t    sin_family; /* address family: AF_INET */
+    in_port_t      sin_port;   /* port in network byte order */
+    struct in_addr sin_addr;   /* internet address */
+};
+
+/* Internet address. */
+struct in_addr {
+    uint32_t       s_addr;     /* address in network byte order */
+};</code></pre>
+
+
+<p>在连接建立以后，剩下的事情就和访问文件(管道)差不多了。除了read/write，套接字还支持send/recv; readv/writev; sendmsg/recvmsg，也推荐使用<code>select</code>系统调用管理多个文件描述符。事情开始变糟了——原本UNIX世界的API是非常干净简洁的，但为了支持越来越多的系统功能，不得不加入大量的结构体、大量的API。</p>
+<div class="fenced fenced-yellow">
+<h4 id="dont-panic">Don't Panic</h4>
+<p>如果你试着写一点网络小程序，也许立即会遇到一些困难。静下心来读手册，虽然这次的内容会比往常要多一些。记得我们只是需要多花一些时间描述清楚两个“接口”之间该如何连接。</p>
+</div>
+<h2 id="_7">网络带来的新挑战</h2>
+<p>能够通过计算机网络把计算机连接起来是个非常了不起的想法，但也带来很不小的麻烦——回顾我们之前遇到的两个小麻烦：</p>
+<ul>
+<li>并发：共享资源可能被多个线程按照任意顺序访问。</li>
+<li>崩溃一致性：系统有可能在任意时刻崩溃，此时持久存储(如磁盘)上必须保存一个合法的数据结构。</li>
+</ul>
+<p>实现正确的并发多线程和崩溃一致性的难度，大家在实验中想必已经体会过了，但网络(分布式系统)的麻烦更大：网络和网络中的计算机没有一个是可靠的，好比我们在实现多线程时，任意一个线程都可能忽然从系统中消失(既可能永久消失，也可能在任意一段时间之内回来，例如网络恢复)，在此情况下，仍然要能保证系统的正确性。</p>
+<p>听起来就很麻烦——没错。所以分布式系统的设计和实现是现在计算机系统研究中非常热门的话题。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

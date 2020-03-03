@@ -1,0 +1,163 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>操作系统设计与实现 (2020 春季学期)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="2020">操作系统设计与实现 (2020 春季学期)</h1>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="os-workbench"><code>os-workbench</code> 更新通知</h4>
+<ul>
+<li><code>os-workbench</code> 目录名称修改会导致 Online Judge 的 compile error。</li>
+<li>遇到 pstree 提交找不到 <code>abstract-machine</code> 不成功的同学，请 <code>git pull origin L0</code>，下载 Lab0 的代码</li>
+</ul>
+</div></div></div>
+
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<p>这门课程将会为大家揭秘操作系统——我们一直以来接触最多但却也觉得最神秘的软件之一——是如何设计和实现的。</p>
+<p>为此，这门课的听众假设已有一些在操作系统上编程的经验，并对硬件提供的机制有一定了解。先修课程：《计算机系统基础》和/或《计算机体系结构》。我们假设课程的听众：</p>
+<ol>
+<li>掌握 C 语言编程的技术和技巧，包括测试与调试</li>
+<li>熟悉至少一个指令集 (包括应用和系统指令)，包括但不限于 x86, MIPS, 或 RISC-V</li>
+<li>达到上述两个要求可以通过独立完成 <a href="https://nju-projectn.github.io/ics-pa-gitbook/ics2019/">NEMU 模拟器实验</a> 实现</li>
+</ol>
+</div></div></div>
+
+<div markdown="1"><div class="fenced fenced-red"><div>
+<p><strong>本课程有一定难度，已实现三代同堂，请努力完成实验作业以防意外。</strong></p>
+<ul>
+<li>本年度所有实验采用 Online Judge 在线评测 (即对代码的质量作出严格的要求)。请阅读<a href="OS2020_Labs.html">实验指南</a>。</li>
+</ul>
+</div></div></div>
+
+<div markdown="1"><div class="fenced fenced-red"><div>
+<p>JYY 毕业很多年了，有时候难以体恤一周目同学的痛苦。如果你在阅读实验内容/讲义时有困惑，请不要犹豫，告诉 JYY，帮助他改进讲义。</p>
+</div></div></div>
+
+<ul>
+<li><a href="OS_References.html">教科书与参考资料</a>；<a href="OS_Guide.html">生存指南</a>；<a href="https://www.bilibili.com/video/av89733537/">课程视频</a></li>
+<li>课时：每周一 14:00–16:00、周四 10:00–12:00；上课地点：<a href="http://live.bilibili.com/21816941">bilibili 直播间</a></li>
+<li>成绩：期末考试 (40%), 期中测验 (10%), 系统实验 [L] (25%), 编程实验 [M] (25%)</li>
+<li>助教：欧先飞 (ouxianfei@smail.nju.edu.cn)、屈道涵 (whuqdh@126.com)</li>
+</ul>
+<h2 id="_1">课程概述</h2>
+<p>操作系统对每个同学来说都既陌生又熟悉。一方面每天我们都在使用操作系统，另一方面它又是现今计算机系统中最神秘和复杂的软件之一。首先，操作系统是一个典型的 “system”——它完成对计算机硬件系统的<span class="red">抽象</span>，提供应用程序的运行环境：</p>
+<ul>
+<li>从应用程序的视角看，操作系统定义了一系列的对象。操作系统定义了一系列的对象 (进程/线程、地址空间、文件、设备……) 和操纵它们的 API (系统调用)。这组强大的 API 把计算机的硬件资源有序地管理起来，它不仅能实现应用程序 (浏览器、游戏……)，还支持着各类神奇的系统程序 (容器、虚拟机、调试器、游戏外挂……)；</li>
+<li>从硬件的视角看，操作系统是一个拥有访问全部硬件功能的程序 (操作系统就是个 C 程序，不用怕)。硬件会帮助操作系统完成最初的初始化和加载，之后，操作系统完加载第一个程序后，从此作为 “中断处理程序” 在后台管理整个计算机系统。</li>
+</ul>
+<p>操作系统使用正确的抽象使构造庞大的计算机软件/硬件生态从不可能变为可能。这门课围绕操作系统是<span class="red">如何设计</span> (应用程序视角)、<span class="red">怎样实现</span> (硬件视角) 两个角度展开。</p>
+<hr></hr>
+<p>本学期课程分为五个主要部分：</p>
+<ul>
+<li>原理课 (<span class="box box-blue"> </span>/<span class="box box-green"> </span>/<span class="box box-red"> </span>)：以教科书内容为主，介绍操作系统的原理性内容；</li>
+<li>代码课 (<span class="box box-yellow"> </span>)：讲解操作系统相关的代码实现和编程技巧；</li>
+<li>Mini labs (应用程序视角；设计)：通过实现一系列有趣的 (<del>黑科技</del>) 代码理解操作系统中对象存在的意义和操作系统 API 的使用方法、设计理念；</li>
+<li>OS labs (计算机硬件视角；实现)：基于<a href="AM.html">抽象计算机</a>实现一个简易操作系统内核，向应用程序提供一些基础的操作系统 API；</li>
+<li>专题 (<span class="box box-gray"> </span>)：与计算机系统/操作系统有关的扩展知识。</li>
+</ul>
+<h2 id="_2">课程讲义</h2>
+<ol>
+<li><a href="OS2020_Intro.html">操作系统概述</a> <a href="OS2020_1.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
+  | <span class="box box-yellow">C</span> 应用眼中的操作系统
+    <a href="OS2020_C1.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
+  | <a href="OS2020_M1.html">[M1] pstree</a>
+  | <a href="OS2020_L0.html">[L0] amgame</a></li>
+<li><span class="box box-blue">并发</span>    <a href="OS2020_Concurrency.html">共享内存多线程 (1)</a> <a href="OS2020_2.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
+  | <a href="OS2020_Automata.html">共享内存多线程 (2)</a> <a href="OS2020_3.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
+  | <a href="OS2020_M2.html">[M2] libco</a></li>
+<li><span class="box box-blue">并发</span>    <a href="">并发控制 (1)</a> <a href="OS2020_4.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
+  | <span class="box box-yellow">C</span>
+    硬件眼中的操作系统 <a href="OS2020_C2.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
+  | <a href="OS2020_L1.html">[L1] kalloc</a></li>
+</ol>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

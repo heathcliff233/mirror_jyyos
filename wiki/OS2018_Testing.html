@@ -1,0 +1,156 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>系统软件的质量保障</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">系统软件的质量保障</h1>
+<p>在这里我们提供两篇系统软件测试和验证相关论文的导读。理解一份工作，重要的是理解它解决什么问题(以及为什么这个问题重要)，用了什么最重要的技术(观察、insights)解决了这个问题的挑战。</p>
+<h2 id="explode-a-lightweight-general-system-for-finding-serious-storage-system-errors">EXPLODE: A Lightweight, General System for Finding Serious Storage System Errors</h2>
+<p>by <a href="http://www.cs.columbia.edu/~junfeng/">Junfeng Yang</a>, Paul Twohey, Ben Pfaff, Can Sar, <a href="http://web.stanford.edu/~engler/">Dawson Engler</a> (Stanford University)</p>
+<blockquote>
+<p>Storage systems such as file systems, databases, and RAID systems have a simple, basic contract: you give them data, they do not lose or corrupt it. Often they store the only copy, making its irrevocable loss almost arbitrarily bad. Unfortunately, their code is exceptionally hard to get right, since it must correctly recover from any crash at any program point, no matter how their state was smeared across volatile and persistent memory.</p>
+<p>This paper describes eXplode, a system that makes it easy to systematically check real storage systems for errors. It takes user-written, potentially system-specific checkers and uses them to drive a storage system into tricky corner cases, including crash recovery errors. eXplode uses a novel adaptation of ideas from model checking, a comprehensive, heavy-weight formal verification technique, that makes its checking more systematic (and hopefully more effective) than a pure testing approach while being just as lightweight.</p>
+<p>eXplode is effective. It found serious bugs in a broad range of real storage systems (without requiring source code): three version control systems, Berkeley DB, an NFS implementation, ten file systems, a RAID system, and the popular VMware GSX virtual machine. We found bugs in every system we checked, 36 bugs in total, typically with little effort.</p>
+</blockquote>
+<p>对于Storage System，它们在任何系统崩溃的时候，都必须能够正确保存用户的数据——这一点通常是很容易测试的。存储系统作为保存在non-volatile storage上数据结构的维护者，对外的接口无非是数据结构的修改和查询，因此我们很容易构造它的测试用例，并且在崩溃恢复以后判断测试用例是否通过(例如文件和目录是否存在，以及是否保存了正确的内容)。</p>
+<p>然而，复杂的情况是那些“tricky corner cases”：如果在运行时<code>malloc</code>失败，又伴有崩溃，存储系统的代码还正确吗？如果按照特定的序列操作，存储系统的代码还正确吗？因此这类问题的测试就是一个非常具有挑战性的问题。</p>
+<p>怎么解决呢？一个直观的想法就是去“尝试所有的可能”，无论是操作的组合，还是失败的情况，都要竭尽可能地尝试，于是就有了这份工作提出的技术。</p>
+<h2 id="klee-unassisted-and-automatic-generation-of-high-coverage-tests-for-complex-systems-programs">KLEE: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs</h2>
+<p>by Cristian Cadar, Daniel Dunbar, <a href="http://web.stanford.edu/~engler/">Dawson Engler</a> (Stanford University)</p>
+<blockquote>
+<p>We present a new symbolic execution tool, KLEE, capable of automatically generating tests that achieve high coverage on a diverse set of complex and environmentally-intensive programs. We used KLEE to thoroughly check all 89 stand-alone programs in the GNU COREUTILS utility suite, which form the core user-level environment installed on millions of Unix systems, and arguably are the single most heavily tested set of open-source programs in existence. KLEE-generated tests achieve high line coverage -- on average over 90% per tool (median: over 94%) -- and significantly beat the coverage of the developers' own hand-written test suite. When we did the same for 75 equivalent tools in the BUSYBOX embedded system suite, results were even better, including 100% coverage on 31 of them.</p>
+<p>We also used KLEE as a bug finding tool, applying it to 452 applications (over 430K total lines of code), where it found 56 serious bugs, including three in COREUTILS that had been missed for over 15 years. Finally, we used KLEE to crosscheck purportedly identical BUSYBOX and COREUTILS utilities, finding functional correctness errors and a myriad of inconsistencies.</p>
+</blockquote>
+<p>阅读这篇论文需要一些符号执行的背景。为了更有效地测试程序，生成能够覆盖它所有代码的测试数据是非常重要的(如果一行代码里有bug，但它却没有被任何测试用例执行到，当然不能指望它被test oracle找出来)。</p>
+<p>符号执行就是一种枚举所有程序执行路径的方法。例如</p>
+<pre class="codehilite"><code class="language-c">int f(int x) { return 2 * x; }
+int h(int x, int y) {
+  if (x != y) {
+    int t = f(x);
+    if (t == x + 10) {
+      bug();
+    }
+  }
+  return 0;
+}</code></pre>
+
+
+<p>假设<math>x</math>, <math>y</math>都是来自外部的输入，我们希望测试<math>h(x,y)</math>，那么，如果<code>if (x != y)</code>成立，我们一定知道<code>if</code>语句里的条件成立，这时候我们可以把条件写成一个表达式：</p>
+<ul>
+<li>当<math>x\ne y</math>的时候，走if分支；</li>
+<li>当<math>x=y</math>的时候，走else分支。</li>
+</ul>
+<p>接下来我们考虑走else分支的情况。注意到在分支的方向确定以后，程序所有的执行流也就确定了——这个时候，每一个中间变量的结果都可以写成是输入的表达式，例如<math>t = 2 * x</math>。此时，如果<math>2x = x + 10</math>成立，那么就会走有<code>bug()</code>的分支。</p>
+<p>换句话说，我们可以为每一条路径(循环可以看成是条件和<code>goto</code>，而<code>goto</code>是确定的控制流)都建立这样的条件表达式，例如同时满足：</p>
+<ol>
+<li>
+<math>x=y</math>
+</li>
+<li>
+<math>2x = x + 10</math>
+</li>
+</ol>
+<p>条件的输入，将确保走入<code>bug()</code>路径。因此如果我们有一个方程组求解器(SMT-Solver, 例如<a href="https://github.com/Z3Prover/z3">z3</a>)，就能求出一个测试用例啦。</p>
+<p>当然，要想把这样的技术用在实际的软件上，同样面临很大的挑战：</p>
+<ol>
+<li>刚才简单的例子里都是简单计算，但实际上这些程序会频繁调用库函数和系统调用，这怎么办？</li>
+<li>实际路径可能非常多，循环也可能是无限的，道理虽好但我们的计算资源有限，这怎么办？</li>
+<li>即便生成了路径，我们也不知道测试是否通过(没有crash不代表不正确)，这怎么办？</li>
+</ol>
+<p>带着这些(以及你可能想到的其他问题)可以阅读这篇论文。</p>
+<div class="fenced fenced-blue">
+<h4 id="_2">阅读论文</h4>
+<p>当你读完论文的时候，你也许会有一种感觉：这论文也没解决所有问题嘛。你看，文件系统有checker，那没有checker的时候这个技术不就完全不行了么。</p>
+<p>没错，每个研究工作都有它解决问题的scope。奢望在一个研究论文中解决所有的问题似乎是不太可能的。理解论文为什么选择了一个重要的scope，并且在这个scope里作出了卓越的工作，有时候比一味地“批评”它要重要得多。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

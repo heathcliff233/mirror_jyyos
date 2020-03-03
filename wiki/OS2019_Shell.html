@@ -1,0 +1,118 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>终端和Shell</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="shell">终端和Shell</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="https://www.gnu.org/software/libc/manual/html_node/Job-Control.html">GNU libc job control文档</a>。其中“implementing a shell”小节包含了你需要了解关于Shell的全部。</p>
+</div>
+<h2 id="_2">终端</h2>
+<p>我们已经非常熟悉UNIX Shell (bash/zsh)的使用了——不过它到底是怎么实现的呢？首先，Shell作为操作系统的“壳”和用户交互，就需要接收用户输入，并且把输出交给用户。在1970年代，这是通过“字符终端”实现的，并且一直延续至今。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/terminal.jpg" width="500px" /></center></p>
+<p>从编程的角度，everything is a file，终端也是——可以对终端设备文件执行read/write系统调用，从中读出数据或写入数据。至于如何控制终端，请有兴趣的同学STFW。</p>
+<div class="fenced fenced-green">
+<h4 id="_3">为什么？</h4>
+<p>如何解释以下终端的行为？</p>
+<ul>
+<li>按下backspace后，屏幕上的字符会“消失”，但在Vim的normal mode里，backspace却只是把光标向前移动。</li>
+<li>在大部分时候，我们都可以编辑一行的内容，按下回车后才会把字符给read()系统调用；但Vim却可以直接立即捕捉到按键。</li>
+<li>按下Ctrl-C后，程序会退出，但Vim不会退出(并且在底部打印一行提示信息)。有趣的是，在2017年Stackoverflow已经<a href="https://stackoverflow.blog/2017/05/23/stack-overflow-helping-one-million-developers-exit-vim/">帮助了1,000,000人退出Vim</a>。</li>
+<li>有时候会发出讨厌的(鸽子般的)声音。</li>
+<li>为什么命令有时候能打印出彩色，重定向后颜色又没了？</li>
+</ul>
+</div>
+<h2 id="shell_1">Shell</h2>
+<p>Shell的实现请参考本讲阅读材料。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

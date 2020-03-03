@@ -1,0 +1,374 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>基础设施</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+
+class: center, middle
+
+# 基础设施
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 概述
+
+本周末.red[PA2截止]，拖延的同学，你们危险了
+
+.red[HW3已发布]，很轻松几分钟就搞定了
+
+----
+
+感受到PA的恶意了吗？
+
+* 不就是写几行代码么，怎么……怎么写不对啊……
+* 这就是为什么PA要搞那么.red[麻烦]：又是Makefile，又是各种项目/工具
+* 没有.red[基础设施]，PA的完成率会大幅降低
+
+---
+
+class: center, middle
+
+# Differential Testing
+
+---
+
+# 复习：测试/调试的理论
+
+Fault → Error → Failure
+
+----
+
+对于PA来说，failure是显而易见的：
+
+* Segmentation Fault了，fail了
+* HIT BAD TRAP了，fail了
+* 马里奥/仙剑不能跑嘛，fail了
+
+我已经调了很久了，但就是找不到那个导致error的指令啊😱😱😱
+
+----
+
+麻烦：.red[找不到error发生的位置]
+
+---
+
+# 怎么办 (不借助他人版本)？
+
+<br/>
+
+<br/>
+
+<br/>
+
+# .center[.red[挫]]
+
+# .center[.red[败]]
+
+---
+
+# 解锁正确的抱大腿姿势
+
+你只要找大腿要一份binary就行了，他不会觉得你想抄代码的。然后写一个脚本，比如`cmdgen.py`：
+
+```python
+for i in range(int(sys.argv[1])):   # Life is short
+  print("\n".join(["si"] +          # You need python
+    [f"p %{r}" for r in ["eax", "ebx", ...]]))
+```
+
+然后就可以实现“对比”：
+
+```bash
+diff() {
+  python3 cmdgen.py $1 | ./build/nemu -l 1.log img; \
+  python3 cmdgen.py $1 | ./nemu-datui -l 2.log img; \
+  diff -q 1.log 2.log && echo "Pass"
+}
+```
+
+愉快地.red[二分查找]吧！你会找到哪一条指令错了！
+
+---
+
+# 这就是Differential Testing
+
+如果我们有.green[同一套API]的.green[两个实现]。
+
+你们想想有什么.red[现实中软件系统]的例子？
+
+--
+
+count: false
+
+----
+
+Differential testing是real research (excited🏅)
+
+* 浏览器 [Mesbah and Prasad, ICSE'11](https://dl.acm.org/citation.cfm?id=1985870)
+* GCC (vs clang), [Yang et al., PLDI'11](https://embed.cs.utah.edu/csmith/)
+* 文件系统, [Min et al., SOSP'15](https://dl.acm.org/citation.cfm?id=2815422)
+* Gcov (vs llvm-cov), 我们系老师的工作，投稿中
+* OS API (嘿嘿……好像还没人做过这个，当时WSL刚出来的时候很多bug，就想做这个)
+* 数据库 (有bug吗？不知道耶)
+
+---
+
+class: center, middle
+
+# 实现diff-testing
+
+---
+
+# 原理
+
+刚才我们已经给大腿的代码实现了一个简单版本的diff-testing
+
+不过不要忘记一个.red[真正的大腿]：QEMU & gdb
+
+* ICS PA = 缩水版QEMU
+* monitor = 缩水版gdb
+
+实际上是这些软件给了PA.green[简化的灵感]
+
+--
+
+count: false
+
+----
+
+diff-testing又恰好是一个和.red[外部世界打交道]的故事
+
+* 以前我们一直都只是自己写自己的程序，只用少量的库函数
+* diff-testing也许是你们第一次见到和其他程序(QEMU, gdb).red[交互]的程序
+
+---
+
+# 原理 (cont'd)
+
+我们希望实现的diff-testing和之前使用大腿的类似，先做一个简单的改进(就不需要手工二分查找了)：
+
+* 同时启动两个NEMU binary
+* 在一个while循环中，给两个NEMU分别发送si和p %eax, ...命令
+* 获取两个NEMU的输出并比较，如果不同，输出指令
+
+----
+
+有同学知道.red[如何实现]吗？diff-test也是类似的
+
+--
+
+count: false
+
+1. 启动QEMU并配置它进入与PA类似的模式
+2. 用gdb连接qemu
+3. 用`gdb_si()`在QEMU中执行一条指令
+4. 实现QEMU中内存/寄存器的读写
+
+---
+
+# yzh的实现
+
+首先，你会发现PA代码(`src/`)里.red[没有] diff-test的实际代码，只有一堆函数指针：
+
+```c
+static void (*ref_difftest_memcpy_from_dut)(paddr_t dest, void *src, size_t n);
+static void (*ref_difftest_getregs)(void *c);
+static void (*ref_difftest_setregs)(const void *c);
+static void (*ref_difftest_exec)(uint64_t n);
+void (*ref_difftest_init)(void) = ...;
+```
+
+封装了参考实现(ref)的各种功能，然后diff-test的实现就简单了：在`exec_wrapper()`中执行.red[一条]指令之后直接对比结果就行：
+
+```c
+difftest_step(ori_eip);
+```
+
+---
+
+# ref_difftest_xxx在哪里？
+
+经过RTFM：
+
+> NEMU的框架代码已经准备好相应的功能了. 首先在`nemu/tools/qemu-diff`目录下执行`make`, 将用于与QEMU进行DiffTest的API编译成动态库`qemu-so`
+
+然后RTFSC (nemu/tools/qemu-diff看起来有我们想找的FSC)，看到了若干有用的函数：
+
+* `gdb_connect_qemu`，看起来就是用来连接到QEMU的，创建一个到127.0.0.1、端口是1234的gdb连接
+* `gdb_si`，和monitor一样，单步执行指令
+* `gdb_setregs`, `gdb_getregs`，好像复杂一点，不过就是用`gdb_send()`和`gdb_recv()`发送/接收消息
+
+---
+
+# diff-test实现
+
+主要的实现还是在diff-test.c中
+
+阅读这些代码的时候会遇到一定的困难，.red[怎么办呢]？
+
+(代码解读)
+
+* 动态链接库被加载
+* diff-test初始化，加载MBR，启动QEMU和初始化进入保护模式
+* diff-test调用`ref_difftest_memcpy_from_dut(ENTRY_START, guest_to_host(ENTRY_START), img_size);`同步镜像
+* 之后每执行一条指令都会把寄存器现场从DUT复制到REF
+
+---
+
+class: center, middle
+
+# 基础设施
+
+.red[机器永远是对的]
+
+.red[未测代码永远是错的]
+
+你们感受到了吗？
+
+---
+
+# 层出不穷的Bugs
+
+在程序规模到达一定程度的时候，bug是非常难免的。你的编程经验可以.green[减少]bug，但很难完全.red[消灭]它们
+
+* 各类肉眼难以发现的低级错误 (`i` vs. `j`, `0x` vs `0b`, `int` with `unsigned`, ...)
+* 读错了手册 (忘记更新某个flags, 记错0/符号扩展, ...)
+* 逻辑上的错误 (使用一块已经释放的内存, 虚拟/物理内存地址访问错, ...)
+
+----
+
+做过PA的人就知道，“机器永远是对的”不是开玩笑的
+
+* 你折腾一天，两天，可能就是多打了一个空格
+* 获得的经验：少bb，认真打log看log，多测试
+
+---
+
+# 程序分析 (Program Analysis)
+
+静态(程序)分析：分析.red[源代码]证明/推断/模拟执行程序
+
+* 编译器(-Wall -Werror)/优化
+* linter代码风格检查
+* FindBug：各种基于bug pattern的检查，比如缓冲区溢出
+
+----
+
+动态(程序)分析：分析/控制.red[程序执行] (trace, log, …)
+
+* gdb (帮助你分析程序执行)
+* diff-test (对比两个程序的执行)
+* perf性能工具
+
+---
+
+# 基础设施
+
+当我们大规模软件工程实践遇到困难的时候，我们要去.red[找轮子]
+
+* (日常管理) 效率低 → .red[熟练使用命令行工具/Python]
+* (项目管理) 你已经会`gcc a.c`了，但没法管理几十个文件 → .red[make]，实现.green[一键编译]、.green[一键运行]
+* (代码编辑) 在代码里跳来跳去很麻烦  → .red[IDE/配置Vim/装插件]
+* (错误检查) 很容易犯低级错误 → .red[-Wall -Werror]
+* (代码调试) Segmentation Fault了  → .red[gdb]
+
+----
+
+不夸张地说，使用/不使用正确的工具，效率可以差.red[几十到几百倍]
+
+* 走上人生巅峰(轻松挑战更有难度的任务) vs. 毕业困难(无法完成课程作业)
+
+---
+
+# 基础设施 (cont'd)
+
+当轮子都不够用的时候，我们就去.red[造轮子]
+
+* 调试困难，有参考实现 → .red[diff-test]
+* 难以贯通多门实验课 → .red[AbstractMachine]
+
+--
+
+count: false
+
+----
+
+轮子还不够用呢？
+
+* diff-test每秒只能检查5000条指令
+* 中断和I/O具有不确定性
+* 没有参考实现呢 → .red[real research]
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

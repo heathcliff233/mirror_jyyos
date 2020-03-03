@@ -1,0 +1,370 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>Hello, C World</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# Hello, C World
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+<div class="row justify-content-md-center">
+  <div class="center author-block">
+    <p><a href="http://www.nju.edu.cn/">南京大学</a></p>
+    <img class="inline-img" height="64px" src="../static/img/nju.png"/>
+  </div>
+  <div class="center author-block">
+    <p><a href="http://cs.nju.edu.cn/">计算机科学与技术系</a></p>
+    <img class="inline-img" height="64px" src="../static/img/njucs.jpg"/>
+  </div>
+  <div class="center author-block">
+    <p><a href="http://moon.nju.edu.cn/">计算机软件研究所</a></p>
+    <img class="inline-img" height="60px" src="../static/img/ics-nju.png"/>
+  </div>
+</div>
+
+---
+
+# 本次课内容
+
+* C 语言拾遗
+    * main 函数
+    * 预编译
+    * 程序的执行
+    * 变量和类型
+    * 语句
+
+---
+
+class: center, middle
+
+# C语言拾遗
+
+---
+
+# (0) `main` 函数
+
+所有C程序都是从`main`开始执行的，那谁执行的main呢？
+
+```c
+int main(int argc, char *argv[]);
+```
+
+* argc (argument count): 参数个数
+* argv (argument vector): 参数列表(NULL结束)，它是一个`char *`的数组
+
+--
+
+count: false
+
+------
+
+编译好的C程序不仅可以“双击”调用，还可以传入参数
+
+* `ls -al` (`argc = 2, argv = ["ls", "-al"]`)
+* `python -c 'print(2**100)'` (`argc = 3`)
+
+> 想到上一次课的 UNIX 哲♂学了吗？
+
+---
+
+# (0) `main` 函数
+
+可以写一段[代码](/static/wiki/ics/2019/files/test_args.c)测试参数传递
+
+----
+
+规定：
+
+* `argv[0], argv[1], ... argv[argc - 1]`是程序执行的参数
+* `argv[argc] == NULL`
+* `main` 函数在末尾没有 return 的前提下，返回 0
+
+----
+
+Shell命令就是这样实现的！
+
+* `find . -name "*.cpp" | xargs cat | wc -l`
+* 命令行工具从 `argc/argv` 中解析参数
+
+---
+
+# (0) 巧用 argc/argv
+
+Linux 支持 “Shebang” 格式的脚本：
+
+```bash
+#!interpreter [args]
+...
+```
+
+例子：
+
+```bash
+#!/bin/bash
+echo "Hello, World"
+```
+
+----
+
+可以实现“一个可执行文件，支持各种命令”
+
+* ls - `#!/bin/busybox ls`
+* echo - `#!/bin/busybox echo`
+
+---
+
+# (1) 预编译
+
+`#include <stdio.h>` 到底发生了什么？
+
+* `#include`  是一条.red[预编译指令]，把后面指定的文件“粘贴”进来
+* `#include <...>` 和 `#include "..."` 有什么区别？
+
+----
+
+其他预编译指令：
+
+* `#define`—课程的老朋友，经常会见到
+* `#ifdef ... #endif`
+
+* `#if ... #else ... #endif`
+
+---
+
+# (1) 预编译 (cont'd)
+
+有趣的预编译
+
+```c
+#include <stdio.h>
+
+int main() {
+#if aa == bb
+  printf("Yes\n");
+#else
+  printf("No\n");
+#endif
+}
+```
+
+`gcc -E` 能够查看预编译后的结果
+
+---
+
+# (1) 预编译 (cont'd)
+
+.red[宏展开 = 复制/粘贴] (递归)
+
+知乎问题：如何搞垮一个 OJ？ [oj-killer.c](/static/wiki/ics/2019/files/test_def.c)
+
+```c
+#define A "a"
+#define B A A A A A A A A A A
+#define C B B B B B B B B B B
+#define D C C C C C C C C C C
+...
+```
+
+* 在整个课程中我们会看到更多有趣的例子
+    * AbstractMachine 代码
+    * NEMU 框架代码
+    * ……
+
+---
+
+# (2) 程序的执行
+
+理解 C 程序的运行最重要的是理解.red[内存布局]
+
+* 代码/数据/堆栈
+* C 程序：根据.blue[代码]指定的规则，修改数据/堆栈的.blue[状态]
+
+----
+
+C 语言的语义 (semantics)
+
+* 程序始终有一个“当前执行的位置” (Program Counter, PC)
+
+* 赋值 = 修改内存 (数据/堆栈) 状态
+
+* 函数调用 = 创建栈帧; 函数返回 = 回收栈帧
+
+---
+
+# (2) 程序的执行：例子
+
+代码、数据、堆栈在同一个.blue[地址空间] (address space) 中。
+
+* 可以把一个地址解释成不同的含义 (类型)
+
+----
+
+```c
+#include <stdio.h>
+
+void foo() { printf("Hi\n"); }
+int x = 1024;
+
+int main() {
+  void *p;
+  p = foo; ((void (*)())p)(); // 代码
+  p = &x;  printf("%p %lx\n", p, *(intptr_t *)p); // 数据
+  p = &p;  printf("%p %lx\n", p, *(intptr_t *)p); // 堆栈
+}
+```
+
+---
+
+# (3) 变量和类型
+
+内存中的数据有.red[类型]
+
+* 在汇编语言中，内存就是一个 `char[]`
+* C 语言中，可以通过类型.red[更安全/更方便地访问内存]
+
+----
+
+.blue[Quiz]：以下`argv`参数都可以作为`main`的参数，它们有什么区别？哪些`argv`执行`strcpy(argv[0], "a");`是合法的？
+
+1. (样例) `char *argv[]`
+2. (经常见到的) `char **argv`
+3. (?) `const char *argv[]`
+4. (??) `char ** const argv`
+5. (???) `const char ** const argv`
+6. (????) `const char * const * const argv`
+
+---
+
+# (3) 变量和类型 (cont'd)
+
+附加题：这是啥？
+
+```c
+void (*signal(int sig, void (*func)(int)))(int);
+```
+
+--
+count:false
+----
+
+说人话：
+
+```c
+typedef void (*sig_t)(int);
+sig_t signal(int sig, sig_t func);
+```
+
+* 这辈子要遇到返回一个函数指针的情况还是有的
+* STFW: “顺时针法则”
+
+---
+
+# (4) 程序
+
+程序是.blue[“手册”]，定义了计算机应该做什么
+
+* 我们做的无非就是把数据算出来，算到另一个地方
+* 其他功能通过库函数实现
+    * 读取输入、屏幕打印、GUI 显示…… (暂时不知道该怎么办)
+
+----
+
+即便只允许你调用 `gettime()`, `read_key()` 和 `draw_pixel(x, y, color)`，你就能实现.red[几乎任何程序]
+
+* 算法
+* 游戏 (LiteNES)
+* ……
+
+---
+
+# 常见的误解
+
+“我们只要能写出程序就行了，语言特性关我X事！”
+
+----
+
+事实：
+
+1. 总是可以用简单粗暴的编程方式写出正确的程序
+2. 随着项目的增长，这么做可能会让你的代码深陷泥潭
+
+----
+
+为什么要好好学习学C语言？
+
+1. .red[简单]。这是一个相对在可控时间成本里可以精通的语言
+2. .red[通用]。大量系统是用 C 语言编写的，例如 Python
+3. .red[对底层机器的精确控制]。C 语言几乎就是汇编，能够控制它在机器上的行为
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

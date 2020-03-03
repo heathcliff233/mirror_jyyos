@@ -1,0 +1,478 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>Putting Pieces Together</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+
+class: center, middle
+
+# Putting Pieces Together
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+class: center, middle
+
+### Happy Birthday to Nanjing University!
+
+<br>
+
+.center[<img src="../static/wiki/os/2019/img/pku.jpg" width="400px"/>]
+
+---
+
+# 本讲概述
+
+> Three easy pieces
+>
+> * Virtualization
+> * Concurrency
+> * Persistence
+>
+> 它们如何构成完整的操作系统？
+
+* 自顶向下视角
+* 自底向上视角
+
+---
+
+# 操作系统：层层抽象
+
+“操作系统是一组API规范” @ MiniLabs
+
+- 进程管理(fork, execve, ...)
+- 文件系统(pipe, open, ...)
+- 存储管理(mmap, ...)
+
+----
+
+“操作系统是一个C程序” @ OSLabs
+
+- 纯C程序 (只能进行.red[计算])
+- 直接运行在计算机硬件上
+- 允许调用硬件提供的API (被抽象为AM)
+
+----
+
+计算机硬件
+
+* 状态机 、指令(《计算机系统基础》)
+
+---
+
+class: center, middle
+
+# 自顶向下看OS
+
+---
+
+# 操作系统：设计
+
+操作系统是管理程序的系统软件
+
+* 操作系统API：减少编程的.red[负担]，不必管理各种细节
+* 能够让多个程序共享一台计算机上的资源
+  * 分布式操作系统：能以统一的方式管理多台计算机上的资源
+
+----
+
+核心的概念：.red[虚拟化]
+
+* 虚拟CPU + 虚拟内存 = 进程/线程
+* 虚拟磁盘 = 文件/目录
+
+---
+
+# 理解操作系统API
+
+系统调用
+
+* fork, execve, exit, open, ...
+* 但它们其实并不是理解操作系统API最重要的部分
+
+--
+
+count: false
+
+----
+
+操作系统中有一系列虚拟化的.red[对象]
+
+* 进程：执行的程序；通过pid访问
+* 地址空间：进程私有；通过mmap管理
+* 文件 (and everything is a file)：通过路径得到文件描述符；通过文件描述符访问文件
+* 操作系统中的对象使系统调用变得make sense
+
+---
+
+# 操作系统设计
+
+我们需要怎样的系统调用？
+
+* 由.red[应用场景]驱动！
+* 在minilabs中，已经看到了很多有趣的例子了
+
+----
+
+Visual Studio Code: 在文件发生变更时，及时更新打开的文件和源码树中的信息……每隔一段时间扫描目录树效率太低，带来大量文件系统操作、污染缓存
+
+--
+
+count: false
+
+*  `inotify_watch` (`man 7 inotify`), since 2.6.13
+
+--
+
+count: false
+
+服务器程序：有海量的文件描述符(套接字)保持连接，但并不是每个文件描述符随时都有数据。如何更好地服务这些连接？
+
+--
+
+count: false
+
+* `poll`, `select`, `epoll`, since 2.6
+
+---
+
+# 一些有趣的系统调用
+
+在内核中调整系统调用应当.red[非常谨慎]
+
+* 万一后悔，影响就大了
+  * `get_kernel_syms`, removed in 2.6 (`/proc/kallsyms`)
+  * `create_module`, removed in 2.6 (被`init_module`替代)
+* 更多的是创建一个新的系统调用
+  * `mmap2`，与`mmap`完全相同，但允许32bit机器映射4KB * offset的文件
+  * `readv` (2.0), `preadv` (2.6), `preadv2` (4.6)，都是为了高性能的I/O
+* `userfaultfd` (4.3)
+  * ？？？
+
+---
+
+class: center, middle
+
+# 自底向上看OS
+
+---
+
+# 操作系统：实现
+
+把操作系统API中描述的规约用代码实现
+
+* 纯粹的“编程活”，但却又实在很难
+* 谁做Labs谁知道
+
+----
+
+那我们是如何一步一步构造一个小而全面的操作系统呢？
+
+---
+
+# AM：硬件 → 机制
+
+处理器管理
+
+* C程序的运行时环境：TRM
+* 中断和上下文管理：CTE
+
+----
+
+内存管理
+
+* 物理内存管理：`_heap`
+
+* 虚拟内存管理：VME
+
+----
+
+设备管理
+
+* I/O设备管理：IOE
+
+---
+
+# 并发 & 虚拟化：线程
+
+OSLab中的`task`
+
+* 支持task的创建、删除、并发控制
+* 所有tasks共享操作系统的物理内存：代码、数据
+* 每个task有独立的堆栈
+
+----
+
+完成的抽象：.red[一个或多个CPU → 线程(虚拟CPU)]
+
+* 线程 = 运行固定程序的虚拟CPU
+* 通过kmt API管理(创建、删除等)
+* 虚拟CPU可以通过信号量等进行同步
+
+---
+
+# 设备对象：设备抽象层
+
+完成的抽象：.red[I/O设备寄存器 → 设备对象]
+
+* 线程可以使用统一的接口访问I/O设备：read, write, ioctl
+
+---
+
+# 文件系统 (Lab3)
+
+完成的抽象：.red[操作系统中的对象 → inode]
+
+* 系统中可以有不同文件系统的实现(blkfs, devfs, procfs)
+* 但都通过文件描述符和统一的接口访问
+
+---
+
+# 虚拟存储：线程 → 进程
+
+最后，我们只要把地址空间作为线程(task)的一部分：
+
+```c
+struct task {
+  ...
+  AddressSpace as;
+  ...
+};
+```
+
+创建用户态的上下文
+
+```c
+Context *uctx =
+  _ucontext(&task->as, ustk, kstk, elf_entry, argvec);
+```
+
+就创建了系统中的第一个.red[进程]
+
+* 但它还不能执行，因为没有代码、数据、堆栈
+
+---
+
+# 线程 → 进程 (cont'd)
+
+让进程执行，只需要一个`mmap`
+
+* 操作系统只需要管理内存中的映射区域
+* 在缺页中断发生时，找到对应的数据即可
+  * 文件：调用`read`读入页面数据
+  * 匿名映射区域：使用`pmm->alloc()`分配一页
+* 在文件关闭时，调用`write`写回修改过的页面
+
+----
+
+在mmap基础上实现fork, execve和exit
+
+* 在操作系统中维护每个进程的`struct page`，写时复制
+
+---
+
+# That's All!
+
+我们已经在中间相遇了
+
+* (.blue[OSLab]) 硬件(指令) → AM → 并发多线程 → 设备API → 文件系统 → 虚拟存储 & 进程 → .red[系统调用] → 操作系统API (.blue[MiniLab])
+* 至此可以体会为什么“操作系统”难教了
+  * 讲进程需要文件
+  * 讲文件需要进程
+  * 死锁 (逃
+
+---
+
+class: center, middle
+
+# 系统调用：设计与实现
+
+---
+
+# 操作系统：没什么难的
+
+为了实现各种各样的应用需求
+
+* pthread线程库
+* 网络编程
+* 容器/虚拟机
+* 高性能I/O
+* 游戏外挂 (修改另外一个进程的内存)
+
+----
+
+我们已经看到内核需要实现更多的API
+
+* (高级) C语言编程
+
+对已有API行为进行补充
+
+* 在procfs/devfs/sysfs添加文件实现
+
+---
+
+# 设计与实现：管道
+
+UNIX一开始就有进程间通信的需求，因此有了pipe()
+
+----
+
+管道有固定的容量
+
+- 剩余容量不足时，写者需要等待
+- 管道空时，读者需要等待
+- 如何实现？提示：.green[条件变量]
+
+---
+
+# 管道：读者和写者计数
+
+> If all file descriptors referring to the write end of a pipe have been closed, then an attempt to `read`(2) from the pipe will see  end-of-file (`read`(2) will return 0).  If all file descriptors referring to the read end of a pipe have been closed, then a `write`(2) will cause a SIGPIPE signal to be generated for the calling process. (man 7 pipe)
+
+匿名管道
+
+- 创建时有1个读者、1个写者
+  - 文件描述符拷贝(dup/fork)时，计数器+1
+  - 文件描述符关闭(close)时，计数器-1
+  - `open("/proc/[pid]/fd/[fd]", O_RDONLY)` (demo)
+
+---
+
+# 设计与实现：pthread线程库
+
+fork()会导致地址空间的完整复制
+
+* pthread (`threads.h`)能够创建共享内存的线程
+* 每个线程能被调度到多个处理器上
+  * 思考题：.green[如何证实这一点？应该用何种系统调用实现线程？]
+
+--
+
+count: false
+
+```
+clone(
+  child_stack=0x7f120bdbffb0,
+  flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|
+        CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+        CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID,
+  parent_tidptr=0x7f120bdc09d0,
+  tls=0x7f120bdc0700,
+  child_tidptr=0x7f120bdc09d0
+)
+```
+
+> If  CLONE_VM  is  set,  the calling process and the child process run in the same memory space.
+
+---
+
+# 例子：图形界面
+
+.float-right[<img src="../static/wiki/ics/2018/slides/img/projectn.jpg" width="300px"/>]
+
+实现图形界面.red[无需额外系统调用]
+
+* 在输入设备和图形设备上可以构造窗口管理系统(WM)
+* 需要绘制窗口的进程把命令发送给WM (管道/套接字)
+  * 窗口更新
+  * 事件获取
+  * ……
+
+---
+
+# Putting Pieces Together
+
+这门课程真正帮助你的是对.red[整个计算机系统栈通透的理解]
+
+* 给.red[任何]一个应用程序，你知道用什么操作系统API实现它
+* 给.red[任何]一个系统调用，你能提出它在操作系统内实现的一个方案
+
+----
+
+现实中的程序离我们并不遥远，它们并不是“黑盒子”：
+
+* 炼丹炉：Tensorflow/Pytorch (over CUDA)
+* 数据库：SQLite, MySQL, MongoDB, ...
+* Web Browser (包括WebApps, 例如vscode)
+* Java Virtual Machine/Android Runtime/编译器……
+
+----
+
+理解.blue[原理]和.red[实践]是两件事
+
+* 这些软件都有复杂的架构设计、技术细节……
+
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

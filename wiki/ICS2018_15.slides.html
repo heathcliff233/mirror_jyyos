@@ -1,0 +1,499 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>总复习</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+
+class: center, middle
+
+# 总复习
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 这门课究竟学到了什么？
+
+理论 ← 可能60%的同学之后都会忘记这些内容
+
+* 数据/程序的机器级表示
+* 指令的执行
+* 计算机硬件系统的构造……
+
+----
+
+实践 ← 只要大家还在编程，就有潜移默化的影响
+
+* (部分).red[代码]和.red[手册]的正确打开方式
+* 机器永远是对的
+* 未测代码永远是错的
+
+---
+
+# 计算机系统基础：复习
+
+一段很简单的C代码：
+
+```c
+int x;
+
+void f(int a, int b) {
+  x = a + b;
+}
+
+int main() {
+  int a, b;
+  scanf("%d%d", &a, &b);
+  f(a, b);
+  printf("%d\n", x);
+}
+```
+
+---
+
+# 1 - 程序和数据的机器级表示
+
+程序有自己的.red[地址空间]
+
+* 代码被翻译成指令(字节)的序列
+* 数据是地址空间中的地址
+
+----
+
+几个问题：
+
+* 何种指令序列用于访问`x`？ (`x = a + b`)
+* 何种指令用于调用`f`？
+
+---
+
+# 2 - 程序的执行
+
+程序执行的基本原理
+
+* 把计算机看成状态机
+* <math>(M, R)</math>看成是状态
+* 执行一条指令对应了.red[状态的改变]
+
+----
+
+```
+ (32bit) mov %eax,0x804a028 
+   // VM[0x804a028] = R[EAX];
+ (64bit) mov %esi,0x200a04(%rip)
+   // VM[R[RIP] + 0x200a04] = R[ESI];
+```
+
+---
+
+# 3 - 存储器体系结构
+
+`mov %eax,0x804a028 `对应了.red[虚拟地址]的访问
+
+* 从CR3寄存器中得到页目录基地址
+* 经过二级页表翻译，得到对应的物理地址(`?????028`)
+
+* 检查物理地址是否在缓存中，若缓存命中则直接写入
+* 如果缓存不命中，通过总线向内存发送请求，CPU等待执行
+
+----
+
+总线之外的部分CPU是不控制的
+
+* 写内存地址可能写入一个.red[I/O设备]
+* 例如将显存的某个地址设置，就相当于在屏幕上画点
+
+---
+
+# 4 - 异常和中断
+
+如果地址翻译时出错，或系统主动执行`int`指令
+
+* 处理器将会发生.red[异常]
+* (Ring 0) 将CS, EIP, EFLAGS保存到堆栈，跳转到IDT[#INT]
+
+----
+
+如果处理器IF = 1，则处理器响应外部中断
+
+* 在一条指令执行完毕后响应.red[中断]
+* (Ring 0) 将CS, EIP, EFLAGS保存到堆栈，跳转到IDT[#INT]
+
+---
+
+class: center, middle
+
+# 再来一次，加强版
+
+---
+
+# 1 - 程序和数据的机器级表示
+
+程序到机器码，经历了字节序列(UTF-8编码的代码)到字节序列(ELF格式二进制文件)的翻译
+
+* 预处理、编译、ELF、静态/动态链接
+
+.center[<img src="../static/wiki/ics/2018/slides/img/compile.png" width="600px"/>]
+
+---
+
+# 2 - 程序的执行
+
+程序是被.red[操作系统]执行的；操作系统会为程序创建一个地址空间，调用加载器(loader)解析ELF文件
+
+* 把代码、数据、堆栈等在地址空间中布置好
+* 初始化处理器状态
+* 通过iret指令进入用户程序执行指令
+
+----
+
+处理器是执行指令的循环，但每个时钟周期可以执行.red[不止一条指令]
+
+* 应用程序指令只能完成计算(内存/寄存器的状态转换)
+* 其他所有功能都通过系统调用实现(`int $0x80`)
+
+---
+
+# 3 - 存储器体系结构
+
+写过PA就知道，一条指令会.red[多次]访问存储器：
+
+* 取指令(M[R[RIP]])、访存指令、虚拟地址查找……
+* 存储器的矛盾：.red[快]的存储器做不.red[大]、做不.red[便宜]
+
+.center[<img src="../static/wiki/ics/2018/slides/img/memory-hierarchy.png" width="350px"/>]
+
+---
+
+# 4 - 异常和中断
+
+处理器的行为：如果IF = 1，在某条指令执行完毕后
+
+- 将必要的信息保存到堆栈上
+- 跳转到IDT[#INT]中的指定地址(irq0)
+
+.center[<img src="../static/wiki/ics/2018/slides/img/x86-kern-interrupt.png" width=480px/>]
+
+---
+
+# 4 - 异常和中断 (cont'd)
+
+一段非常难以理解的代码
+
+实现上下文的保存和恢复
+
+```assembly
+irq0: pushl $0; pushl $32; jmp asm_trap
+asm_trap:
+  pushal
+  pushl $0   # 虚拟地址空间
+  pushl %esp # 参数 (tf)
+  call irq_handle # _Context* irq_handle(_Context *tf);
+  addl $8, %esp
+  popal
+  addl $8, %esp
+  iret
+```
+
+---
+
+# 总结
+
+这就是我们对计算机系统理解的方法！
+
+* 先有一些总体的概念，非常简单、清晰、明了
+* 能用这些概念构造最基础的计算机系统
+
+----
+
+然后试着去解决.red[系统问题]
+
+* 减少代码共享的开销 → 动态链接
+* 隔离多任务 → 存储保护
+* 让CPU不再等待I/O设备 → DMA
+* ……
+
+---
+
+class: center, middle
+
+#Hacking Interrupt Returns
+
+(上次没讲完的)
+
+---
+
+# 中断返回
+
+> 如果中断处理程序不改变<math>P</math>的状态 (tf指向的区域、<math>P</math>的代码、数据、堆栈)，<math>P</math>完全不会感受到中断的存在
+
+--
+
+count: false
+
+----
+
+例子：系统调用`read(fd, buf, count);` (man 2 read)
+
+* (用户程序) 把read的编号, fd, buf, count放到寄存器中
+* 执行`asm volatile ("int $0x80");`
+* 操作系统做各种事情(例如把buf填好，即改变<math>P</math>的状态)
+* 把系统调用返回值放入`%eax`，返回
+
+---
+
+# Hacking Interrupt Returns
+
+但是中断还可以有别的用法
+
+- .red[中断可以是外界不受程序控制触发的] (时钟，键盘，……)
+- 中断可以.red[返回到任何context] (寄存器现场，EIP, EFLAGS, ...)
+
+----
+
+Key Insight：.red[没人规定我们不能改变<math>P</math>的状态]，甚至是另一个程序啊？
+
+* 在系统中保存多个上下文
+* 每次中断(时钟中断定时发生)选择一个上下文执行
+* 实现单处理器上的多线程并发
+
+---
+
+# 上下文切换
+
+假设有两个函数：
+
+```c
+void f() { while (1) printf("a"); }
+void g() { while (1) printf("b"); }
+```
+
+.red[执行这两个函数需要哪些计算机系统中的资源？]
+
+--
+
+count: false
+
+----
+
+代码：共享在内存中(f, g有各自的地址)
+
+数据：共享在内存中("a", "b"等都在数据区)
+
+堆栈：执行函数需要独立的栈帧
+
+处理器：寄存器等
+
+---
+
+# 上下文切换 (cont'd)
+
+中断：保存上下文 → 执行中断处理 → 恢复上下文
+
+* 假设f执行到了任何部分(例如printf中)，只要把上下文保存到内存里，就可以让处理器执行.red[任何代码]，并且随时可以让f恢复执行
+
+----
+
+在f被中断，`irq_handle`执行中：
+
+* f的代码和数据在内存中(不会被修改)；
+* 当前堆栈是f的堆栈，但因为堆栈是单向生长的，因此不会影响f已有的栈帧；
+* f的寄存器信息已经被保存在堆栈中(tf指针)；
+* 此时可以选择任意一个其他进程的tf恢复；
+* 之后只要找回这个tf指针(操作系统保存)即可恢复f的执行
+
+---
+
+# Magic Happens!
+
+……f正在执行：
+
+* 中断到来，f的上下文被保存在堆栈上
+* 中断处理程序找到g的上下文
+* 恢复该上下文，执行iret
+
+……g继续执行
+
+* 中断到来……
+
+----
+
+我们在.red[单处理器]系统上创建了两个.red[并发]的程序，在每个.red[时钟中断]时有机会决定让哪个程序执行
+
+* ababaaababbbbaaba...
+
+---
+
+class: center, middle
+
+# Hello, OS World
+
+经过一学期的长途跋涉，ICS终于进入尾声
+
+不知不觉，你已经开始更好地理解计算机系统中更多的机制了……
+
+---
+
+# UNIX信号
+
+> 如果你想停下你的程序，你会在终端中按Ctrl+C，但这并不对所有的程序都有效。Ctrl+C到底是什么？
+
+--
+
+count: false
+
+------
+
+答案：信号 (SIGINT)
+
+```c
+typedef void (*sig_t) (int);
+sig_t signal(int sig, sig_t func);
+int kill(pid_t pid, int sig);
+```
+
+- `signal`可以注册一个信号处理程序，在程序收到信号时跳转到处理程序执行 (中断处理程序)
+- `kill`可以给系统中的进程(哪怕它在运行)发送信号 (中断)
+
+---
+
+# UNIX信号 (cont'd)
+
+- SIGALRM：“闹钟”，用于定时
+
+- SIGBUS：bus error
+
+- SIGFPE：数值运算错 (FPE是UNIX历史的印记之一)
+
+  - > Ken Thompson, the creator of Unix, was once asked what he'd do if he had it to do over again. He said, “I'd spell creat with an ‘e’.”
+
+- SIGSEGV：segmentation fault (这是个信号，所以可以捕获并忽略，猜猜有什么用？)
+
+- SIGILL：其他非法操作
+
+- SIGCHILD：子进程终止
+
+- SIGHUP：终端退出 (捕获这个信号可以实现后台常驻，例如nohup)
+
+---
+
+# kill(pid, sig)实现
+
+如果进程不在运行，上下文已经被保存
+
+* 找到sig对应的handler
+* `tf->ESP` ← `tf->ESP - 4`
+* `M[tf->ESP]` ← `tf->EIP`
+* `tf->EIP` ← handler
+* (假装原地执行一条call指令，signal handler会保存/恢复GPR)
+
+----
+
+如果进程正在执行(例如在另一个处理器上执行)
+
+* 标记这个进程
+* 等待下一次中断进入`irq_handle`
+* hack it
+
+---
+
+# Hello, OS World
+
+概括来说，操作系统只做两件事：
+
+* 加载第一个用户进程
+* 处理所有的中断 (系统调用, I/O, NMI, IPI, ...)
+
+----
+
+从应用程序的角度
+
+* 操作系统是.red[系统调用]行为的总和
+
+从计算机硬件的角度
+
+* 操作系统初始化完毕后，就是一个.red[中断处理函数]
+
+---
+
+class: center, middle
+
+# Happy Hacking!
+
+ICS PA为大家打开了通向计算机系统的大门
+
+为你们喝彩！
+
+(下学期见)
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

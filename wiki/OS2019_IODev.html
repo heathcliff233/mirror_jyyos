@@ -1,0 +1,264 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>I/O设备与驱动</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="io">I/O设备与驱动</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a>第36章。</p>
+</div>
+<h2 id="io_1">I/O设备</h2>
+<p>处理器的指令能够访问I/O设备，主要是通过两种方式实现的：</p>
+<ul>
+<li>端口I/O (Port IO, PIO)，相当于是为I/O设备提供了一个单独的地址空间，通过读/写端口的方式实现设备控制。通常，一个I/O设备的寄存器分为三类：状态寄存器、控制寄存器、数据寄存器。顾名思义，我们可以通过控制寄存器实现设备控制(例如设置设备的模式等)，从数据寄存器读写数据，并且读取状态寄存器来查看设备执行命令的状态。</li>
+<li>内存映射I/O (Memory-Mapped I/O, MMIO)。给特定的内存地址赋予特殊的含义，从而读/写内存地址就能实现设备的访问。在PA中，显存就是通过这种方式实现的。一方面，内存映射I/O完全可以用来实现状态/控制/数据寄存器，另一方面，在设备从外部看来是一段连续数据时(例如显存)，MMIO能减少I/O指令的数量。</li>
+</ul>
+<p>从道理上来说，I/O设备无非就是一组接口，能够读取/写入数据，I/O设备会根据自己的协议解读这些数据，并且反映到物理世界中去。我们每个人使用计算机，使用的都是它的I/O设备，因此对“计算机”的第一印象其实都来自这些设备——我们可以通过按键、移动鼠标，来改变屏幕上的内容。这一切都是用<strong>计算</strong>实现的——处理器读取二进制的数据、进行计算，再以二进制的形式输出。</p>
+<p>因此，一个I/O设备可以看做是若干可以读写的“寄存器”——我们只需能和设备交换状态、命令、数据，就能完成各类设备的访问。</p>
+<h3 id="_2">键盘控制器</h3>
+<p>键盘控制器内部有一个缓冲区，在按键之后会将键盘的扫描码保存到缓冲区内——这就是为什么老式的计算机如果没能进入操作系统，反复按键会导致报警——缓冲区满后，键盘的按键将丢失，键盘用报警的方式提醒用户。CPU可以通过I/O指令(根据系统实现，端口I/O或内存映射I/O)读取键盘控制的信息：</p>
+<pre class="codehilite"><code class="language-c">int status = inb(0x64);
+if ((status &amp; 0x1) == 0) {
+  // no input
+} else {
+  if (status &amp; 0x20) { // mouse
+  } else {
+    int code = inb(0x60) &amp; 0xff;
+    // 按键的“扫描码”
+  }
+}</code></pre>
+
+
+<p>鼠标和键盘是非常类似的，鼠标向控制器发送的是按键的信息，以及鼠标距离上一个时刻发生的位移<math>(x, y)</math>坐标。</p>
+<h3 id="_3">磁盘控制器</h3>
+<p>磁盘控制器与键盘控制器相似，通过状态、控制、数据访问。因为磁盘相对于CPU是很慢的设备(磁盘中有机械装置，通常需要ms级别的时间才能完成操作)，因此让CPU不断轮询status寄存器会浪费很多CPU资源。因此，磁盘驱动器可以配置成中断模式，在磁盘准备完毕后发送中断。</p>
+<p>与磁盘交互的代码请参考xv6的<a href="https://github.com/mit-pdos/xv6-public/blob/master/ide.c">ide.c</a>。</p>
+<h3 id="_4">显卡</h3>
+<p>显卡是大家最感兴趣的设备——没有它，就没有那么多好玩的游戏了。不过当我们介绍显卡(GPU)的时候，并不通过“图形显示”这个功能来介绍它，而是写一段在显卡上运行的程序，来解释显卡的工作原理。以下是一段为GPU编写的程序：</p>
+<pre class="codehilite"><code class="language-c">__global__ void add(int *a, int *b, int *c) {
+  int tid = blockIdx.x; // handle the data at this index if (tid &lt; N)
+  if (tid &lt; N) {
+    c[tid] = a[tid] + b[tid];
+  }
+}</code></pre>
+
+
+<p>可以看到，GPU上程序最重要的特性就是<strong>并行</strong>。一个GPU上有数以千计的核心，并且可以被配置成三维“立方体”的形态，编写一份程序可以在立方体的节点上同时运行(这个例子只用到了一个维度)——虽然每个CUDA核心的运算能力未必达到CPU，但在运算量极大的场景上，多核心的优势就体现出来了。</p>
+<p>CPU与GPU工作的模式大致如下：</p>
+<ul>
+<li>把需要的数据传送给GPU。对于上一个例子，GPU需要的数据是两个数组；对于游戏或图形显示的例子，GPU需要顶点信息、材质、贴图、映射等信息；</li>
+<li>通知GPU开始运算并等待运算结束；</li>
+<li>从GPU处取回运算结果。当然，如果运算的结果最终的目的是显示在屏幕上(例如算出1920x1080个像素点的颜色)，GPU可以帮助我们把这个信号发送到显示接口(例如HDMI)上，此时CPU就完全不必过问图形的显示了。</li>
+</ul>
+<p><center><img alt="" src="../static/wiki/os/2019/img/gpu.png" width="640px" /></center></p>
+<p>因此，刚才的<code>add</code>程序并不能直接在GPU上运行。GPU是一个I/O设备，它需要在CPU的指示下运行。为了在GPU上运行<code>add()</code>，我们可以使用如下的main函数。这段main函数运行在CPU上：</p>
+<pre class="codehilite"><code class="language-c">int main( void ) {
+  int a[N], b[N], c[N];
+  int *dev_a, *dev_b, *dev_c;
+
+  // allocate the memory on the GPU
+  HANDLE_ERROR(cudaMalloc((void**)&amp;dev_a, N * sizeof(int)));
+  HANDLE_ERROR(cudaMalloc((void**)&amp;dev_b, N * sizeof(int)));
+  HANDLE_ERROR(cudaMalloc((void**)&amp;dev_c, N * sizeof(int)));
+
+  // fill the arrays 'a' and 'b' on the CPU
+  for (int i=0; i&lt;N; i++) {
+    a[i] = -i;
+    b[i] = i * i;
+  }
+
+  // copy the arrays 'a' and 'b' to the GPU
+  HANDLE_ERROR(cudaMemcpy(dev_a, a, N * sizeof(int), cudaMemcpyHostToDevice));
+  HANDLE_ERROR(cudaMemcpy(dev_b, b, N * sizeof(int), cudaMemcpyHostToDevice));
+
+  add&lt;&lt;&lt;N,1&gt;&gt;&gt;( dev_a, dev_b, dev_c );
+
+  // copy the array 'c' back from the GPU to the CPU
+  HANDLE_ERROR(cudaMemcpy(c, dev_c, N * sizeof(int), cudaMemcpyDeviceToHost));
+
+  // display the results
+  for (int i=0; i&lt;N; i++) {
+    printf( &quot;%d + %d = %d\n&quot;, a[i], b[i], c[i] );
+  }
+
+  // free the memory allocated on the GPU
+  cudaFree(dev_a);
+  cudaFree(dev_b);
+  cudaFree(dev_c);
+  return 0;
+}</code></pre>
+
+
+<div class="fenced fenced-green">
+<h4 id="gpu">编译到GPU：发生了什么？</h4>
+<p>使用nvcc可以编译程序到GPU。你没有猜错——CPU部分的代码和GPU部分的代码(由<code>__global__</code>标记)是分开编译的。在GPU上运行的程序有两种模式：</p>
+<ul>
+<li>直接生成GPU指令.cubin文件</li>
+<li>生成中间代码.ptx文件(可以想象成是NEMU中的RTL)，然后再由显卡驱动进行just-in-time编译，最终到GPU上运行</li>
+</ul>
+<p>编译到本地的二进制文件会负责与驱动程序通信，给GPU发送正确的指令，执行程序并等待执行完成。</p>
+</div>
+<p>为了显示图形，流程和上述代码是十分类似的，但GPU毕竟从它诞生的那一刻起的根本使命就是显示图像，因此有专门的核心、指令等用于<a href="https://en.wikipedia.org/wiki/Rendering_pipeline">图像显示</a>，刚才用于通用计算的程序就是脱胎于其中的“着色器” (shader)。这些知识已经超过操作系统课程的范畴——操作系统把GPU看成是总线上的一个设备，剩下的工作就都交给设备驱动程序了。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/gpu-1.png" width="480px" /></center></p>
+<h3 id="dma">DMA</h3>
+<p>最后一类设备十分特殊：它并不负责与计算机系统外的I/O，它的出现主要是为了解决设备访问速度慢的一个缺点：试想我们希望从磁盘中读出海量的数据。在磁盘准备好后，我们就可以使用一个循环进行读取：</p>
+<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; nbytes / sizeof(uint32_t); i++) {
+  data[i] = inl(DISK_PORT); // or
+  data[i] = mmio_readl(DISK_MMIO_ADDR);
+}</code></pre>
+
+
+<p>再比如刚才我们的<code>cudaMemcpy</code>，如果要传送很大的数据(例如在游戏开始时向显卡传送的高清贴图)，就非常耗时了。为了把CPU从这些繁重的工作中解脱出来，就有了DMA这个设备。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/dma.png" width="640px" /></center></p>
+<p>DMA设备可以看成是一个只能执行memcpy操作的处理器：</p>
+<pre class="codehilite"><code class="language-c">// 设备寄存器；可以通过I/O进行设置
+uint8_t *src, *dst;
+size_t length, incr_src, incr_dst;
+
+void do_dma() {
+  // 收到DMA开始指令后开始执行
+  for (size_t i = 0; i &lt; length; i++) {
+    *src = *dst; // 可以是PIO/MMIO; 可以在设备-内存；内存-内存之间传递数据
+    src += incr_src;
+    dst += incr_dst;
+  }
+  send_interrupt(); // 完成后向处理器发送中断
+}</code></pre>
+
+
+<p>有了这样的一个特殊的设备，CPU就不再需要花费时间在传送大量I/O设备数据上，而是只需要传送少量控制数据(例如，给DMA设置<code>src</code>, <code>dst</code>等数值)。</p>
+<h2 id="_5">设备驱动程序</h2>
+<p>I/O设备五花八门。因此操作系统需要对设备进行额外的抽象，使得更上层的部分(通常是文件系统，大家之前已经看到“everything is a file”，每个设备在文件系统中都有一个与之对应的文件，并且可以执行文件操作)能够以统一的接口访问这些设备。</p>
+<p>I/O设备的几种常见类型：</p>
+<ul>
+<li>按照字节流访问的设备。键盘、鼠标、终端、显卡等都是此类设备。</li>
+<li>按照“数据块”为单位访问的设备。存储设备(磁盘、SSD)是典型的块设备。</li>
+<li>发送网络报文的设备。</li>
+</ul>
+<p>根据设备类型不同，我们给每一类设备以统一的接口访问，实现这些接口的就是设备驱动程序。例如在Lab2中，我们有非常简易的设备驱动层，每个设备都有init, read, write三种操作(假设设备在计算机启动的整个过程中均可用)：</p>
+<pre class="codehilite"><code class="language-c">typedef struct devops {
+  int (*init)(device_t *dev);
+  ssize_t (*read)(device_t *dev, off_t offset, void *buf, size_t count);
+  ssize_t (*write)(device_t *dev, off_t offset, const void *buf, size_t count);
+} devops_t;</code></pre>
+
+
+<p>在实际的系统中，设备实现的操作要更多一些(例如Linux系统设备实现完整的<code>struct file_operations</code>)，这样上层的应用就可以用统一的接口来访问设备了。</p>
+<p>设备驱动程序会将对这些接口的调用翻译成设备的指令发送给设备，并等设备完成，因此，磁盘的read操作可能是这样实现的：</p>
+<pre class="codehilite"><code class="language-c">ssize_t disk_read(deivce_t *dev, off_t offset, void *buf, size_t count) {
+  // assume everything is valid
+  P(disk_ready);
+  set_disk_read(buf, offset, count);
+  P(disk_ready);
+  return count;
+}
+
+void on_disk_irq() { // 中断时调用
+  if (did_becomes_ready()) {
+    V(disk_ready);
+  }
+}</code></pre>
+
+
+<p>设备驱动层帮助我们屏蔽了底层设备的具体实现细节(例如寄存器的含义)。同理，如果我们想创建“虚拟”设备，也是非常容易的，只需要为它编写一个驱动程序即可。例如我们希望实现随机数生成器设备，就只需要实现设备的读接口，不需要有实际的设备：</p>
+<pre class="codehilite"><code class="language-c">ssize_t random_read(deivce_t *dev, off_t offset, void *buf, size_t count) {
+  for (int i = 0; i &lt; count; i++) {
+    ((uint8_t *)buf)[i] = random_byte();
+  }
+  return count;
+}</code></pre>
+
+
+<p>Linux系统中就有一些虚拟的设备：<code>/dev/random</code>, <code>/dev/null</code>是大家熟知且经常使用的，它们被实现为了“字符设备”。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

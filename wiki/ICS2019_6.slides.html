@@ -1,0 +1,664 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>PA 代码选讲</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# PA 代码选讲
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 概述
+
+> 大家一定在阅读 PA 框架代码的时候遇到了困难。
+>
+> 坚持住！一定会有一门课让大家完成真正的蜕变。
+
+----
+
+* 修复 assert fail 的正确姿势
+* 代码阅读：进入 PA2
+* 译码/执行
+* RTL
+
+---
+
+# 彩蛋
+
+框架代码里居然藏了.red[游戏]
+
+* LiteNES: `nexus-am/apps/litenes`
+* Typing: `nexus-am/apps/typing`
+
+----
+
+Fun facts
+
+* 这是个 “虚拟机”，与 NEMU/QEMU 类似
+    * 6502 CPU, RP2C02 PPU (GPU)
+* 这是个跨平台的游戏 (Linux 本地, x86, mips32, riscv, ...)
+* 这部分代码 (AbstractMachine 等) 以后分解
+
+---
+
+# 彩蛋 (cont'd)
+
+`cpu.c` 似曾相识 (YEMU/NEMU/数字电路模拟器...)？
+
+```c
+void cpu_run(long cycles) {
+  cycles /= 3;
+  while (cycles > 0) {
+    op_code = memory_readb(cpu.PC++);
+    if (cpu_op_address_mode[op_code] == NULL) {
+    }
+    else {
+      cpu_op_address_mode[op_code]();
+      cpu_op_handler[op_code]();
+    }
+    cycles -= cpu_op_cycles[op_code] + op_cycles;
+    cpu_cycles -= cpu_op_cycles[op_code] + op_cycles;
+    op_cycles = 0;
+  }
+}
+```
+---
+
+class: center, middle
+
+# 阅读代码：从修复第一个 Assertion Fail 开始
+
+---
+
+# 回顾：数字电路模拟器/YEMU
+
+计数器模拟器
+
+```c
+int X = 0, Y = 0; // 状态 
+while (1) {
+  bool X1 = !X && Y;
+  bool Y1 = !X && !Y;
+  X = X1; Y = Y1;
+}
+```
+----
+
+简易计算机模拟器
+
+```c
+enum { RA, RB, ..., PC };
+u8 R[] = { [RA] = 0, [RB] = 0, ... }, M[NMEM];
+while (!is_halt(M[pc])) {
+  execute();
+}
+```
+
+---
+
+# PA 里的第一个问题就是模拟 CPU State!
+
+CPU 的状态 (`src/isa/$(ISA)/include/isa/reg.h`)：
+
+* 自由选择：x86 (默认), mips32, riscv32
+
+```c
+typedef struct {
+  struct { uint32_t _32; uint16_t _16; uint8_t _8[2]; } gpr[8]; 
+  rtlreg_t eax, ecx, edx, ebx, esp, ebp, esi, edi;
+  vaddr_t pc;
+} CPU_state;
+```
+
+----
+
+.red[然后就 assert fail 了]
+
+> TODO: Re-organize the `CPU_state` structure to match the register
+> encoding scheme in i386 instruction format. For example, if we
+> access `cpu.gpr[3]._16`, we will get the `bx` register; if we access
+> `cpu.gpr[1]._8[1]`, we will get the `ch` register.
+
+---
+
+# 分析问题、解决问题
+
+不正确的方法：.red[random tries]
+
+* 试着改一改这里，改一改那里
+* 各种不对，放弃，抱大腿 (太真实了)
+
+----
+
+正确的方法：.red[figure out *why*] (computer science 的基本思维方法)
+
+* `cpu.gpr[3]._16` 是什么？ 
+* `cpu.eax` 是什么？
+* assert fail 在哪里？ (`src/isa/x86/reg.c:19`)
+* `assert(reg_w(i) == (sample[i] & 0xffff));` 是什么意思？
+* 其他 assertions 是什么意思？
+
+---
+
+# 这个例子里你学到了什么？
+
+更深刻地理解了 C Runtime 的本质：
+
+* C 语言的内存是.red[字节序列]
+* 变量/指针代表了字节序列的.red[地址]
+* 类型是对字节序列布局的.red[解读]
+
+----
+
+这三句话读多少遍，都不如做这么一个实验来得有效
+
+---
+
+# 补充：一个小细节
+
+想更容易地调试？可以自定义参数！
+
+* 用.red[环境变量]控制 NEMU 运行的行为
+* `export NEMU_BATCH=1`
+* 大家在编程中不妨总是想一想，能不能做得更好
+
+----
+
+```Makefile
+ifneq ($(NEMU_BATCH), )
+override ARGS += -b
+endif
+```
+
+随着对代码的熟悉，不妨自己试试让框架代码更符合自己的习惯
+
+* 如果代码 break，使用 git 回滚
+* 可以实现 `make test` 运行测试 (不过记得保留 git log)
+
+---
+
+class: center, middle
+
+# 阅读代码：进入 PA2
+
+---
+
+# 解释指令的主循环
+
+经过一番痛苦的阅读，找到了几个关键函数：
+
+* `ui_mainloop` 是程序的主循环
+* `exec_once` 负责执行一条指令
+* .red[原来和 “数字电路模拟器” 没有本质区别]！
+
+----
+
+```c
+// src/cpu/cpu.c
+vaddr_t exec_once(void) {
+  decinfo.seq_pc = cpu.pc;
+  isa_exec(&decinfo.seq_pc);
+  update_pc();
+  
+  return decinfo.seq_pc;
+}
+```
+
+---
+
+# `isa_exec`
+
+实际负责执行指令的代码
+
+* .red[噩梦的开始]
+* 我也知道这是取指令/译码/执行的循环啊，但就是太复杂了
+    * 理解的关键：`opcode_table` (大把的宏，读起来就想放弃)
+
+----
+
+```c
+// src/isa/x86/exec/exec.c
+void isa_exec(vaddr_t *pc) { 
+  uint32_t opcode = instr_fetch(pc, 1);  // 取指令
+  decinfo.opcode = opcode;               // 得到opcode
+  set_width(opcode_table[opcode].width); // 和指令宽度
+  idex(pc, &opcode_table[opcode]); 
+  // if (e->decode) e->decode(pc); // (ID)
+  // e->execute(pc); // (EX)
+} 
+```
+
+---
+
+# `opcode_table`
+
+大量的预编译指令
+
+* `EMPTY`, 似乎是指令没实现
+* `IDEXW(mov_E2G, mov, 1)`, 似乎也是某种指令的实现
+
+----
+
+花点时间人肉宏展开吧……例子：`IDEX(mov_I2r, mov)`
+
+* 展开结果：`{decode_mov_I2r, exec_mov, 0}`
+* 类型：`DHelper, EHelper, int (width)`
+* .red[指令的 decode 函数、execute 函数、宽度]
+* 但是 `grep -e exec_mov $(find . -name "*.c")` 毛线也没有啊！
+
+
+---
+
+# 基本原则：感到不爽时一定有解决办法
+
+Hack the Makefile!
+
+* 还记得习题课演示过的 `gcc -E` 吗？
+* .red[它可以帮我们解决预编译的问题]！
+
+----
+
+```Makefile
+$(OBJ_DIR)/%.o: src/%.c
+  @$(CC) $(CFLAGS) $(SO_CFLAGS) -c -o $@ $<
++ @$(CC) $(CFLAGS) $(SO_CFLAGS) -E $< | grep -ve '^#' | indent - > $(basename $@).i
+```
+
+* 解决问题！
+
+---
+
+# 总结：一个更高级的 switch-case
+
+```c
+switch (cur->rtype.op) {
+  case 0b0000: { RTYPE(cur); R[rt]  = R[rs]; pc++; break; }
+  case 0b0001: { RTYPE(cur); R[rt] += R[rs]; pc++; break; }
+  ...
+}
+```
+
+----
+
+上面的代码的确很优美
+* 但难以 scale 到更多指令、多体系结构……
+* PA 框架代码提供了一个更好的 switch-case 的实现方法
+* (cool!)
+
+---
+
+# 总结：一个更高级的 switch-case (cont'd)
+
+PA 刚开始时，大家不由自主地面向 Copy-Paste 的编程
+
+```c
+if (opcode == XX) { ... }
+else if (opcode == XX) { ... }
+...
+```
+
+----
+
+代码中有很多公共部分，于是：
+
+* 好办，先复制粘贴一份写着再说
+* 之后发现好像写个函数更好，但已经写了几个了好麻烦啊……
+* 复制了 20 份以后发现有个地方要改……然后有个漏了 💥
+
+----
+
+框架代码展示了一个好的 scale out 的设计
+
+---
+
+class: center, middle
+
+# 译码/执行 (IDEX)
+
+---
+
+# 下一步做什么？
+
+我们已经大概理解了框架代码，但.red[一条指令到底是如何执行的呢]？
+
+* 我们需要找一些具体指令的实现，观察代码到底做了什么
+
+----
+
+方法1：阅读 (模拟 C 代码执行)
+
+* 本次课讲解
+
+方法2：调试 (让 C 代码真实执行，并观察调试器输出/log)
+
+* 之后课程讲解
+
+---
+
+# 从 dummy 开始
+
+根据手册，我们应该从 “dummy” 程序开始实现指令
+
+* 我们不妨看一下 dummy 执行的指令是什么
+* `build/` 目录下有一些有用的文件
+
+----
+
+`dummy-x86-nemu.txt`: objdump 的结果
+
+```text
+00100000 <_start>:
+  100000:	bd 00 00 00 00       	mov    $0x0,%ebp
+  100005:	bc 00 90 10 00       	mov    $0x109000,%esp
+  10000a:	e8 09 00 00 00       	call   100018 <_trm_init>
+  10000f:	90                   	nop
+```
+
+`nemu-log.txt`: 执行的指令
+
+```text
+100000:   bd 00 00 00 00             movl $0x0,%ebp
+100005:   bc 00 90 10 00             movl $0x109000,%esp
+10000a:   e8 e8 09 00 00 00 90 55 89 invalid opcode
+nemu: ABORT at pc = 0x0010000a
+```
+
+---
+
+# `mov $0x0, %ebp`
+
+稳住：多看看 logs
+* RTFM：把 0 赋值给 `ebp` 寄存器
+* `100000` 和 `100005` 的两条指令似乎是执行成功了，RTFSC
+
+----
+
+`100000` 位置的指令 opcode: `0xbd`
+
+* `opcode_table[0xbd]`: `IDEX(mov_I2r, mov)`
+* 宏展开：`{decode_mov_I2r, exec_mov, 0}`
+* 译码函数：`decode_movI2r` (move immediate to register)
+* 执行函数：`exec_mov` (move)
+
+---
+
+# 译码 `movI2r`
+
+`isa/x86/decode/decode.c` (配合预编译以后的结果):
+
+```c
+static inline make_DopHelper(I) { // decode_op_I
+  op->type = OP_TYPE_IMM;
+  op->imm = instr_fetch(pc, op->width); // instr_fetch()更新pc
+  rtl_li(&op->val, op->imm); // op->val = op->imm;
+}
+
+static inline make_DopHelper(r) { // decode_op_r
+  op->type = OP_TYPE_REG;
+  op->reg = decinfo.opcode & 0x7;
+  if (load_val) { // false
+    // 如果是 add $1, %eax，则 load_val == true
+    rtl_lr(&op->val, op->reg, op->width); // op->val = R[op->reg];
+  }
+}
+
+make_DHelper(mov_I2r) {
+  decode_op_r(pc, id_dest, false);
+  decode_op_I(pc, id_src, true);
+}
+```
+
+---
+
+# Operand
+
+唯一剩下神秘的东西就是 `id_dest`, `id_src` 了！
+
+* src (I), `op->imm = instr_fetch(pc, 4);`，得到 `0x0`
+* dest (r), `op->reg = decinfo.opcode & 0x7`
+    * `0xbd & 7 == R_EBP` (`reg.h`)
+    * 指令行为与手册一致！
+
+----
+
+原来这段代码更新了 `DecodeInfo`！
+
+```c
+#define id_src (&decinfo.src)
+#define id_src2 (&decinfo.src2)
+#define id_dest (&decinfo.dest)
+```
+
+---
+
+# 执行 `mov`
+
+执行：同理 (找到相应的文件)
+
+```c
+void operand_write(Operand *op, rtlreg_t* src) {
+  if (op->type == OP_TYPE_REG) { rtl_sr(op->reg, src, op->width); }
+  else if (op->type == OP_TYPE_MEM) { rtl_sm(&op->addr, src, op->width); }
+  else { assert(0); }
+}
+
+make_EHelper(mov) {
+  operand_write(id_dest, &id_src->val);
+  print_asm_template2(mov);
+}
+```
+----
+
+问题：.green[为什么要那么多`make_XHelper`]？
+
+---
+
+# 总结
+
+在取出指令 (opcode) 以后，会完成译码 + 执行
+
+* 译码 = 计算出一些中间状态 (decinfo)
+* 执行 = 根据 decode info 改变系统状态 (寄存器/内存)
+
+----
+
+这恰好也是.red[处理器]的实现
+
+* 译码信号作为组合电路的一部分 (单周期处理器)，或是保存在寄存器中 (流水线)
+* 将执行结果写回寄存器中
+
+----
+
+我们已经完全知道了 NEMU 的架构，剩下的就是
+
+* RTFM，把 M 转换成代码
+* 就从第一条失败的指令开始实现吧 (`0xe8`, call 指令)
+
+---
+class: center, middle
+
+# RTL
+
+---
+
+# 回顾 `movl $0, %ebp` 执行过程
+
+```c
+// decode_op_I;   $src.val := imm
+rtl_li(&decinfo.src.val, op->imm, 4);
+
+// exec_mov;      R[EBP] := $src.val
+rtl_sr(R_EBP, src, 4);
+```
+
+----
+
+`rtl_sr(l, r) -> interpret_rtl_sr(l, r) -> R[l] = *r;`
+* `interpreter_rtl_xx` 是直接执行指令
+
+---
+
+# 为什么要搞那么麻烦？
+
+RTL 可以有不同的实现方式
+
+* `rtl_sr(l, r) -> compile_rtl_sr(l, r) ->`
+* `printf("%s = %s\n", name_of(l), name_of(r));`
+
+----
+
+完全相同的代码，我们可以用于.red[生成指令]
+
+```c
+src.val = 0; // imm
+R[EBP] = src.val;
+```
+
+---
+
+# 为什么要搞那么麻烦？
+
+再经过编译器的优化
+
+* 遇到一个指令序列，生成一段代码 (编译)
+* 原本一条指令会从 `exec_once()` 开始执行很多代码
+    * 编译后就可以直接在本地执行！ (Just-in-Time, like QEMU)
+
+----
+
+```text
+mov $1, %eax; mov $1, %eax; mov $1, %eax => {
+  uint32_t src_val;
+  src_val = 1; R[EAX] = src_val;
+  src_val = 1; R[EAX] = src_val;
+  src_val = 1; R[EAX] = src_val;
+}
+```
+
+聪明的编译器
+
+* 知道 `src_val` 之后不再使用
+* 编译成一句 `R[EAX] = 1`；如果 `R` 的地址静态确定，只需一条 `mov` 指令！
+
+---
+
+# 理解 RTL：计算机 = 状态机
+
+一般模拟器：直接根据指令改变计算机系统状态
+
+```c
+switch (opcode) {
+  // 我们读了那么多代码，其实就这一句话😂
+  ... case 0xbd: R[R_EBP] = inst_fetch(4); break; ...
+}
+```
+
+----
+
+.blue[NEMU 设计]：所有对模拟器.red[状态]的改变，全部在 RTL 中
+
+* 因此在.red[非 rtl 代码中改变内存、CPUstate 都是非法的] (常见误解)
+* 非常有趣的设计
+
+---
+
+class: center, middle
+
+# 总结
+
+---
+
+# 总结
+
+PA 的框架有点复杂，需要弄清楚一些知识点
+
+* x86/MIPS32/RISC-V 指令的格式
+* 计算机执行指令的原理 (取指令、译码、执行)
+* C 编程的基础知识
+
+----
+
+其实最大的障碍在 C 语言和系统编程
+
+* 但写代码的 paradigm 和之前课程不太一样
+* 用对工具很重要：代码浏览、查看预编译后的结果 (对照)……
+
+----
+
+.red[.center[Happy Hacking!]]
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

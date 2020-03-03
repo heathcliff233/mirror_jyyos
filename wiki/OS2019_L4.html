@@ -1,0 +1,375 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>L4: 进程管理</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="l4">L4: 进程管理</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">本实验为不计分选做实验，但大家可以提交 :)</h4>
+<p>你的所有操作系统实验将在你之前的代码上完成，你只需要维护一份内容不断增加的实验报告(pdf格式)，其中每次实验的内容不建议超过2页A4纸。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的bug等。</p>
+</div>
+<div class="fenced fenced-blue">
+<h4 id="meet-in-the-middle">Meet in the Middle</h4>
+<p>在本学期的MiniLabs里，我们编写的都是形如</p>
+<pre class="codehilite"><code class="language-c">int main(int argc, char *argv[]) {
+ ...
+}</code></pre>
+
+
+<p>这样的程序，这些程序调用libc或者使用系统调用API (C语言封装)，来实现各式各样的应用需求。在这个实验里，我们的操作系统终于可以加载这样的程序了——终于MiniLabs和OSLabs在这里</p>
+</div>
+<h3 id="_2">收到的作业</h3>
+<p><table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></p>
+<h2 id="_3">实验描述</h2>
+<p>实现uproc模块中的以下API，并且能在系统启动后加载文件系统里的一个程序(路径固定，例如<code>/bin/init</code>)作为用户进程执行，用户进程运行在Ring 3，通过<code>int $0x80</code>执行系统调用。</p>
+<pre class="codehilite"><code class="language-c">MODULE {
+  void (*init)();
+  int (*mmap)(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
+  int (*fork)();
+  int (*execve)(const char *path, char *argv[], char *envp[]);
+  int (*exit)();
+} MOD_NAME(uproc);</code></pre>
+
+
+<div class="fenced fenced-blue">
+<h4 id="_4">开放实验</h4>
+<p>与L3类似，本次实验是开放的实验，大家可以自由愉快地发挥啦！在完成这个实验后，你们就真正获得了完整的操作系统体验。有兴趣的同学可以把navy-apps项目中的程序移植到你们的操作系统中——同样也欢迎大家在来年参加龙芯杯系统能力竞赛，做自己完整的计算机系统！</p>
+<p>(JYY在这里说抱歉，真的没有时间把全套框架做好，让大家做完实验就能跑应用了……争取明年赶上！)</p>
+</div>
+<h3 id="_5">创建进程上下文</h3>
+<p>进程有自己独立的地址空间。为了使用硬件管理虚拟存储的机制，我们需要启动AbstractMachine的VME：</p>
+<pre class="codehilite"><code class="language-c">int _vme_init(void *(*pgalloc)(size_t size), void (*pgfree)(void *));</code></pre>
+
+
+<p>你需要给<code>_vme_init</code>传递两个函数指针类型的参数：</p>
+<pre class="codehilite"><code class="language-c">void *paglloc(size_t size) {
+  // your implementation
+}
+void pgfree(void *ptr) {
+  // your implementation
+}</code></pre>
+
+
+<p>由于创建地址空间需要额外的内存，在需要分配物理页面时，VME会调用你传入的pgalloc/pgfree函数，其中pgalloc参数为页面的大小(例如4KB或1MB)，pgfree会传入你需要释放的物理页地址。要求：</p>
+<ul>
+<li><code>pgalloc()</code>返回的内存对齐到页边界，即<code>pgalloc(size)</code>返回的地址<code>mod size == 0</code>。</li>
+<li>线程安全。<code>_vme_init</code>, <code>_map</code>, <code>_protect</code>, <code>_unprotect</code>可能调用pgalloc/pgree (不持有任何锁)。因此你需要格外注意你实现的正确性。</li>
+</ul>
+<p>之后，可以使用<code>_ucontext()</code>创建一个用户空间进程的上下文，它与<code>_kcontext</code>非常类似：</p>
+<pre class="codehilite"><code class="language-c">_Context *_ucontext(_AddressSpace *as,
+                    _Area ustack, // 用户栈，虚拟地址空间中的地址
+                    _Area kstack, // 内核栈，内核空间、物理地址
+                    void *entry,  // 用户态的第一条指令，通常是ELF的入口
+                                  // 执行必要的初始化，就像AM一样
+                    void *args);  // 一个参数指针</code></pre>
+
+
+<p><code>ucontext()</code>返回的<code>_Context</code>可以直接调度到处理器上执行，默认运行在低权限下，不能访问内核空间，也不能执行如I/O、关中断等系统指令。执行非法指令将会引起异常(会被<code>os-&gt;trap()</code>捕获)。</p>
+<h3 id="_6">进程的第一条指令</h3>
+<p>虽然我们按照上述步骤创建了进程并且可以调度，但现在这个进程什么都不能执行：它并不知道该执行什么代码，甚至我们也不知道在<code>_ucontext()</code>创建上下文时，我们需要给进程的入口地址entry指定什么数值——因此直接调度它会得到在entry上的page fault。</p>
+<p>那么怎么测试我们的第一个用户进程呢？是等到后面的实验都做完吗？当然没必要了！</p>
+<div class="fenced fenced-green">
+<h4 id="_7">循序渐进编写代码</h4>
+<p>如果你想一口气把所有内容都写完再去测试，那定位bug的难度就大了。因此你不妨先实现一个最简单的用户程序，它不断地执行系统调用，例如：</p>
+<pre class="codehilite"><code class="language-c">int syscalls() {
+  int x = 0;
+  while (1) {
+    asm volatile(&quot;int $0x80&quot; : : &quot;a&quot;(++x));
+  }
+}</code></pre>
+
+
+<p>然后得到它的汇编指令：</p>
+<pre class="codehilite"><code class="language-text">00000000 &lt;f&gt;:
+   0:   b8 00 00 00 00          mov    $0x0,%eax
+   5:   83 c0 01                add    $0x1,%eax
+   8:   cd 80                   int    $0x80
+   a:   eb f9                   jmp    5 &lt;f+0x5&gt;</code></pre>
+
+
+<p>然后分配一页：</p>
+<pre class="codehilite"><code class="language-c">static uint8_t code[] = { 0xb8, 0x00, ..., 0xeb, 0xf9, };
+void *ptr = pgalloc(as-&gt;pgsize);
+memcpy(ptr, code, sizeof(code));</code></pre>
+
+
+<p>并且把<code>ptr</code>映射到地址空间中的某个位置，然后就可以测试你的系统调用实现了！在这个例子里，你先实现了一个最小的“用户进程”，调对并熟悉了VME API之后，就可以进入后续的实验了。</p>
+<p>你可以在此基础上实现一些简化的进程管理，确认测试无误后再考虑ELF的加载。</p>
+</div>
+<p>在完成了一些小的测试之后，我们就可以进入正题了：实现下来实现虚拟存储管理的核心系统调用mmap。</p>
+<h3 id="mmap">实现mmap</h3>
+<p>从道理上，mmap就是进程维护它关于内存映射的一个“视图”，就像我们在pmap命令中看到的那样：</p>
+<pre class="codehilite"><code>000055eda272d000    780K r-x-- zsh          # 代码
+000055eda29f0000      8K r---- zsh          # rodata
+000055eda29f2000     24K rw--- zsh          # 数据
+000055eda29f8000     80K rw---   [ anon ]   # bss
+000055eda4801000   1272K rw---   [ anon ]   # 堆区
+...
+00007f85c30de000   1948K r-x-- libc-2.27.so # 动态链接库
+00007f85c32c5000   2048K ----- libc-2.27.so
+00007f85c34c5000     16K r---- libc-2.27.so
+00007f85c34c9000      8K rw--- libc-2.27.so
+00007f85c34cb000     16K rw---   [ anon ]
+...</code></pre>
+
+
+<p>我们只需在进程中维护这个数据即可，例如我们不妨假设进程不能拥有超过16个内存映射区域(虽然这对于Linux来说是不可接受的，但对我们的小操作系统来说，这也没啥问题)：</p>
+<pre class="codehilite"><code class="language-c">struct mm_area {
+  uintptr_t start, end;
+  int fd, prot, flags;
+  off_t offset;
+};
+
+struct task {
+  ...
+  struct mm_area mmaps[16];
+  ...
+}</code></pre>
+
+
+<p>所谓mmap，就是在<code>maps[]</code>中找到一个空闲的slot，然后标记好映射到哪个文件的哪个位置。此外，我们支持匿名映射(<code>MAP_ANONYMOUS</code>)，它不涉及文件描述符，可以用于分配内存空间。bss和堆栈都可以直接使用匿名映射分配。</p>
+<p>有了mmap，ELF的加载就变得非常容易了，甚至比之前《计算机系统基础》课程中的还要容易——如果你使用readelf查看编译后的文件 (litenes)：</p>
+<pre class="codehilite"><code class="language-c">Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz   Flg Align
+LOAD           0x001000 0x00100000 0x00100000 0x0cfe8 0x0cfe8  R E 0x1000
+LOAD           0x00e000 0x0010d000 0x0010d000 0x74484 0x171e60 RW  0x1000
+GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000  RWE 0x10</code></pre>
+
+
+<p>看到了最后的Align选项(也可以在ld-script里指定align的字节数)，这就是为了方便对齐到页边界，直接进行内存映射。我们只需要用mmap系统调用把文件描述符对应文件的一部分映射到进程地址空间中即可。</p>
+<p>如果我们查看程序运行的strace，也有相当一部分是在进行动态链接库的内存映射：</p>
+<pre class="codehilite"><code class="language-text">openat(AT_FDCWD, &quot;/lib/x86_64-linux-gnu/libc.so.6&quot;, O_RDONLY|O_CLOEXEC) = 3
+read(3, &quot;\177ELF&quot;..., 832)              = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=2030544, ...}) = 0
+mmap(NULL, 8192, READ|WRITE, PRIVATE|ANONYMOUS, -1, 0) = 0x7f8dcf1bd000
+mmap(NULL, 4131552, READ|EXEC, PRIVATE|DENYWRITE, 3, 0) = 0x7f8dcebbb000
+mprotect(0x7f8dceda2000, 2097152, NONE) = 0
+mmap(0x7f8dcefa2000, 24576, READ|WRITE, PRIVATE|FIXED|DENYWRITE, 3, 0x1e7000) = 0x7f8dcefa2000
+mmap(0x7f8dcefa8000, 15072, READ|WRITE, PRIVATE|FIXED|ANONYMOUS, -1, 0) = 0x7f8dcefa8000
+close(3)                                = 0</code></pre>
+
+
+<p>在<code>struct task</code>中完成映射后，就可以启动程序并运行了。用户进程执行的第一条指令是ELF文件指定的entry，这将会得到一个page fault，会由<code>os-&gt;trap()</code>捕获：</p>
+<pre class="codehilite"><code class="language-c">typedef struct _Event {
+  int event;
+  uintptr_t cause, ref;
+  const char *msg;
+} _Event;</code></pre>
+
+
+<p>其中的cause记录了page fault的原因；ref记录了page fault的地址。注意到这个page fault是在进程上下文上运行的，你做的事情大约是：</p>
+<pre class="codehilite"><code class="language-c">void *pg_addr = ROUND_DOWN(ev.ref, as-&gt;pagesz); // 获得缺页的地址
+for (int i = 0; i &lt; 16; i++) {
+  struct mm_area *mma = &amp;current-&gt;mmaps[i];
+  if (contains(mma, pg_addr)) {
+    void *pa = pgalloc(); // 分配一个新页
+    // 从mma-&gt;fd中读取数据到pa
+  }
+}</code></pre>
+
+
+<p>也就是调用read系统调用的实现，从VFS中把这一页对应的数据载入到内存即可。</p>
+<div class="fenced fenced-blue">
+<h4 id="_8">映射物理页</h4>
+<p>AM已经提供了<code>_map()</code>实现虚拟地址空间中页的映射，遵循硬件的要求，<code>_map()</code>的页面必须对齐到页边界。</p>
+</div>
+<p>听起来很简单吧——mmap就是这么简单，这么好用。</p>
+<h3 id="_9">管理物理页</h3>
+<p>你需要管理一个进程所有的页面，例如用以下结构体表示一个进程映射的物理页。</p>
+<pre class="codehilite"><code class="language-c">struct page {
+  int flags;   // 页的状态，如copy-on-write标记
+  int refcnt;  // 引用计数
+  void *paddr; // 物理地址
+};</code></pre>
+
+
+<p>你还需要为每个进程维护它所有的页面，这样就能很容易地实现fork了。如果你希望实现copy-on-write的fork，就遍历。进程所有的pages，把它们设置成只读，并且让父子进程共享同一个<code>struct page</code>。当page fault发生在copy-on-write的页面时，将这个页面的引用计数减一并分配新页面(如果引用计数回到1，则可以标记为可写)。</p>
+<h3 id="_10">系统调用</h3>
+<p>在调度user-space context到处理器上后，处理器将在Ring 3 (低权限的保护模式)上运行，执行任何非法的指令将会导致#13 GP异常；访问页表中没有权限的页面将会导致#14 PF异常；或者，如果希望进行系统调用，使用<code>int $0x80</code>陷入内核执行：</p>
+<p>类似的，我们可以在Linux系统上做类似的事情(不过不支持<code>int $0x80</code>)，请求系统调用：</p>
+<pre class="codehilite"><code class="language-c">#include &lt;stdio.h&gt;
+
+int main() {
+  int ret;
+  asm volatile(&quot;syscall&quot; // x86-64, 不是int $0x80
+    : &quot;=a&quot;(ret) // 执行后%rax: 系统调用返回值
+    : &quot;a&quot;(57)); // 执行前%rax: 系统调用编号
+  printf(&quot;ret = %d\n&quot;, ret);
+}</code></pre>
+
+
+<p>(可以使用<code>man 2 syscall</code>查看Linux在不同系统上的系统调用ABI，例如RDI寄存器用来存放系统调用的第一个参数……)</p>
+<p>系统调用也会被<code>os-&gt;trap()</code>捕获，对应的事件是<code>_EVENT_SYSCALL</code>。中断处理程序可以通过<code>ctx-&gt;GPR1</code>, …<code>ctx-&gt;GPR4</code>访问系统调用的参数；<code>GRPx</code>用于系统调用返回值(参见<code>am/include/arch/x86-qemu.h</code>)。(这实际上是AbstractMachine和用户程序之间的ABI。)</p>
+<h3 id="_11">实现系统调用</h3>
+<p>你可以直接在<code>os-&gt;trap()</code>里根据系统调用的编号，进行系统调用处理，就像这样：</p>
+<pre class="codehilite"><code class="language-c">int syscall_id = saved_ctx-&gt;GPR1;
+int ret = -EINVAL;
+switch (syscall_id) {
+  case SYS_READ:
+    ret = vfs-&gt;read(...);
+    break;
+  case SYS_WRITE:
+    ret = vfs-&gt;write(...);
+    break;
+}
+saved_ctx-&gt;GRPx = ret;</code></pre>
+
+
+<p>你没有看错——操作系统就是这么简单！Linux就是直接在系统调用的异常处理函数里执行系统调用的。当然，你写代码的时候可能会稍稍遇到一些小麻烦：</p>
+<blockquote>
+<p>系统调用时，有些参数是来自用户进程地址空间的指针(例如<code>write()</code>系统调用的<code>buf</code>参数)，但这个指针仅在用户进程运行时才有效，内核并不能直接访问。</p>
+</blockquote>
+<p>所以你需要实现</p>
+<pre class="codehilite"><code class="language-c">void *copy_from_user(void *dst, void __user *src, size_t nbytes);
+void *copy_to_user(void __user *dst, void *src, size_t nbytes);</code></pre>
+
+
+<p>由于所有的用户空间的页面都是操作系统代码通过<code>_map()</code>映射的，因此操作系统原则上有足够多的信息把进程虚拟地址空间里的一个地址转换成<code>_heap</code>中的物理地址。</p>
+<div class="fenced fenced-green">
+<h4 id="_12">能不能减少复制？</h4>
+<p>在x86系统上，如果把内核代码/数据和用户代码/数据映射到同一地址空间里(Linux内核就是这么做得)，那么只要在<code>int $0x80</code>之后开始直接执行系统调用代码(<code>vfs-&gt;write(...)</code>)，其指向用户态缓冲区的指针就始终是有效的。</p>
+<p>不过AbstractMachine为了简化概念，假设内核和用户进程并没有映射到同一个地址空间，因此需要通过操作系统内部维护的虚拟地址-物理地址映射来完成用户态指针的数据拷贝。</p>
+<p>说到底，用来教学的东西是有一些overly simplify的嫌疑的——但这门课的设计风格是注重机制(mechanism)，也就是“先完成，后完美”，策略和性能优化都是留给大家二周目(或者更多周目)思考的问题。</p>
+</div>
+<p>最后的一个大坑是，<code>os-&gt;trap()</code>是在关中断的状态下运行的。这里就涉及到用户进程的一个大坑了……</p>
+<div class="fenced fenced-green">
+<h4 id="_13">是否应该在系统调用执行时打开中断？</h4>
+<p>答案是Yes——系统调用和缺页都是耗时很长的操作，如果关闭中断会导致中断丢失。打开中断容易，但请你仔细看一看你的代码：</p>
+<pre class="codehilite"><code class="language-c">void os_trap(_Event ev, _Context *ctx) {
+  ...
+  current-&gt;saved_ctx = *context;
+  ...</code></pre>
+
+
+<p>只要在系统调用/缺页(缺页可以看成是一种系统调用)时打开中断，这段代码就会造成麻烦：缺页或系统调用是由<code>int $0x80</code>指令或异常引起的，所以我们的代码相当于反复调用<code>os_trap</code>。甚至即便你不打开中断，在<code>os-&gt;trap</code>时睡眠也会引发一个额外的<code>int $0x80</code>：</p>
+<pre class="codehilite"><code class="language-c">// 中断/异常发生
+[1] void os_trap(_Event ev, _Context *ctx) {
+[2] current-&gt;saved_ctx = *context;
+[3] asm volatile(&quot;int $0x80&quot;);
+[4] void os_trap(_Event ev, _Context *ctx) { // 再次异常
+[5] current-&gt;saved_ctx = *context;</code></pre>
+
+
+<p>在[5]发生时，之前保存的寄存器现场已经<strong>不见</strong>了。也就是说，返回到用户空间的context已经找不回来了。你需要谨慎处理这个问题。(这是一个非常有用的剧透，否则全班同学又会debug致死了。)</p>
+</div>
+<h3 id="_14">操作系统上的应用程序</h3>
+<p>在Linux上直接编译的应用程序，即便复制到文件系统中(通过initrd)，也是无法执行的，即便用<code>-static</code>编译也不行。navy-apps提供了编译在操作系统上运行程序的途径，大家可以参考；大家也可以使用<code>make -nB</code>查看我们在编译AM时使用的编译/链接选项，然后编写自己生成应用程序二进制文件的Makefile。</p>
+<div class="fenced fenced-green">
+<h4 id="_15">代码、数据、堆栈的位置</h4>
+<p>静态编译的ELF文件中需要指定代码和数据的地址。但这个地址到底应该是多少呢？如果查看VME的实现，你会发现：</p>
+<pre class="codehilite"><code class="language-c">static const struct vm_area areas[] = {
+  { RANGE(0x00000000, 0x20000000), 1 }, // kernel code/data
+  { RANGE(0x40000000, 0x80000000), 0 }, // protected address space range
+  { RANGE(0xf0000000, 0x00000000), 1 }, // system mmap area
+};
+#define uvm_area (areas[1].area)</code></pre>
+
+
+<p><code>_protect()</code>执行的是：</p>
+<pre class="codehilite"><code class="language-c">*p = (_AddressSpace) {
+  .pgsize = PGSIZE,
+  .area = uvm_area,
+  .ptr = upt,
+};</code></pre>
+
+
+<p>这也是AbstractMachine应用程序ABI的一部分。</p>
+</div>
+<p>剩下一些非常tedious的工作，需要小心处理，但你得到的回报就是你拥有了一个完整的操作系统！祝贺你完成了走向计算机系统的一小步，虽然它和一个真正的操作系统(例如Linux)还有很大的距离，但你在其中积累的经验和认识，将是你走向更复杂计算机系统的阶梯。</p>
+<div class="fenced fenced-blue">
+<p>(今年就到这里说再见啦！)</p>
+<p>虽然简陋，但我们真的能在操作系统上运行应用程序了！写出一个看起来可以用的操作系统没有那么难。如果你看Linux 1.0的代码，它几乎比我们现在写出的代码好不了太多。但写出一个正确性和安全性有一定保证、性能过硬的操作系统，却不是一个人可以完成得了的——Linux Kernel社区里人才济济，不仅有天才黑客，还有很多拿着公司薪水的职业打手。</p>
+<p>无论如何，希望OSLab能帮助大家彻底消除计算机系统的神秘感，从此走上码农的不归路。</p>
+<p><center><img src="../static/wiki/ics/2018/slides/img/projectn.jpg" width="300px"/></center>
+</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

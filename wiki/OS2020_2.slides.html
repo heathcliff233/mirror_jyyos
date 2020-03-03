@@ -1,0 +1,882 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>Easy Pieces #1: Concurrency</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="easy-pieces-1-concurrency">Easy Pieces #1: Concurrency</h1></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">多处理器编程：从入门到放弃</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>我们对操作系统已经有了模糊的认识：它是支持应用程序的系统软件；应用程序由代码和数据构成，使用 <code>syscall</code> 等指令调用操作系统 API……</p>
+<p>在第一部分 (并发) 中介绍实现操作系统的基础知识：</p>
+<ul>
+<li>操作系统首先是一个<span class="red">程序</span>，是世界上最早的 “<span class="red">并发程序</span>” 之一</li>
+<li>如何编写并发程序 (操作系统课程的学习目标之一)</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>什么是并发？</li>
+<li>为什么需要并发？</li>
+<li>(共享内存) 多处理器上的并发程序 (1)</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="concurrency-parallelism">并发 (Concurrency) 与并行 (Parallelism)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="concurrency">并发 (Concurrency)</h2>
+<blockquote>
+<p>Concurrent: existing, happening, or done <em>at the same time</em>.</p>
+<p>In computer science, concurrency refers to the ability of different parts or units of a program, algorithm, or problem to be executed out-of-order or in partial order, without affecting the final outcome. (Wikipedia)</p>
+</blockquote>
+<p>思考题：<span class="green">为什么在这门课 (先) 讲并发？</span></p>
+<div class="fragment">
+<ul>
+<li>讲并发<ul>
+<li>操作系统是最早的并发程序之一</li>
+<li>并发控制算法最早在操作系统中研究</li>
+</ul>
+</li>
+<li>先讲并发<ul>
+<li>好做实验 (L1: 多处理器 bare-metal 上的 <code>malloc</code>/<code>free</code>)<ul>
+<li>警告：难度剧增</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多任务操作系统中的并发</h2>
+<blockquote>
+<p>(假设系统中只有一个 CPU)</p>
+</blockquote>
+<p>操作系统可以同时加载多个程序 (进程)</p>
+<ul>
+<li>每个进程都有独立的地址空间；互相不会干扰<ul>
+<li>你编写的 C 程序，任何 <code>*p</code> 都不能访问其他进程的内存</li>
+<li>思考题：<span class="green">即便是拥有 root 权限的进程，也不能直接访问操作系统内核的内存，为什么？</span></li>
+</ul>
+</li>
+<li>每隔一定时间，就切换到另一个进程执行 (看起来进程好像在同时运行)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">多任务操作系统中的并发 (cont'd)</h2>
+<p>并发性的来源：<span class="red">进程会调用操作系统的 API</span></p>
+<ul>
+<li><code>write(fd, buf, 1 TiB)</code> (<a href="../static/wiki/os/2020/demos/bytes.h">TiB 宏</a>)</li>
+<li><code>write</code> 的实现是操作系统的一部分<ul>
+<li>x86-64 应用程序执行 <code>syscall</code> 后就进入操作系统执行 (应用程序不可见)<ul>
+<li>类似 “中断处理程序”</li>
+</ul>
+</li>
+<li>运行在处理器的高特权级；能访问硬件设备 (否则就不能写数据了)</li>
+<li>但又不能一直霸占处理器运行 (否则系统就卡死了)</li>
+</ul>
+</li>
+<li>因此必须允许 <code>write</code> 到一半的时候，让另一个进程执行<ul>
+<li>另一个进程调用 <code>read(fd, buf, 512 MiB)</code> 读取同一个文件</li>
+<li><span class="red">操作系统代码并发了</span>：操作系统 API 实现需要考虑并发</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>“操作系统是最早的并发程序之一”</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">典型的并发系统</h2>
+<p>并发 (Concurrent)：多个执行流可以不按照一个特定的顺序执行</p>
+<p>并行 (Parallel)：允许多个执行流同时执行 (多个处理器)</p>
+<hr></hr>
+<table>
+<thead>
+<tr>
+<th>处理器数量？</th>
+<th>共享内存？</th>
+<th>典型的并发系统</th>
+<th>并发/并行</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单处理器</td>
+<td>共享内存</td>
+<td>OS 内核/多线程程序</td>
+<td>并发不并行</td>
+</tr>
+<tr>
+<td>多处理器</td>
+<td>共享内存</td>
+<td>OS 内核/多线程程序/GPU Kernel</td>
+<td>并发、并行</td>
+</tr>
+<tr>
+<td>多处理器</td>
+<td>不共享内存</td>
+<td>分布式系统 (消息通信)</td>
+<td>并发、并行</td>
+</tr>
+</tbody>
+</table></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">多处理器编程：入门</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">线程</h2>
+<p>线程：多个执行流并发/并行执行，并且它们<span class="red">共享内存</span></p>
+<ul>
+<li>两个执行流共享代码和所有全局变量 (数据、堆区)</li>
+<li>线程之间指令的执行顺序是不确定 (<em>non-deterministic</em>) 的</li>
+</ul>
+<pre class="codehilite"><code class="language-c">int x = 0, y = 0; // defaults to 0
+
+void thread_1() {
+  [1] x = 1;
+  [2] printf("y = %d\n", y);
+}
+
+void thread_2() {
+  [3] y = 1;
+  [4] printf("x = %d\n", x);
+}</code></pre>
+
+
+<ul>
+<li>1 → 2 → 3 → 4 (y = 0, x = 1)</li>
+<li>1 → 3 → 2 → 4 (y = 1, x = 1)</li>
+<li>1 → 3 → 4 → 2 (x = 1, y = 1)</li>
+<li>...</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">线程：什么该共享、什么不共享？</h2>
+<pre class="codehilite"><code class="language-c">extern int x;
+int foo() {
+  int volatile t = x;
+  t += 1;
+  x = t;
+}</code></pre>
+
+
+<pre class="codehilite"><code class="language-text">0000000000001140 &lt;foo&gt;:
+ 1140: 8b 05 ce 2e 00 00       mov    0x2ece(%rip),%eax # 4014 &lt;x&gt;
+ 1146: 89 44 24 fc             mov    %eax,-0x4(%rsp)
+ 114a: 8b 44 24 fc             mov    -0x4(%rsp),%eax
+ 114e: 83 c0 01                add    $0x1,%eax
+ 1151: 89 44 24 fc             mov    %eax,-0x4(%rsp)
+ 1155: 8b 44 24 fc             mov    -0x4(%rsp),%eax
+ 1159: 89 05 b5 2e 00 00       mov    %eax,0x2eb5(%rip) # 4014 &lt;x&gt;
+ 115f: c3                      retq   </code></pre>
+
+
+<p>考虑如果有两个执行流同时调用 <code>foo</code>，哪些资源是共享的？</p>
+<ul>
+<li><code>foo</code> 的代码 (<code>1140--115f</code>)</li>
+<li>寄存器: <code>rip</code>, <code>rsp</code>, <code>rax</code></li>
+<li><code>t</code>: <code>-0x4(%rsp)</code>, <code>x</code>: <code>0x2eb5(%rip)</code></li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="posix-threads">POSIX Threads</h2>
+<p>POSIX 为我们提供了线程库 (pthreads)</p>
+<ul>
+<li>使用 <code>pthread_create</code> 创建并运行线程</li>
+<li>使用 <code>pthread_join</code> 等待某个线程结束</li>
+<li><code>man 7 pthreads</code></li>
+</ul>
+<hr></hr>
+<p>无论系统是单处理器/多处理器，都得到若干共享了当前进程地址空间的<span class="red">线程</span></p>
+<ul>
+<li>共享代码：所有线程的代码都来自当前进程的代码</li>
+<li>共享数据：全局数据/堆区可以自由引用</li>
+<li>独立堆栈：每个线程有独立的堆栈</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="threadsh-simplified-thread-apis"><code>threads.h</code>: Simplified Thread APIs</h2>
+<p>操作系统课封装了线程 API (<a href="../static/wiki/os/2020/demos/threads.h"><code>threads.h</code></a>)</p>
+<ul>
+<li><code>create(fn)</code><ul>
+<li>创建并运行一个线程，该线程立即开始执行函数 <code>fn</code></li>
+<li>函数原型 <code>void fn(int tid) { ... }</code></li>
+<li><code>tid</code> 是从 1 开始编号</li>
+</ul>
+</li>
+<li><code>join(fn)</code><ul>
+<li>等待所有线程执行结束</li>
+<li>执行函数 <code>fn</code></li>
+<li>只能 join 一次</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="threadsh"><code>threads.h</code> 实现：数据结构</h2>
+<pre class="codehilite"><code class="language-c">struct thread {
+  int id;               // 线程号
+  pthread_t thread;     // pthread 线程
+  void (*entry)(int);   // 入口地址
+  struct thread *next;  // 链表
+};
+
+struct thread *threads; // 链表头
+void (*join_fn)();      // callback</code></pre>
+
+
+<p><code>pthread_t</code>: POSIX thread API 中的线程号</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="threadsh"><code>threads.h</code> 实现：线程创建</h2>
+<pre class="codehilite"><code class="language-c">static inline void *entry_all(void *arg) {
+  struct thread *thread = (struct thread *)arg;
+  thread-&gt;entry(thread-&gt;id);
+  return NULL;
+}
+
+static inline void create(void *fn) {
+  struct thread *cur = (struct thread *)malloc(sizeof(struct thread));
+  assert(cur);
+  cur-&gt;id    = threads ? threads-&gt;id + 1 : 1;
+  cur-&gt;next  = threads;
+  cur-&gt;entry = (void (*)(int))fn;
+  threads    = cur;
+  pthread_create(&cur-&gt;thread, NULL, entry_all, cur);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="threadsh-join"><code>threads.h</code> 实现：线程 Join</h2>
+<pre class="codehilite"><code class="language-c">static inline void join(void (*fn)()) {
+  join_fn = fn;
+}
+
+__attribute__((destructor)) static void join_all() {
+  for (struct thread *next; threads; threads = next) {
+    pthread_join(threads-&gt;thread, NULL);
+    next = threads-&gt;next;
+    free(threads);
+  }
+  join_fn ? join_fn() : (void)0;
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多处理器 & 多线程：入门！</h2>
+<p>恭喜你，你已经可以玩起多线程编程啦！</p>
+<pre class="codehilite"><code class="language-c">#include &lt;threads.h&gt;
+
+void a() { while (1) { printf("a"); } }
+void b() { while (1) { printf("b"); } }
+
+int main() {
+  setbuf(stdout, NULL); // ???
+  create(a);
+  create(b);
+}</code></pre>
+
+
+<p>更多的例子</p>
+<ul>
+<li><span class="green">如何相信真的启动了多个线程？</span> (<a href="../static/wiki/os/2020/demos/hello-mt.c">hello-mt.c</a>)</li>
+<li><span class="green">如何知道每个线程的堆栈范围和大小？</span> (<a href="../static/wiki/os/2020/demos/stack-probe.c">stack-probe.c</a>)<ul>
+<li>使用 <code>pmap</code> 可以查看到 8192 KiB 的内存映射区域和 4 KiB (一页) 的 guard</li>
+<li>每个线程都要分配 8 MiB 堆栈，为什么 1,000 个线程没有耗尽内存？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">共享内存带来的麻烦……</h2>
+<p>线程共享代码、数据，拥有独立堆栈</p>
+<pre class="codehilite"><code class="language-c">int x;
+
+void thread_func() {
+  int y;  // 除非指针逃逸，其他线程不可见
+  x++;    // 其他线程直接可见
+}</code></pre>
+
+
+<hr></hr>
+<p>多处理器系统中线程的代码可能<span class="red">同时</span>执行</p>
+<ul>
+<li>两个线程同时执行 <code>x++</code>，结果会是什么呢？</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="1">多处理器编程：放弃 (1) 原子性</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多处理器编程的困难：共享资源</h2>
+<p>并发/并行执行的线程可能对资源 (内存) 进行 “争抢”</p>
+<ul>
+<li><p>一个和尚挑水喝，两个和尚抬水喝，三个和尚没水喝</p>
+<ul>
+<li>随着线程数量的增加，并发控制的难度越来越大</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/monks.jpg" width="600px"></img></p>
+</li>
+<li><p>如不进行<span class="red">并发控制</span>，结果可能出乎意料</p>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="write">例子: write 的实现</h2>
+<pre class="codehilite"><code class="language-c">ssize_t write(int fd, const char *buf, size_t size) {
+  struct file *file = get_file(fd);
+  ...
+  write_to_disk(buf, file-&gt;offset, size);
+  file-&gt;offset += size;
+  ...
+}</code></pre>
+
+<p>并发执行 <code>write</code> 会发生什么？</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">例子：山寨多线程支付宝</h2>
+<pre class="codehilite"><code class="language-c">int pay(int money) {
+  if (deposit &gt;= money) {
+    deposit -= money;
+    return SUCCESS;
+  } else {
+    return FAIL;
+  }
+}</code></pre>
+
+
+<p>并发执行 <code>pay(100)</code> 会发生什么 (<code>balance == 100</code>)？</p>
+<ul>
+<li>如果是 <code>deposit</code> 是 <code>unsigned</code>，会发生更严重的后果——账户里会多出用不完的钱！</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>为了正确实现 pay，我们需要<span class="red">原子性</span> (atomicity)<ul>
+<li>一段代码不允许与其他代码并发</li>
+<li>(历史) 1960s，大家争先在共享内存上实现原子性 (互斥)<ul>
+<li>但几乎所有的 solution 都是<span class="red">错的</span>，直到 <a href="https://en.wikipedia.org/wiki/Dekker%27s_algorithm">Dekker's Algorithm</a>，只能保证两个线程的互斥</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="look-deeper-inside">Look Deeper Inside...</h2>
+<pre class="codehilite"><code class="language-c">int pay(int money) {
+  if (deposit &gt;= money) {
+    deposit -= money;
+    return SUCCESS;
+  } else {
+    return FAIL;
+  }
+}</code></pre>
+
+
+<p>中的 <code>deposit -= money;</code> 在硬件上的实际实现：</p>
+<pre class="codehilite"><code class="language-c">int tmp = deposit;
+// 可能与其他处理器并发
+tmp -= money;
+// 可能与其他处理器并发
+deposit = tmp;</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">另一个例子：求和</h2>
+<p>分两个线程，计算 <math class="inline-math">1+1+1+\ldots+1</math> (共计 <math class="inline-math">2n</math> 个 <math class="inline-math">1</math>)</p>
+<pre class="codehilite"><code class="language-c">#define n 100000000
+long sum = 0;
+
+void do_sum() { for (int i = 0; i &lt; n; i++) sum++; }
+void print()  { printf("sum = %ld\n", sum); }
+
+int main() {
+  create(do_sum);
+  create(do_sum);
+  join(print);
+}</code></pre>
+
+
+<p>结果</p>
+<ul>
+<li>113863902</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">放弃的理由：原子性的丧失</h2>
+<p>指令序列可以在任意时刻被<span class="red">中断</span>，然后操作系统切换到其他线程执行</p>
+<ul>
+<li>即便是最简单的 <code>x++</code>，也不能保证原子性</li>
+<li>不用谈更大的代码片段了 (例如 <code>pay</code>)</li>
+</ul>
+<pre class="codehilite"><code class="language-text">===Thread 1===     ===Thread 2===
+movl (x), %eax           .                  // 1st x++;   x == 0
+addl $1,  %eax           .
+      .                  .
+      . // interrupt & context switch
+      .                  .
+      .            movl (x),  %eax          // 2nd x++;   x == 0
+      .            addl $1,   %eax
+      .            mov  %eax, (x)           // 2nd x++;   x == 1
+      .                  .
+      . // interrupt & context switch
+      .                  .
+mov %eax, (x)            .                  // 1st x++;   x == 1</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">有没有感到后怕？</h2>
+<p>单线程程序代码没有原子性的保证</p>
+<pre class="codehilite"><code class="language-c">void thread1() { while (1) { printf("a"); } }
+void thread2() { while (1) { printf("b"); } }</code></pre>
+
+
+<p><code>printf</code> 并发还对么？</p>
+<div class="fragment">
+<hr></hr>
+<pre class="codehilite"><code class="language-text">PRINTF(3)  ATTRIBUTES
+For an explanation of the terms used in this section, see attributes(7).
+┌────────────────────────┬───────────────┬────────────────┐
+│Interface               │ Attribute     │ Value          │
+├────────────────────────┼───────────────┼────────────────┤
+│printf(), fprintf(),    │ Thread safety │ MT-Safe locale │
+│sprintf(), snprintf(),  │               │                │
+│vprintf(), vfprintf(),  │               │                │
+│vsprintf(), vsnprintf() │               │                │
+└────────────────────────┴───────────────┴────────────────┘</code></pre>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="2">多处理器编程：放弃 (2) 顺序</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">更多的实验：求和</h2>
+<p>分两个线程，计算 <math class="inline-math">1+1+1+\ldots+1</math> (共计 <math class="inline-math">2n</math> 个 <math class="inline-math">1</math>)</p>
+<pre class="codehilite"><code class="language-c">#define n 100000000
+long sum = 0;
+
+void do_sum() { for (int i = 0; i &lt; n; i++) sum++; }
+void print()  { printf("sum = %ld\n", sum); }
+
+int main() {
+  create(do_sum);
+  create(do_sum);
+  join(print);
+}</code></pre>
+<div class="fragment">
+<p>结果： <span class="float-right"><img src="../static/wiki/os/2019/img/question.jpg" width="150px/"></img> </span>
+<ul>
+<li><code>-O0</code>: 113863902</li>
+<li><code>-O1</code>: 100000000</li>
+<li><code>-O2</code>: 200000000</li>
+</ul></p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">放弃的理由：顺序的丧失</h2>
+<p>编译器干了什么好事？</p>
+<p>允许<span class="red">源代码中 “内存访问” 指令不再按顺序甚至不再出现</span></p>
+<ul>
+<li>编译器假设是优化对象是<span class="red">单线程</span>程序<ul>
+<li>思考题：<span class="green">为什么？</span></li>
+</ul>
+</li>
+<li>假设程序是读 (<code>R</code>) 和写 (<code>W</code>) 的序列；编译器：<ul>
+<li>在值能被确定的前提下，<code>R(x)</code> 可能被删除</li>
+<li>在未来 <code>x</code> 一定被覆盖的前提下，<code>W(x)</code> 可能被删除</li>
+<li><code>x</code>, <code>y</code> 的读写可以交换顺序</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; n; i++) sum++;</code></pre>
+
+
+<p>可以翻译成</p>
+<ul>
+<li>(<code>-O1</code>) <code>tmp = R(sum); for (int i = 0; i &lt; n; i++) ; tmp += n; W(sum, tmp);</code></li>
+<li>(<code>-O2</code>) <code>tmp = R(sum); tmp += n; W(sum, tmp);</code> </li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="3">多处理器编程：放弃 (3) 可见性</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">实验：之前的一小段代码</h2>
+<pre class="codehilite"><code class="language-c">int x = 0, y = 0;
+
+void thread_1() {
+  [1] x = 1;
+  [2] printf("y = %d\n", y);
+}
+
+void thread_2() {
+  [3] y = 1;
+  [4] printf("x = %d\n", x);
+}</code></pre>
+
+
+<hr></hr>
+<p>实验结果 (4 x Xeon X7460, 24-cores)</p>
+<p><span class="float-right"><img src="../static/wiki/os/2019/img/question.jpg" width="150px/"></img> </span>
+<table>
+<thead>
+<tr>
+<th>打印的 x</th>
+<th>打印的 y</th>
+<th>概率</th>
+<th>可能的调度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>0</td>
+<td><font color="red">0.2%</font></td>
+<td>？？？</td>
+</tr>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>82.3%</td>
+<td>3 → 4 → 1 → 2</td>
+</tr>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>17.5%</td>
+<td>1 → 2 → 3 → 4</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td><font color="red">0.0%</font></td>
+<td>1 → 3 → 2 → 4</td>
+</tr>
+</tbody>
+</table></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">分析</h2>
+<ul>
+<li><code>x = 0, y = 1</code> 和 <code>x = 1, y = 0</code><ul>
+<li>可以接受</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>没有观察到 <code>x = 1, y = 1</code><ul>
+<li>可以接受，指令的执行就几个 nanoseconds，在 <code>[1] [2]</code> 之间插入其他指令的可能性很低</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>观察到 <code>x = 0, y = 0</code><ul>
+<li>难以接受：任何 [1], [2], [3], [4] 的排列都不可能得到</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">放弃的理由：可见性的丧失</h2>
+<p>为了使 CPU 运行得更快，CPU 可以<span class="red">不按顺序执行指令</span>！</p>
+<pre class="codehilite"><code class="language-text">movl $1, (x)   # x = 1, cache miss
+               # 如果等这条指令执行完，会浪费大量时间
+movl (y), %eax # 因此只要 x, y 不是同一个变量，CPU 会立即执行这条指令
+               # (此时 y = 0)
+...</code></pre>
+
+
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/arch-book.jpg" width="250px"></img></p>
+<p>现代处理器 (动态数据流分析)：</p>
+<ul>
+<li><span class="red">如果两条指令没有数据依赖关系，就让它们并行执行好了！</span></li>
+<li>乱序执行 (out-of-order)<ul>
+<li>多处理器上执行的结果可以不等价于指令按照某个顺序执行的结果</li>
+<li><a href="https://preshing.com/20120930/weak-vs-strong-memory-models/">Further reading</a></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">多处理器编程：从入门到放弃</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">代码的执行比我们想象的复杂</h2>
+<p>在现代计算机系统上，即便是一个简单的 <code>x = 1</code> 也会经历：</p>
+<ul>
+<li>C代码<ul>
+<li>编译器优化 → <span class="red">顺序的丧失</span></li>
+</ul>
+</li>
+<li>二进制文件</li>
+<li>处理器执行<ul>
+<li>中断/并行 → <span class="red">原子性的丧失</span></li>
+<li>乱序执行 → <span class="red">可见性的丧失</span></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>共享内存并发编程真正需要面对的难题：</p>
+<ul>
+<li>内存访问不保证按<span class="red">代码书写的顺序</span>发生 (order)</li>
+<li><span class="red">代码的原子性</span>随时被破坏 (atomicity)</li>
+<li>执行过的指令可能在<span class="red">多处理器间不可见</span> (visibility)<ul>
+<li>本节课讲解的都是最小的例子；复杂的例子……</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">保证顺序</h2>
+<p>控制编译器行为、阻止编译优化</p>
+<pre class="codehilite"><code class="language-c">void delay() {
+  for (volatile // !!!
+       int i = 0; i &lt; DELAY_COUNT; i++) ;
+}</code></pre>
+
+<p>保证内存访问 (指令) 的顺序</p>
+<pre class="codehilite"><code class="language-c">extern int x;
+
+#define barrier() asm volatile ("":::"memory")
+
+void foo() {
+  x++;
+  barrier(); // ============================
+  x++;       // 阻止 x 的访问被合并
+  y++;       // y 的访问不能被移到 barrier 之前
+}</code></pre>
+
+
+<p>(这部分内容应该出现在《计算机系统基础》)</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">保证原子性</h2>
+<p>本学期的重要主题：互斥 (mutual exclusion)</p>
+<ul>
+<li><p>效果等效于：</p>
+<pre class="codehilite"><code class="language-c">stop_the_world();
+... // critical section, 临界区
+resume_the_world();</code></pre>
+
+
+<ul>
+<li>执行 <code>stop_the_world()</code> 之后，整个系统中所有的其他线程都暂停</li>
+<li>执行 <code>resume_the_world()</code> 后，系统中其他线程才恢复</li>
+</ul>
+</li>
+<li><p>这样就可以保证我们安静地完成 <code>pay()</code> 或者 <code>sum++</code> 了</p>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">保证可见性</h2>
+<p>本学期基本不涉及</p>
+<ul>
+<li>会介绍一个简化但够用的模型</li>
+<li>简化自 C11 Memory Model</li>
+</ul>
+<hr></hr>
+<ul>
+<li>保证可见性：指令集来帮忙<ul>
+<li>顺序指令<ul>
+<li>fences (lfence, sfence, mfence, ...)</li>
+</ul>
+</li>
+<li>原子指令<ul>
+<li>x86-family: lock prefix (<code>lock xchg</code>, ...)</li>
+<li>riscv/mips: load-reservation/store-conditional (mip)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="take-aways-and-wrap-up">Take-aways and Wrap-up</h2>
+<p>多处理器编程：从入门到放弃</p>
+<ul>
+<li><p><span class="red">不要自作主张写 “聪明” 的并发程序</span></p>
+<ul>
+<li>W. Xiong, et al. <a href="https://www.usenix.org/events/osdi10/tech/full_papers/Xiong.pdf">Ad hoc synchronization considered harmful</a>. In <em>Proceedings of OSDI</em>, 2010.</li>
+</ul>
+</li>
+<li><p>老老实实使用久经考验的 API，写出读得懂、说明得了正确性的代码</p>
+</li>
+<li>这是一门 <span class="red">system</span> 课程，因此这门课不讲复杂的并发</li>
+</ul>
+<p><img alt="" class="float-right" src="../static/wiki/os/2019/img/taomp.jpg" "="None" width="250px"></img></p>
+<hr></hr>
+<p>还不放弃？</p>
+<ul>
+<li>并发算法是非常有趣 (很难) 的研究问题！</li>
+<li>《并发算法与理论》 (秋季学期开课)<ul>
+<li>主讲：梁红瑾；SIGPLAN Distinguished Paper Award Winner (PLDI'19)</li>
+<li>使用右边这本世界上最好的并发教科书</li>
+<li>Gödel Prize Winner</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

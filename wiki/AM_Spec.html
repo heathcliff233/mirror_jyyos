@@ -1,0 +1,562 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>AbstractMachine：设计与规约 (Specifications)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="abstractmachine-specifications">AbstractMachine：设计与规约 (Specifications)</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<p>本文档在更新中。</p>
+</div></div></div>
+
+<h2 id="abstractmachine">AbstractMachine 设计</h2>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">为什么需要抽象层？</h4>
+<p>操作系统利用硬件提供的各类机制 (指令) 管理计算机系统中的资源，为应用提供服务。资源种类繁多 (例如多个处理器、物理/虚拟内存、I/O 设备等)，管理方法也各不相同。因此如果就单纯 (不借助外力) 想写个小操作系统，很快会遇到很大的挫折。不难想象，如果我们在课上布置以下代码的习题：</p>
+<ul>
+<li>向调试终端输出一个字符 (进而实现<code>printf</code>)；</li>
+<li>在中断到来时保存寄存器现场到堆栈 (进而实现进程/线程的切换)；</li>
+<li>创建虚拟地址空间映射……</li>
+</ul>
+<p>这些习题 “难做” 的原因是大家对硬件的规约并不了解——不知道应该以什么方式访问硬件提供的什么机制。实打实和机器打交道的代码必须<strong>非常小心地阅读手册</strong>，弄错一个 bit 不再是 Segmentation Fault，而是直接导致模拟器崩溃 (日志信息还少得可怜)。做过《计算机系统基础》实验的同学们也一定有过因为看手册不仔细导致调试至死的愉快体验。</p>
+<p>更麻烦的是如果我们希望为多个硬件平台写操作系统，我们还需要<strong>把类似的事为不同硬件重复若干次</strong>。比如：</p>
+<ul>
+<li>操作系统课上让我们在 x86-64 上实现迷你操作系统；实际上，现在网上流传的 x86-64 操作系统代码质量很高的就不太多；</li>
+<li>体系结构课教我们实现了一个 MIPS32 或 RISC-V32 的 CPU。我想把操作系统课上的迷你操作系统移植到自己的 CPU 上……同样的麻烦要再经历一次。已经在 x86-64 上死过一次了，还要再在 MIPS32 上死一次吗？</li>
+</ul>
+<p>对计算机系统提供的机制进行抽象，能帮助我们解决这个问题。实际上，现代的可移植操作系统都有这样的抽象层——Linux 内核绝大部分代码都是可移植的。AbstractMachine 是为计算机系统教学特别设计的抽象层。</p>
+</div></div></div>
+
+<p>AbstractMachine 解决的问题是能否在不理解硬件机制细节的前提下实现系统软件 (包括操作系统)？C 程序本身就是一个很不错的抽象——我们可以忘掉计算机硬件的初始化、初始的加载器等技术细节，只要假设程序从 <code>main</code> 函数开始执行即可。</p>
+<p>在此基础上，虽然不同计算机系统的指令集、设备接口等均不同，但它们都遵循了 “冯诺依曼体系结构”，支持中断/异常控制流和虚拟存储。从这个角度，我们已经有了一个具体的问题：</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="c">问题：如何设计一个 C 语言层次的 “指令集”，能够实现底层的设备管理、中断管理、虚存管理和多处理器管理？</h4>
+<p>例如某个 x86 系统使用 <code>int 0x80</code> 指令自陷入内核；某个 MIPS32 系统则使用 <code>trap</code> 指令。但这个细节对我们来说并不重要，我们希望的是 C 程序在随时可以调用 <code>yield()</code> API 产生一个自陷异常。</p>
+<p>再例如不同硬件管理虚拟内存的方式大相径庭。x86-64 系统使用硬件 MMU 维护四级页表 (PML4, PDPT, PD, PT)；MIPS32 则是软件 MMU 在 TLB 缺失时产生异常。但操作系统实际需要的是使指令访问地址 <math class="inline-math">v</math> 时，访问被重定位到 <math class="inline-math">f(v) = p</math>。</p>
+</div></div></div>
+
+<p>AbstractMachine 把虚拟的通用指令集抽象成一组 C API，并将这些 API 分为几组 (extensions)。在其中不可避免地丢失了一些对计算机系统的细节控制，但却屏蔽了琐碎的底层细节，帮助初学者理解计算机系统的本质。</p>
+<p><img alt="" class="center" src="../static/wiki/am/img/amarch.png" width="400px"></img></p>
+<h2 id="abstractmachine-specifications_1">AbstractMachine 规约 (Specifications)</h2>
+<h3 id="1">1. 基本概念</h3>
+<p>AbstractMachine 上运行的程序称为 “kernel” (内核)。这个名字通常表示直接运行在硬件上、对硬件有直接控制的代码。不仅是操作系统内核，像在 GPU 上运行的二进制文件也称为 “kernel”。</p>
+<h3 id="2-trm-turing-machine-c">2. TRM (Turing Machine): C 语言运行环境</h3>
+<p>Kernel 的静态表示是由 C 程序编译所得的二进制目标文件；Kernel 的执行以指令为单位：</p>
+<p>(状态机模型；TBD)</p>
+<p>Kernel 执行的具体约定：</p>
+<ul>
+<li>Kernel 被 TRM 加载，从 <code>main()</code> 函数开始运行；</li>
+<li><code>main</code> 函数有一个参数 <code>const char *args</code>，允许程序启动时传递一个字符串参数：<ul>
+<li>在运行 (<code>make run</code>) 时设置 <code>mainargs</code> 环境变量，即可向 kernel 传递参数</li>
+<li>参数字符串的长度不超过 1024 字节 (包含末尾的 <code>\0</code>)</li>
+</ul>
+</li>
+<li><p>Kernel 在运行时，使用指针能够直接访问物理地址空间，可访问的物理地址空间有：</p>
+<ul>
+<li>代码和只读数据 (只读, 大小编译时确定)</li>
+<li>数据 (读写，大小编译时确定)</li>
+<li>堆栈 (读写，位置运行时确定，大小不少于 4 KiB)</li>
+<li>堆区 (读写，大小和位置运行时确定，通过 <code>_heap</code> 获取)</li>
+</ul>
+<p>上述四种类型的数据位于同一个地址空间中 (不相交)，各自在内存中连续存储，下图是可能的例子：</p>
+<p><img alt="" class="center" src="../static/wiki/am/img/trm-mem-layout.png" width="600px"></img></p>
+</li>
+</ul>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="kernel">Kernel 的非法内存访问</h4>
+<p>如果 Kernel 非法访问内存 (写入代码、越界访问等)，将导致 undefined behavior——即程序的任何行为都被认为是合理的。你的程序可能一切正常；也可能虚拟机直接崩溃。</p>
+</div></div></div>
+
+<ul>
+<li>Kernel 执行 AbstractMachine API 调用后，可能会执行若干条指令，但不在状态机模型中体现。状态机仅仅认为执行了一次 AbstractMachine API 调用。<ul>
+<li>每个 AbstractMachine API 会声明其在多处理器上并发执行的安全性；</li>
+<li>每个 AbstractMachine API 会声明中断 (抢占) 对它的影响。</li>
+</ul>
+</li>
+</ul>
+<h4 id="21-_area">2.1 <code>_Area</code> 结构体</h4>
+<p>在 AbstractMachine 代码中，会用到结构体 <code>_Area</code> 表示一段内存：</p>
+<pre class="codehilite"><code class="language-c">typedef struct _Area {
+  void *start, *end;
+} _Area;</code></pre>
+
+
+<p>它表示左闭右开区间 <code>[start, end)</code> 的一段内存。我们假设地址空间的最后一个字节 (例如 32-bit 平台下地址 <code>0xffffffff</code>) 永远不会被包含在某个 <code>_Area</code> 中，因此 <code>end</code> 不会溢出。内存区间</p>
+<pre class="codehilite"><code class="language-c">(_Area) {
+  .start = (void *)0;
+  .end   = (void *)0xffffffff;
+}</code></pre>
+
+
+<p>的最后一个字节的地址是 <code>0xfffffffe</code>。</p>
+<h4 id="22-_heap">2.2 <code>_heap</code>: 物理内存堆区</h4>
+<pre class="codehilite"><code class="language-c">extern _Area _heap;</code></pre>
+
+
+<p>标记一段连续可用的物理内存 <code>[_heap.start, _heap.end)</code>，这段内存 kernel 可以任意读写。</p>
+<p><span class="green">多处理器：安全</span>；<code>_heap</code> 是只读的。修改 <code>_heap</code> 导致 undefined behavior；Kernel 没有任何理由需要修改它。</p>
+<h4 id="23-_putc">2.3 <code>_putc</code>: 打印字符</h4>
+<pre class="codehilite"><code class="language-c">void _putc(char ch);</code></pre>
+
+
+<p>向默认的调试终端打印 ASCII 码为 <code>ch</code> 的字符，例如在 x86 (x86-64) 上，向 COM1 输出</p>
+<p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
+<h4 id="24-_halt-abstractmachine">2.4 <code>_halt</code>: 终止 AbstractMachine</h4>
+<pre class="codehilite"><code class="language-c">void _halt(int code) __attribute__((__noreturn__));</code></pre>
+
+
+<p>立即终止整个 AbstractMachine 的运行，并返回数字编号 <code>code</code> (0-255)</p>
+<p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
+<h3 id="3-mpe-multi-processing-extension">3. MPE (Multi-Processing Extension) 共享内存多处理器</h3>
+<p>(TBD: 状态机)</p>
+<h4 id="31-_mpe_init">3.1 <code>_mpe_init</code>: 启动多处理器</h4>
+<pre class="codehilite"><code class="language-c">int _mpe_init(void (*entry)());</code></pre>
+
+
+<p>启动系统中多个并行的执行流，每个执行流都从 <code>entry</code> 开始，执行流共享代码、数据；每个执行流有独立的堆栈和寄存器。</p>
+<p><span class="red">限制</span>：在一次 kernel 运行中，只能调用一次。</p>
+<h4 id="32-_ncpu">3.2 <code>_ncpu</code>: 处理器个数</h4>
+<pre class="codehilite"><code class="language-c">int _ncpu();</code></pre>
+
+
+<p>返回系统中处理器的个数，在整个 AbstractMachine 执行期间数值不会变化。</p>
+<p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
+<h4 id="33-_cpu">3.3 <code>_cpu</code>: 当前处理器编号</h4>
+<pre class="codehilite"><code class="language-c">int _cpu();</code></pre>
+
+
+<p>返回当前执行流的 CPU 编号，从 <code>0</code> 开始，例如 <code>_ncpu()</code> 返回 <code>4</code>，则四个 CPU 调用 <code>_cpu()</code> 分别返回 <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>。</p>
+<p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
+<h4 id="34-_atomic_xchg">3.4 <code>_atomic_xchg</code>: 内存交换</h4>
+<pre class="codehilite"><code class="language-c">intptr_t _atomic_xchg(volatile intptr_t *addr, intptr_t newval);</code></pre>
+
+
+<p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
+<div style="display: none">
+
+
+
+<pre class="codehilite"><code class="language-text">(C, PC, I) determines
+  =&gt; load (D/S) I' PC'
+  =&gt; store (D/S) I' PC'
+  =&gt; callam D/S I' PC'
+  =&gt; I' PC'
+
+C UB =&gt; UB
+load/store out-bound (C, other) =&gt; UB
+
+Trace:
+S = (C, D, S, PC, I) =&gt; S1 =&gt; S2 =&gt; ...
+                     |
+                    load(area)/store(area)/none
+
+I 是不可见的
+
+MPE:
+
+C, D shared
+per-CPU: S, PC, I
+
+(C, D, S1, PC1, I1, S2, PC2, I2) -(1,load)-&gt; (...)
+                                 -(2,none)-&gt; (...)
+
+race: 在一次执行中，同一个变量的atomic_xchg是HB
+
+HB race -&gt; UB
+
+IOE:
+callam 等效于 store(dev)
+
+CTE:
+
+allow non-deterministic</code></pre>
+
+
+
+
+### 抽象计算机模型
+
+抽象计算机运行一个编译后的C程序。抽象计算机系统由处理器、内存和寄存器组成。我们稍微用一些数学符号来(不太严谨地)表示计算机系统中的部分。
+
+内存 $M$：AM假设系统中只有一份物理内存$M$，程序的代码、数据、堆栈等都位于这份物理内存中。任何类型的指针都指向$M$中的地址。内存中包含：
+
+* 代码：代码编译后的指令序列(.text节)。
+* 静态数据：编译时确定的内存(.rodata, .data, .bss节)。
+* 堆区：一段连续的、通常数量很大的可用内存(通常是系统物理内存的可用的剩余部分)。
+* 栈区：一段连续的内存，可能位于地址空间的任意位置(可能在堆区或静态数据中)。
+
+**寄存器$R$**：处理器的内部状态，通常称为寄存器。我们用$R[name]$表示某个特定的寄存器，例如$R[SP]$为栈顶；$R[PC]$为当前程序计数器。
+
+**处理器$C$**：系统中可能有多个处理器。处理器按照手册规定的指令语义执行程序$C(R, M) = (R', M')$，即在寄存器和内存给定的前提下，机器能执行一条指令，得到更新以后的寄存器和内存的状态。
+
+例如对于x86来说，如果$M[R[PC]]$ = 0x54，即当前指令是`pushl %esp`，则执行后满足$M'[R[ESP]] = R[ESP]$; $R'[ESP] = R[ESP] - 4$'; $R'[PC] = R[PC] + 1$。参照手册，我们不难为每一条机器指令都定义出它们的行为，它们共同构成了处理器的规约。
+
+**Undefined Behavior (UB)**：C语言中规定了很多UB，例如有符号整数溢出、非法内存访问等。UB在不同的计算机系统上可能有不同行为。C中的UB在AM上也是UB，此外随着AM扩展的引入，还有其他行为引起UB。
+
+**初始状态$(M_0,R_0)$**：`main`函数开始运行时，抽象计算机保证：代码、静态数据的值与二进制文件一致；栈区有>1KB的余量；堆区的初始值为0。访问其他内存的行为是UB。
+
+> 这个最简的模型体现了计算机的本质，即计算机是执行指令的、循环的状态机。
+>
+> （人类的本质是复读机。）
+
+当然，如果为了编写实际的程序，这个模型就过度简化了。它连输出任何东西都不可能，也不能结束(堆栈溢出导致undefined behavior)。抽象计算机就是对这个基础模型的**扩展**，允许程序在运行时调用特殊的API(可以看作指令)，对系统外的I/O设备或系统的运行模式产生影响。AM API需要系统指令才能实现——但是C程序不需要看到系统指令。
+
+
+### #. TRM: C 语言运行环境
+
+
+### #. MPE: 共享内存多处理器
+
+(模型修正)
+
+
+### #. IOE: 访问 I/O 设备
+
+
+<pre class="codehilite"><code class="language-c">int    _ioe_init();
+size_t _io_read (uint32_t dev, uintptr_t reg, void *buf, size_t size);
+size_t _io_write(uint32_t dev, uintptr_t reg, void *buf, size_t size);</code></pre>
+
+
+
+### #. CTE: 中断/异常/上下文管理
+
+
+
+<pre class="codehilite"><code class="language-c">enum {
+  _EVENT_NULL = 0,
+  _EVENT_ERROR,
+  _EVENT_IRQ_TIMER,
+  _EVENT_IRQ_IODEV,
+  _EVENT_PAGEFAULT,
+  _EVENT_SYSCALL,
+  _EVENT_YIELD,
+};</code></pre>
+
+
+
+
+<pre class="codehilite"><code class="language-c">typedef struct _Event {
+  int event;
+  uintptr_t cause, ref;
+  const char *msg;
+} _Event;</code></pre>
+
+
+
+
+<pre class="codehilite"><code class="language-c">typedef struct _Context _Context;</code></pre>
+
+
+
+
+
+<pre class="codehilite"><code class="language-c">int  _cte_init(_Context *(*handler)(_Event ev, _Context *ctx));
+void _yield();
+int  _intr_read();
+void _intr_write(int enable);
+_Context* _kcontext(_Area kstack, void (*entry)(void *), void *arg);</code></pre>
+
+
+
+### #. VME: 虚拟地址空间
+
+<pre class="codehilite"><code class="language-c">enum {
+  _PROT_NONE  = 0x1, // no access
+  _PROT_READ  = 0x2, // can read
+  _PROT_WRITE = 0x4, // can write
+  _PROT_EXEC  = 0x8, // can execute
+};</code></pre>
+
+
+
+
+<pre class="codehilite"><code class="language-c">typedef struct _AddressSpace {
+  size_t pgsize;
+  _Area area;
+  void *ptr;
+} _AddressSpace;</code></pre>
+
+
+
+
+<pre class="codehilite"><code class="language-c">int  _vme_init(void *(*pgalloc)(size_t size), void (*pgfree)(void *));
+void _protect(_AddressSpace *as);
+void _unprotect(_AddressSpace *as);
+void _map(_AddressSpace *as, void *va, void *pa, int prot);
+_Context *_ucontext(_AddressSpace *as, _Area kstack, void *entry);</code></pre>
+
+
+
+
+<div style="display: none;">
+
+### TRM (Turing Machine)
+
+AM提供将C程序$P$ (一组源代码)编译成机器代码并加载的能力——可以把同一份可移植(即不使用任何平台相关特性)的C代码不做任何修改编译到多个目标硬件平台上执行。
+
+编写AM上的程序使用Makefile：
+
+
+<pre class="codehilite"><code>NAME := project-name     # 编译后二进制文件的名字
+SRCS := main.c hello.c   # 源代码列表，支持.c, .cpp, .S
+LIBS := klib             # 静态链接的库函数
+include $(AM_HOME)/Makefile.app</code></pre>
+
+
+
+配置`ARCH`环境变量设置程序的运行环境(例如`ARCH=x86-qemu`编译成qemu-system-i386模拟器运行的磁盘镜像)：
+
+* 使用`make`根据$P$生成机器代码$P_M$，并生成可执行的镜像文件；
+* `make run`将$P_M$加载到机器上实际执行，然后从`main`的第一条语句对应的初始的状态$(R,M)$开始，每次都执行一条指令，得到$(R', M')$。
+
+如图所示：
+
+
+<pre class="codehilite"><code>  .c   .c   .c
+   |    |    |  编译
+  .o   .o   .o
+    \   |  /   链接(static)       make
+      a.bin   loader
+        |      /  创建镜像
+      a.img---/
+        |
+        |  make run   Processor  (R) ---Devices
+        v                 |       运行环境
++---------------------------------------+
+|          memory  (M)                  |
++---------------------------------------+</code></pre>
+
+
+
+此外，TRM还提供两个API：
+
+* `void putc(char ch)`：打印一个字符到系统外，不改变系统内的状态。是由具体硬件平台决定的(编译成不同的机器指令)，例如qemu打印到串口(COM1)、自制CPU可能打印到屏幕或串口。
+* `void halt(int code)` $f_{halt()}=\bot$ 终止程序的执行，能够返回一个0..255的整数表示成功/失败。
+
+之所以叫Turing Machine，就是有“程序 = 内存 + 状态机”的类比。如果有无穷大的内存，Turing Machine就代表了我们所知的“可计算”的全部，我们可以在TRM上实现各种算法。AM也提供了一组benchmarks用于测试硬件指令计算实现的正确性。
+
+### MPE (多处理器)
+
+抽象计算机的运行模型可以扩展到多处理器系统，仿佛有多个单处理器系统共享同一份内存，但每个处理器都有独立的寄存器$R$和堆栈(堆栈在同一地址空间中不重叠的位置)：
+
+
+<pre class="codehilite"><code>Proc1 (R1)   Proc2 (R2)
+    |          |         ....
++-----------------------------------+
+|   memory (M)                      |
++-----------------------------------+</code></pre>
+
+
+
+MPE的接口非常简单：
+
+* `mpe_init(entry)`：启动多处理器，创建$R_1,R_2,\ldots,R_n$，所有$R_i$的执行均从entry开始，且每个处理器都对应一个>1KB的堆栈(各个处理器的堆栈在内存中不重叠)。
+
+* `cpu()`: 返回当前CPU的编号，这是$P$唯一获得当前运行处理器的方法。
+
+* `ncpu()`: 返回系统中处理器的数量。程序运行过程中CPU数量不变。
+
+* `atomic_xchg()`: 对共享内存的原子操作。
+
+* ```c
+  intptr_t atomic_xchg(volatile intptr_t *addr, intptr_t newval) {
+    intptr_t oldval = *addr;
+    *addr = newval;
+    return oldval;
+  }
+  ```
+
+多处理器系统可以看成是共享内存的多个单处理器系统，每个处理器有自己的寄存器$R$，即整个系统的状态为$(R_1,R_2,...R_n,M)$。
+
+简单地理解，系统运行的每一步都“选一个处理器$i$”执行一步$(R_i,M)\to f(R_i,M)=(R_i',M')$，然后更新整个系统的状态为$(R_1,...R_i',...,R_n, M')$，而实际运行中系统“选择”哪个处理器执行是不确定的。因此假设系统中有2个处理器：
+
+
+<pre class="codehilite"><code class="language-c">void mp_main() {
+  while (1) putc("ab"[_cpu()]);
+}</code></pre>
+
+
+
+输出的结果可以是任意的由ab组成的序列。
+
+但实际的处理器比这个简单的模型复杂得多。首先，对于同一个地址的atomic_xchg我们都可以排序。然后，对于两个共享内存访问，只有$x@1 \to_{po} atomic@1 \to atomic@2 \to_{po} x@2$，我们成为访问是ordered。只要有不ordered，行为就是UB (race)。
+
+简单来说：
+
+* 两个处理器若能同时访问同一个变量，且至少有一个是写，那么行为就是UB。
+* 两个处理器同时执行putc和halt，不会产生UB，由AM的实现保证正确。
+
+
+<pre class="codehilite"><code>intptr_t x, flag = 0;
+T1:
+
+(1) x = 1;
+atomic_xchg(&flag, 1);
+
+T2:
+
+while (atomic_xchg(&flag, 0) == 0) ;
+(2) x = 2;</code></pre>
+
+
+
+这个保证了ordered。
+
+### IOE (输入/输出设备)
+
+计算机系统中通常有很多输入输出设备：键盘、鼠标、显示器、磁盘……，运行在计算机上的程序(尤其是操作系统)需要管理这些设备。在AM中，我们假设每一个设备都是由若干个可以读/写的寄存器构成的。AM提供io_read和io_write读写这些设备寄存器。
+
+* 任何处理器均可以访问设备。如果$f_{PC}(M)$是一个IOE API，调用后PC为下一个语句，$M$中只有传递给的buffer会变化(从外界输入数值)，其他不变，但I/O会和物理世界发生交互。
+* 对同一个设备的两次不ordered的访问是UB。
+
+
+<pre class="codehilite"><code>Proc1   Proc2
+  |       |
++---------------+
+| I/O Registers |---devices
++---------------+</code></pre>
+
+
+
+### CTE (上下文切换)
+
+引入处理器上的异常执行流。对于一个处理器$(R_i,M)$：
+
+* `intr_write(en)` 设置状态：$R_i |_{IF}=en$
+* `intr_read()` 读取状态：$R_i |_{IF}$
+* `yield()`导致处理器立即被中断(无视IF)，事件`EVENT_YIELD`。
+* 如果$R_i|_{IF}=1$，则处理器随时可能被中断。中断后发生后，恢复中断执行的$R$被保存在当前处理器的堆栈上，设置$R_i|_{IF}=0$，然后调用handler。`Context`可以被保存在$M$中，并且可以返回另一个Context。Context中GRP1-4可以读，GRPx可以写，写其他导致UB。
+* 在多处理器系统中，每个处理器会独立地收到中断。关闭/打开中断仅影响当前处理器。
+
+异常流程：
+
+
+<pre class="codehilite"><code>(R, M) -&gt; Interrupt
+       -&gt;  +-----------------------------------+
+           |    (R)  &lt;--------+  M             |
+           +------------------|----------------+
+                 |            |
+                handler(ev, context)</code></pre>
+
+
+
+handler可以返回任何一个保存在内存中的context，此时处理器会切换到那个context执行。
+
+### VME (虚拟地址空间)
+
+允许创建一个虚拟地址空间，将一段内存(非静态、stack、heap)变为虚拟映射
+
+* 可以把prot->pagesz大小的页面进行映射，切可以管理映射的权限(PROT_READ/WRITE/EXECUTE/NONE)
+* 创建prot和ucontext，ucontext运行在低权限，看不到AM所有东西，只能看到映射后的内存
+
+对同一个AddressSpace的操作会race (UB)。不能有两个处理器同时调度同一个AddressSpace对应的ucontext。
+
+pgalloc和pgfree可能会race，需要保证正确性。
+
+
+<pre class="codehilite"><code>     Proc (R)
+        |
+  (address translation) - active when ucontext is returned to processor
+        |                         +-- pa := maped(va)
+ +-------------------------+          when trapped from ucontext, no address translation.
+ |        M                |
+ +-------------------------+</code></pre>
+
+
+
+
+
+(big picture)
+</div>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

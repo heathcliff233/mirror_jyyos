@@ -1,0 +1,118 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>计算机科学与技术系博士研究生申请学位发表论文要求实施细则 (2019)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="2019">计算机科学与技术系博士研究生申请学位发表论文要求实施细则 (2019)</h1>
+<h2 id="_1">目标导向</h2>
+<ul>
+<li>国际化：鼓励学生多投高水平期刊/会议论文，逐步建立与国际接轨的人才培养标准和规范。</li>
+<li>多样化：多种要求组合，有利于不同方向、不同专业的同学。</li>
+<li>质量化：质量重于数量，不再考虑一般刊物论文。</li>
+<li>会议化：考虑到计算机科学领域的特殊性，会议论文与期刊论文同等重视。</li>
+</ul>
+<h2 id="_2">刊物与会议分类</h2>
+<p>参照《中国计算机学会推荐国际学术会议和期刊目录》。</p>
+<p>博士研究生申请学位，须经导师审核认可学位论文质量，并达到下列要求之一：</p>
+<ul>
+<li>发表 CCF期刊/会议论文 2 篇，其中至少含 A 类论文 1 篇。</li>
+<li>发表 CCF期刊/会议论文 3 篇，其中至少含 B 类论文 1 篇。</li>
+</ul>
+<p>注 1：选项 (1), (2) 中必须包含 1 篇期刊论文。</p>
+<p>注 2：下列中文重要学术期刊论文等同 CCF C 类期刊/会议论文：《中国科学》、《软件学报》、《计算机学报》、《电子学报》、《自动化学报》、《计算机研究与发展》、《科学通报》（2019 年 9 月学位委员会补充）</p>
+<p>注 3：对在本系主持的、有影响的应用项目中做出重要贡献者，论文发表要求可以适当放宽，最终解释、决定以系学位委员会是否通过学位申请为准。</p>
+<p>注 4：本细则从 2019 年入学新生开始执行；2019 年之前入学的博士生参照执行。</p>
+<h2 id="_3">指标解读</h2>
+<p>(1) 期刊与会议参考《中国计算机学会推荐国际学术会议和期刊目录》，并保持同步。</p>
+<p>(2) 未尽事宜，解释权在系学位委员会。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

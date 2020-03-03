@@ -1,0 +1,385 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>M2: 协程库(libco)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="m2-libco">M2: 协程库(libco)</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">截止日期</h4>
+<p>Soft Deadline: 3月31日23:59:59</p>
+</div>
+<h3 id="_2">收到的作业</h3>
+<p><table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></p>
+<div class="fenced fenced-blue">
+<h4 id="_3">引子：操作系统中线程的实现</h4>
+<p>在我们学习编程的时候，我们早已默认一个“进程”——一个运行的程序——拥有独立的地址空间。因此进程里的变量<code>x</code>是这个进程所独享的。在之前的课程上，我们也学习了用<code>create()</code>和<code>join()</code>管理同一个进程地址空间里多个并发/并行执行的线程。</p>
+<p>你可能稍有惊讶的是，线程并不是什么神秘的东西。我们只需要给“线程”分配一段堆栈，稍微用上一些hacking，我们自己也能在进程里实现多个能并发执行的线程。</p>
+</div>
+<h2 id="_4">背景</h2>
+<p>如果大家用过Python/Javascript，一定多多少少了解过生成器(generator)和yield，例如，我们可以定义以下“死循环”的函数：</p>
+<pre class="codehilite"><code class="language-python">def integers():
+  i = 0
+  while True:
+    yield i # &quot;output&quot; i
+    i += 1</code></pre>
+
+
+<p>这个函数可以生成所有的整数，从而用于其他类型的数据生成：</p>
+<pre class="codehilite"><code class="language-python">def is_prime(i):
+  return i &gt;= 2 and True not in (i % j == 0 for j in range(2, i))
+
+primes = (i for i in integers() if is_prime(i)) # 所有的素数
+# 类型：&lt;generator object &lt;genexpr&gt; at 0x7f142c14c9e8&gt;</code></pre>
+
+
+<p>虽然<code>integers()</code>是个死循环，但<code>primes</code>却不会无限地执行下去。我们始终可以用<code>next(primes)</code>得到下一个素数，而<code>primes</code>内部的状态<code>i</code>又被神奇的保存了下来。</p>
+<p>如果我们希望在C里实现这样的“函数”，它能够：</p>
+<ul>
+<li>可以被调用，从头开始运行；</li>
+<li>在运行到中途时被“切换”出去，并返回一个值；</li>
+<li>稍后可以“恢复执行”，即回到被切换时的状态继续执行。</li>
+</ul>
+<p>你仔细一想就会发现有些小困难：如果我们我们在函数运行的过程中yield时使用函数返回指令，函数的调用栈帧(stack frame)就被摧毁，从此以后函数内部的状态(具体来说，刚才的局部变量<code>i</code>)就变为了undefined，它会被后续的函数调用覆盖。</p>
+<p>如果我们能实现永久保存一个函数调用的堆栈，我们就有机会切换到另一个函数执行；这天然就有了并发的线程——当一个线程执行<code>yield arg</code>时，则调度调用它的线程执行。这就是<a href="https://en.wikipedia.org/wiki/Coroutine">协程(coroutine)</a>，即“协作的程序”。如果我们允许协程在任意时候被中断(并且切换到其他协程执行)，我们就得到了操作系统理论书中常说的“用户态线程”。</p>
+<h2 id="_5">实验描述</h2>
+<div class="fenced fenced-blue">
+<h4 id="_6">获取实验代码与提交</h4>
+<p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
+<p>在你原先的os-workbench基础上，执行</p>
+<pre class="codehilite"><code class="language-bash">git pull origin M2</code></pre>
+
+
+<p>将本实验的框架代码下载到本地。在<code>libco/</code>下编译能得到动态链接库<code>libco-32.so</code>和<code>libco-64.so</code>。测试代码在<code>libco/tests</code>。</p>
+</div>
+<p>在这个实验中，我们实现轻量级的用户态<del>携谐</del>协程 (coroutine)，也称为green threads、user-level threads，可以在一个不支持线程的操作系统上实现多线程的能力。</p>
+<p>实验要求实现四个函数，分别是：</p>
+<pre class="codehilite"><code class="language-C">typedef void (*func_t)(void *arg);
+struct co;
+
+void co_init();
+struct co *co_start(const char *name, func_t func, void *arg);
+void co_yield();
+void co_wait(struct co *thd);</code></pre>
+
+
+<p>这些函数的实现会被封装成一个动态链接库(就像我们调用<code>printf</code>，其实是调用了glibc动态链接库中的函数)，这样就能被其他程序调用了。函数的具体功能如下：</p>
+<ol>
+<li>使用协程的程序会首先调用<code>co_init</code>完成一些必要的初始化。如果你的实现并不需要在启动时做任何初始化，你可以留下一个空的函数。</li>
+<li><code>co_start</code> 创建一个新的协程，并返回一个指针(动态分配内存)。我们的框架代码中并没有限定 <code>struct co</code> 结构体的设计，所以你可以自由发挥😀。</li>
+<li><code>co_yield</code> 是指当前运行的协程放弃执行，并切换到其他协程执行。系统中可能有多个运行的协程(包括当前协程)。你可以随机选择下一个系统中可运行的协程。</li>
+<li><code>co_wait(thd)</code> 表示当前协程不再执行，直到 <code>thd</code> 协程的执行完成。我们规定，每个协程的资源在<code>co_wait()</code>等待结束后释放，因此每个协程只能被<code>co_wait</code>一次。更精确地说，每个协程必须恰好被<code>co_wait</code>一次，否则就会造成资源泄露。</li>
+</ol>
+<div class="fenced fenced-green">
+<h4 id="_7">资源管理和释放</h4>
+<p>很多时候，我们的库函数都涉及到资源的管理，例如<code>co_start</code>时，需要申请<code>struct co</code>的内存等。在面向OJ编程时，我们从来都是只管申请不管释放的——进程结束后，这些资源都会被自动释放。但如果是长期运行的程序，这些没有释放但又不会被使用的<strong>泄露</strong>资源就成了很大但问题，例如在Windows XP时代，桌面Windows是没有办法做到开机一星期的，一周之后机器就一定会变得巨卡无比。</p>
+<p>如果允许在任意时刻、任意多次等待任意协程，那么协程创建时分配的资源就无法做到自动回收了——即便一个协程结束，我们也无法预知未来是否还会执行对它的<code>wait</code>。当然，如果本着对自己不负责任的态度，你也可以选择不回收协程的资源。C语言中另一种常见style是让用户管理资源的分配和释放，显式地提供<code>free</code>函数，在用户确认今后不会使用时释放资源。</p>
+<p>然后，你立即就会感觉<code>pthread</code>线程库似乎有点麻烦：<code>pthread_create()</code>会修改一个<code>pthread_t</code>的值，线程返回以后资源似乎应该会被释放。那么：</p>
+<ul>
+<li>如果<code>pthread_join</code>发生在结束后不久，资源还未被回收，函数会立即返回。</li>
+<li>如果<code>pthread_join</code>发生在结束以后一段时间，可能会得到<code>ESRCH</code> (no such thread)错误。</li>
+<li>如果<code>pthread_join</code>发生在之后很久很久很久很久，资源被释放又被再次复用(<code>pthread_t</code>是一个的确可能被复用的整数)，我不就join了另一个线程了吗？这恐怕要出大问题。</li>
+</ul>
+<p>实际上，pthread线程默认是“joinable”的。joinable的线程只要没有join过，资源就一直不会释放。特别地，文档里写明</p>
+<blockquote>
+<p>Failure to join with a thread that is joinable (i.e., one that  is  not
+detached),  produces  a  "zombie thread".  Avoid doing this, since each
+zombie thread consumes some system resources, and  when  enough  zombie
+threads  have  accumulated, it will no longer be possible to create new
+threads (or processes).</p>
+</blockquote>
+<p>资源管理一直是计算机系统世界的难题，至今很多系统还受到资源泄漏、use-after-free的困扰。</p>
+</div>
+<p>让我们回到协程API。协程运行的函数就是普通的C函数，只不过其中可以调用<code>co_yield()</code>：</p>
+<pre class="codehilite"><code class="language-C">void foo() {
+  while (1) {
+    printf(&quot;x&quot;);
+    co_yield();
+  }
+}
+
+void bar() {
+  while (1) {
+    printf(&quot;y&quot;);
+    co_yield();
+  }
+}</code></pre>
+
+
+<p>例如这样两个函数被两个协程执行的话，将会打印出由x和y组成的字符串，例如 <code>xxyxyyxy...</code></p>
+<pre class="codehilite"><code class="language-C">int main() {
+  co_init();
+  co1 = co_start(&quot;t1&quot;, work1, arg1);
+  co2 = co_start(&quot;t2&quot;, work2, arg2);
+  co_wait(co1);
+  co_wait(co2);
+}</code></pre>
+
+
+<p>例如上面的代码创建了两个新的协程，并且等待这两个协程都执行结束。如果要实现generator，可以让<code>yield()</code>能返回一个指向协程堆栈上的指针，这个数据在协程结束前都会保证可用。</p>
+<div class="fenced fenced-green">
+<h4 id="vs">协程 vs. 线程</h4>
+<p>细心的你也许已经发现了，协程和课堂上讲解过的线程并没有很大的区别，回顾我们课堂上使用的线程库(<code>threads.h</code>)：</p>
+<pre class="codehilite"><code class="language-c">void create(void (*func)());
+void join(void (*func)());</code></pre>
+
+
+<p>刚好对应了<code>co_start</code>和<code>co_wait</code> (<code>join</code>多次调用<code>pthread_join</code>等待所有线程结束)。唯一不同的是，线程是完全并发执行的，但协程会一直运行，直到执行<code>co_yield()</code>为止，才会切换到另一个协程运行。</p>
+<p>因此，线程可以看成是每一条语句后都插入了<code>co_yield()</code>的协程——这个“插入”操作是由两方实现的：操作系统在中断后可能引发上下文切换，调度另一个线程执行；在多处理器上，两个线程则是真正并行执行的。</p>
+</div>
+<div class="fenced fenced-blue">
+<h4 id="_8">协程的应用</h4>
+<p>协程的最重要特性是可以保存自己的本地状态，因此也用作状态机、actor model等。Python/Javascript等语言里的generator也是一种特殊的协程，它每次<code>yield</code>都将控制流返回到它的调用者，而不是像本实验一样随机选择一个可运行的协程。</p>
+</div>
+<h2 id="_9">实验指导</h2>
+<div class="fenced fenced-blue">
+<h4 id="_10">不要慌。</h4>
+<p>看到这实验要求，你是不是感觉心都凉了？以前的实验都是有明确目标的，比如OJ题给定输入和输出。但这次不一样，我们要hack C语言运行时的行为——写一个函数“切换”到另一个函数执行。听起来就无从下手。</p>
+<p>不要慌，我们会一点一点来分析这个问题，然后你就会发现——其实也没那么难嘛。</p>
+</div>
+<h3 id="_11">运行库</h3>
+<p>和之前的实验(把源文件编译成一个二进制文件)不同，本实验把源文件编译成后缀名为<code>.so</code>的共享库(shared object)：</p>
+<pre class="codehilite"><code class="language-text">$ file libco-64.so 
+libco-64.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), ...</code></pre>
+
+
+<p>注意到我们实现的是一组库函数(没有main函数)，库函数是被其他程序调用的——这个<code>.so</code>共享库将会和其他程序动态链接，从而使另一个程序能调用我们的协程库函数。</p>
+<p>我们的Makefile里已经写明了如何编译共享库：</p>
+<pre class="codehilite"><code class="language-makefile">$(NAME)-64.so: $(DEPS) # 64bit shared library
+    gcc -fPIC -shared -m64 $(CFLAGS) $(SRCS) -o $@ $(LDFLAGS)</code></pre>
+
+
+<p>其中<code>-fPIC -fshared</code>就代表编译成位置无关代码的共享库。虽然这个文件有+x属性并且可以执行，但会立即得到Segmentation Fault。当然，你的确可以让你的共享库真正可以执行(并得到有意义的结果)，同时作为命令行工具和动态链接库，有兴趣的同学请STFW。</p>
+<div class="fenced fenced-red">
+<h4 id="_12">测试你的代码</h4>
+<p>我们已经提供了一组测试用例，测试你的线程库(64bit)。</p>
+<pre class="codehilite"><code class="language-bash">gcc -I.. -L.. -m64 main.c -o libco-test-64 -lco-64</code></pre>
+
+
+<p>请大家RTFM以下编译选项的含义：<code>-I</code>, <code>-L</code>, <code>-l</code>。然后使用</p>
+<pre class="codehilite"><code class="language-bash">LD_LIBRARY_PATH=.. ./libco-test-64</code></pre>
+
+
+<p>运行。这里我们配置了<code>LD_LIBRARY_PATH</code>环境变量，至于为什么，也请STFW。弄清楚这些以后，你就不难搞定32位版本的测试。</p>
+</div>
+<p>框架代码中的协程是用函数调用实现的——<code>co_create</code>时立即执行函数调用，<code>yield()</code>则直接返回。这对于第一个测试用例来说是正确的；但第二个用例会出现死循环等待。</p>
+<div class="fenced fenced-green">
+<h4 id="cflags">奇怪的<code>CFLAGS</code></h4>
+<p>框架代码里有一行<code>CFLAGS += -U_FORTIFY_SOURCE</code>，用来防止<code>__longjmp_chk</code>代码检查到堆栈切换以后报错(当成是stack smashing)。Google的sanitizer<a href="https://github.com/google/sanitizers/issues/721">也遇到了相同的问题</a>。系统中就是有这么多神坑，感谢可爱的助教小哥哥背锅。</p>
+</div>
+<h3 id="_13">问题分析</h3>
+<p>实现协程最关键的地方在于理解函数调用。例如我们写一个函数：</p>
+<pre class="codehilite"><code class="language-c">void foo() {
+  int i;
+  for (int i = 0; i &lt; 1000; i++) {
+    printf(&quot;%d\n&quot;, i);
+    co_yield();
+  }
+}</code></pre>
+
+
+<p>它会编译成以下汇编代码：</p>
+<pre class="codehilite"><code class="language-assembly">push   %rbp
+push   %rbx
+lea    &lt;stdout&gt;, %rbp       
+xor    %ebx, %ebx
+sub    $0x8, %rsp
+mov    %ebx, %esi
+mov    %rbp, %rdi
+xor    %eax, %eax
+callq  &lt;printf@plt&gt;
+inc    %ebx
+xor    %eax, %eax
+callq  &lt;co_yield&gt;
+cmp    $0x3e8, %ebx
+jne    669 &lt;foo+0xf&gt;
+pop    %rax
+pop    %rbx
+pop    %rbp
+retq    </code></pre>
+
+
+<p>因此，如果在<code>co_yield()</code>时切换到另一个函数执行，我们至少需要保存：</p>
+<ul>
+<li>通用寄存器，因为后续汇编代码执行会依赖当前的寄存器状态(例如循环变量保存在<code>%ebx</code>中，如果EBX寄存器数据丢失，我们就丢失了<code>i</code>的数值)。</li>
+<li>栈帧上的数据。我们看到<code>foo()</code>把旧的EBX寄存器的值保存在了堆栈上；如果栈帧被摧毁，则旧的EBX寄存器值将永远无法找回。此外，如果我们有更多的变量无法像<code>i</code>一样存储在寄存器里，则这些数据是保存在堆栈上的。</li>
+</ul>
+<p>因此实现协程的任务一下就变得明确了：在<code>co_yield</code>时</p>
+<ul>
+<li>保存当前所有的寄存器值。可以使用<code>pusha</code>指令(还需要保存额外的寄存器，例如<code>rsp</code>)，也可以使用C标准库中的<code>setjmp</code>函数，这个函数甚至帮我们把PC指针都保存下来了。</li>
+<li>保存当前的栈帧——当然更简单的实现方法是，我们为每一个协程都分配一个独立的堆栈，这样协程切换就不用担心栈帧被销毁的问题了。</li>
+</ul>
+<div class="fenced fenced-green">
+<h4 id="_14">自己试试吧！</h4>
+<p>我们已经给出了足够的提示，所以如果你想挑战一下自己，不妨不要阅读后面的部分，适当地STFW解决问题，这也将在完成后给你更多的成就感。</p>
+</div>
+<h3 id="_15">为每个协程分配堆栈</h3>
+<p>分配堆栈是非常容易的——用<code>malloc</code>分配一段内存即可，甚至我们可以直接把协程的堆栈定义在数据区：</p>
+<pre class="codehilite"><code class="language-c">struct co {
+  ...
+  uint8_t stack[4096];
+};
+
+struct co coroutines[MAX_CO]; // 静态分配</code></pre>
+
+
+<p>那么怎么为协程切换堆栈呢？我们来看一段ACM-ICPC界广为流传的外挂代码。在蛮荒时代，很多赛区使用默认的Linux堆栈，这会导致在有<math>10^6</math>级数据时递归堆栈溢出，因此有了如下代码，可以把一段数据区的内存作为堆栈：</p>
+<pre class="codehilite"><code class="language-c">#define KB * 1024LL
+#define MB KB * 1024LL
+#define GB MB * 1024LL
+char __stack[4 GB];
+void *__stack_backup;
+
+#if defined(__i386__)
+  define SP &quot;%%esp&quot;
+#elif defined(__x86_64__)
+  #define SP &quot;%%rsp&quot;
+#endif
+
+void stackoverflow(long long level) {
+  if (level % (1 MB) == 0) {
+    printf(&quot;level = %d\n&quot;, level);
+  }
+  stackoverflow(level + 1);
+}
+
+int main() {
+  // 堆栈外挂——启动
+  asm volatile(&quot;mov &quot; SP &quot;, %0; mov %1, &quot; SP :
+                 &quot;=g&quot;(__stack_backup) :
+                 &quot;g&quot;(__stack + sizeof(__stack)));
+
+  stackoverflow(0);
+
+  // 堆栈外挂——关闭
+  asm volatile(&quot;mov %0,&quot; SP : : &quot;g&quot;(__stack_backup));
+  // 如果不切换回堆栈，ret指令将会返回到不合法的地址(Segmentation Fault)
+}</code></pre>
+
+
+<div class="fenced fenced-green">
+<h4 id="3264">32位和64位</h4>
+<p>回顾我们要求大家编写在两个不同字长的x86平台上都能工作的代码。<code>setjmp</code>, <code>longjmp</code>都是可移植的函数(它们内部实现很不一样，有兴趣的同学可以参考libc里的实现)，但堆栈切换需要为两个平台分别编写——上面的代码已经给了大家足够的提示，应该如何兼容两个不同的体系结构了。</p>
+</div>
+<p>学过《计算机系统基础》的你应该不难理解这段代码，并且开动脑筋就可以知道如何在<code>co_start</code>的时候，为协程开辟新的堆栈了。你需要的文档：<a href="http://www.ibiblio.org/gferg/ldp/GCC-Inline-Assembly-HOWTO.html">GCC-Inline-Assembly-HOWTO</a>。仔细阅读这个文档，因为很多框架代码里都用到了内嵌汇编，你会受益的。</p>
+<div class="fenced fenced-red">
+<h4 id="_16">堆栈对齐</h4>
+<p>x86_64 ABI要求rsp(栈顶)寄存器总是16字节对齐——这是因为128bit SSE指令在非对齐的情况下可能返回错误的结果。那么怎么让你的堆栈正确对齐呢……？</p>
+</div>
+<h3 id="_17">实现协程</h3>
+<p>我们给大家推荐的方案是<code>setjmp</code>/<code>longjmp</code>，这样就不必再纠结内嵌汇编、应该保存哪些寄存器之类的事情了。首先，我们需要维护“当前运行的协程”：</p>
+<pre class="codehilite"><code class="language-c">struct co *current;</code></pre>
+
+
+<p>这其实已经非常类似于在操作系统里实现线程了——我们会为每一个CPU维护一个“当前运行的线程”。因此，在协程执行时调用<code>co_yield</code>：</p>
+<pre class="codehilite"><code class="language-c">void co_yield() {
+  int val = setjmp(current-&gt;buf);
+  if (val == 0) {
+    // ???
+  } else {
+    // ???
+  }
+}</code></pre>
+
+
+<p>给大家的提示是，<code>setjmp</code>会返回两次：</p>
+<ul>
+<li><code>setjmp</code>会立即返回，对应了<code>yield()</code>的执行，此时我们需要选择下一个协程，并切换到这个协程运行(通过<code>longjmp</code>实现)。</li>
+<li><code>setjmp</code>是由另一个<code>longjmp</code>返回的，此时我们什么都不需要做，只要返回就行了。</li>
+</ul>
+<div class="fenced fenced-red">
+<h4 id="_18">非常难理解？</h4>
+<p>没错，的确很难理解。你需要多读一读setjmp/longjmp的文档和例子——这是很多高端面试职位的必备题目。如果你能解释得非常完美，就说明你对C语言有了脱胎换骨的理解。</p>
+<p>setjmp/longjmp类似于保存寄存器现场/恢复寄存器现场的行为，其实模拟了操作系统中的上下文切换。因此如果你彻底理解了这个例子，你们一定会觉得操作系统也不过如此——我们在操作系统的进程之上又实现了一个迷你的“操作系统”。类似的实现还有AbstractMachine的native，它是通过<code>ucontext.h</code>实现的，有兴趣的同学也可以试试。</p>
+</div>
+<p>至于实现<code>co_wait</code>，我们只需要在<code>struct co</code>中加入协程的状态即可。这个实验的确有点难，但完成之后的那种通透感也是十分畅快的。setjmp/longjmp的checkpoint和还原还被用来做很多有趣的hacking，例如<a href="http://www.doc.ic.ac.uk/~phjk/GROW09/papers/03-Transactions-Schwindewolf.pdf">实现事务内存</a>、<a href="https://doi.acm.org/10.1145/2451116.2451129">在并发bug发生以后的线程本地轻量级recovery</a>。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

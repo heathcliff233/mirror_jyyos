@@ -1,0 +1,338 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>AbstractMachine Devices</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="abstractmachine-devices">AbstractMachine Devices</h1>
+<p>使用 AbstractMachine 设备需要引用 <code>amdev.h</code>。</p>
+<h2 id="abstractmachine">AbstractMachine 设备模型</h2>
+<p>AbstractMachine 内置了一些设备，每个设备可以看成是由若干控制寄存器组成的 “黑盒子”。每个寄存器要么是只读的，要么是只写的，读取寄存器可以获得设备的状态；写入寄存器可以执行某个设备上的操作。</p>
+<p><img alt="" class="center" src="../static/wiki/am/img/devmodel.png" width="500px"></img></p>
+<p>在 AbstractMachine 上，设备只能通过以下 API 访问：</p>
+<pre class="codehilite"><code class="language-c">size_t _io_read(uint32_t dev, uintptr_t reg, void *buf, size_t size);
+size_t _io_write(uint32_t dev, uintptr_t reg, void *buf, size_t size);</code></pre>
+
+
+<ul>
+<li><code>_io_read</code> 从编号为 <code>dev</code> 的设备、编号为 <code>reg</code> 的寄存器中读取数据，<code>buf</code> 指向一个缓冲区 (大小为 <code>size</code>)；</li>
+<li><code>_io_write</code> 向编号为 <code>dev</code> 的设备、编号为 <code>reg</code> 的寄存器写入数据，<code>buf</code> 指向写入的数据，写入数据的数量为 <code>size</code>。</li>
+</ul>
+<p>以上图的 <code>VIDEO</code> 设备为例，执行 <code>_io_read</code> 可以获取屏幕大小信息：</p>
+<pre class="codehilite"><code class="language-c">struct _DEV_VIDEO_INFO_t video_info;
+int nread = _io_read(_DEV_VIDEO,         // VIDEO 设备
+                     _DEVREG_VIDEO_INFO, // VIDEO_INFO 寄存器
+                     &video_info,        // 缓冲区
+                     sizeof(video_info)  // 缓冲区大小
+                    );
+assert(nread == sizeof(video_info));
+printf("Screen size: %d x %d\n", video_info.width, video_info.height);</code></pre>
+
+
+<p>同理，如果希望在屏幕的 (200, 100) 绘制一个 <math class="inline-math">16 \times 16</math> 的红色方块，在准备好寄存器数值后，使用 <code>_io_write</code> 绘制：</p>
+<pre class="codehilite"><code class="language-c">uint32_t pixels[16 * 16];
+for (int i = 0; i &lt; LENGTH(pixels); i++) {
+  pixels[i] = 0xff0000; // 00RRGGBB
+}
+_DEV_VIDEO_FBCTRL_t video_ctrl = (_DEV_VIDEO_FBCTRL_t) {
+  .pixels = pixels,   // 待绘制的数据
+  .x = 200, .y = 100, // 绘制在屏幕上的坐标
+  .w = 16,  .h = 16,  // 16 x 16
+  .sync = 1, // 同步
+};
+_io_write(_DEV_VIDEO, _DEVREG_VIDEO_FBCTRL, &video_ctrl, sizeof(video_ctrl));</code></pre>
+
+
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">约定</h4>
+<ul>
+<li>访问设备前必须调用 <code>_ioe_init()</code> 完成设备初始化；</li>
+<li><code>_io_read</code> 和 <code>_io_write</code> 是同步的，即 API 会等操作完成后才返回 (例如像 <code>VIDEO</code> 设备的 <code>FBCTRL</code> 寄存器写入绘图命令，会等图形绘制完毕后返回)，操作过程中可能访问内存。</li>
+<li>不支持设备的运行时加载。如果系统中存在某个设备，则它从系统启动开始一直存在到系统 (<code>_halt()</code> 或崩溃)；</li>
+<li>读取/写入不存在的设备，返回 <code>0</code>；否则返回读取/写入的字节数。<ul>
+<li>在操作系统实验中，你可以假设所有 AbstractMachine 设备都存在；但你自己实现的某个硬件里可能就缺少定时器或持久存储。</li>
+</ul>
+</li>
+<li>(非常重要) <code>_io_read</code> 和 <code>_io_write</code> 可以被中断；但任一时刻，对同一个设备只允许有<strong>一个尚未返回的 I/O 操作</strong>。对同一个设备的并发 I/O 操作为 undefined behavior。</li>
+</ul>
+</div></div></div>
+
+<h2 id="abstractmachine_1">AbstractMachine 设备</h2>
+<h3 id="1">1. 概述</h3>
+<p>AbstractMachine 已经对设备进行了抽象。尽管不同平台上的键盘、时钟、显示控制器等设备行为各不相同，但 AbstractMachine 以统一的接口访问它们。</p>
+<table>
+<thead>
+<tr>
+<th>设备编号</th>
+<th>设备名称</th>
+<th>寄存器</th>
+<th>功能描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PERFCNT</code></td>
+<td>性能计数器</td>
+<td></td>
+<td>若干性能相关的计数器；具体机器实现相关。</td>
+</tr>
+<tr>
+<td><code>INPUT</code></td>
+<td>输入设备</td>
+<td><code>KBD</code> (r)</td>
+<td>读取上一次键盘事件(keyup/keydown)的按键码。</td>
+</tr>
+<tr>
+<td><code>TIMER</code></td>
+<td>定时器</td>
+<td><code>UPTIME</code> (r)</td>
+<td>系统启动时间的毫秒数。</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><code>DATE</code> (r)</td>
+<td>系统的日期和事件(精确到秒)。</td>
+</tr>
+<tr>
+<td><code>VIDEO</code></td>
+<td>显示控制器</td>
+<td><code>INFO</code> (r)</td>
+<td>屏幕的宽度和高度。</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><code>FBCTRL</code> (w)</td>
+<td>屏幕绘制寄存器。</td>
+</tr>
+<tr>
+<td><code>SERIAL</code></td>
+<td>串口控制器</td>
+<td><code>RECV</code> (r)</td>
+<td>串口接收收据。</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><code>SEND</code> (w)</td>
+<td>串口发送数据。</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><code>STAT</code> (r)</td>
+<td>串口状态信号。</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><code>CTRL</code> (w)</td>
+<td>串口控制信号。</td>
+</tr>
+<tr>
+<td><code>STORAGE</code></td>
+<td>持久存储</td>
+<td><code>INFO</code> (r)</td>
+<td>持久存储的块大小和块数量。</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><code>RDCTRL</code> (w)</td>
+<td>从持久存储读取数据到内存。</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><code>WRCTRL</code> (w)</td>
+<td>将内存数据写入持久存储。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2">2. 代码导读</h3>
+<p>参考 <code>amdev.h</code> 中，首先定义了各个设备的编号：</p>
+<pre class="codehilite"><code class="language-c">#define _DEV_PERFCNT 0x0000ac01
+#define _DEV_INPUT   0x0000ac02
+#define _DEV_TIMER   0x0000ac03
+#define _DEV_VIDEO   0x0000ac04
+#define _DEV_SERIAL  0x0000ac05
+#define _DEV_STORAGE 0x0000ac05</code></pre>
+
+
+<p>每个设备可能有多个寄存器，设备寄存器是使用宏定义的：</p>
+<pre class="codehilite"><code class="language-c">#define _AM_DEVREG(dev, reg, id, ...) \
+  enum { _DEVREG_##dev##_##reg = id }; \
+  typedef struct { __VA_ARGS__; } __attribute__((packed)) \
+    _DEV_##dev##_##reg##_t;</code></pre>
+
+
+<p>例如，我们定义 <code>INPUT</code> (输入) 设备的 <code>KBD</code> (键盘) 寄存器，使用以下代码：</p>
+<pre class="codehilite"><code class="language-c">_AM_DEVREG(INPUT, KBD, 1, int keydown, keycode)</code></pre>
+
+
+<p>宏展开后：</p>
+<pre class="codehilite"><code class="language-c">enum { _DEVREG_INPUT_KBD = 1 }; // 设备寄存器编号 (reg)
+typedef struct { // 设备寄存器结构体
+  int keydown, keycode;
+} _DEV_INPUT_KBD_t;</code></pre>
+
+
+<p>即 <code>_AM_DEVREG</code> 定义了：</p>
+<ul>
+<li>寄存器的编号 (<code>_DEVREG_INPUT_KBD</code>)；</li>
+<li>寄存器数据对应的结构体 (<code>_DEV_INPUT_KBD_t</code>)，这部分是将 <code>_AM_DEVREG</code> 在 <code>dev</code>, <code>reg</code>, <code>id</code> 之后所有的可变参数 (<code>__VA_ARGS__</code>) 粘贴到 <code>typedef struct { ... }</code> 中实现的。</li>
+</ul>
+<p>例如，从 <code>TIMER</code> 设备的 <code>DATE</code> 寄存器获得日期：</p>
+<pre class="codehilite"><code class="language-c">_DEV_TIMER_DATE_t date;
+size_t nread = _io_read(_DEV_TIMER,          // 设备编号
+                        _DEVREG_TIMER_DATE,  // 寄存器编号 (#2)
+                        &date,               // 读取的缓冲区
+                        sizeof(date)         // 恰好等于寄存器大小 
+                       );
+if (nread == 0) {
+  printf("RTC is not supported for this platform.");
+} else {
+  printf("Today is %d-%d-%d\n", date.year, date.month, date.day);
+}</code></pre>
+
+
+<h3 id="3-abstractmachine">3. AbstractMachine 设备寄存器</h3>
+<h4 id="31-input">3.1 输入设备 (<code>INPUT</code>)</h4>
+<p>目前只有键盘设备。读取 <code>KBD</code> 寄存器会获得按键事件队列中最早的一个事件，事件包含按键的行为 (keydown 或 keyup) 以及按键的编码：</p>
+<pre class="codehilite"><code class="language-c">[R] INPUT_KBD    int keydown      // = 1为按下；= 0为松开
+                 int keycode      // 按键扫描码</code></pre>
+
+
+<p>按键的编码在 <code>amdev.h</code> 中定义。读取 <code>KBD</code> 寄存器不会等待按键的到来；如果没有按键，返回 <code>_KEY_NONE</code>。</p>
+<p>定时器有两个寄存器，分别是毫秒为单位的系统启动时间 (<code>UPTIME</code>) 和实时时钟 (<code>DATE</code>)。</p>
+<pre class="codehilite"><code class="language-c">[R] TIMER_UPTIME uint32_t hi      // 开机时间(ms)的高32位
+                 uint32_t lo      // 开机时间(ms)的低32位
+[R] TIMER_DATE   int year         // 当前时间(年)
+                 int month        // 当前时间(月)
+                 int day          // 当前时间(日)
+                 int hour         // 当前时间(时)
+                 int minute       // 当前时间(分)
+                 int second       // 当前时间(秒)</code></pre>
+
+
+<h3 id="33-video">3.3 显示控制器 (<code>VIDEO</code>)</h3>
+<p>显示控制器有两个寄存器，<code>INFO</code> 用于获取屏幕的信息，<code>FBCTRL</code> 用于控制帧缓冲。</p>
+<pre class="codehilite"><code class="language-c">[R] VIDEO_INFO   int width        // 屏幕宽度(像素)
+                 int height       // 屏幕高度(像素)
+[W] VIDEO_FBCTRL int x, y         // 绘制矩形的坐标
+                 int w, h         // 绘制矩形的跨度和高度
+                 uint32_t *pixels // 绘制w * h个像素，32bit AARRGGBB格式，行优先存储
+                 int sync         // 是否刷新屏幕</code></pre>
+
+
+<h3 id="34-serial">3.4 串口 (<code>SERIAL</code>)</h3>
+<p>串口有四个寄存器。</p>
+<pre class="codehilite"><code class="language-c">[R] SERIAL_RECV  uint8_t data     // 串口接收数据
+[W] SERIAL_SEND  uint8_t data     // 串口发送数据
+[R] SERIAL_STAT  uint8_t data     // 串口状态数据
+[W] SERIAL_CTRL  uint8_t data     // 串口控制数据</code></pre>
+
+
+<h3 id="35-storage">3.5 持久存储 (<code>STORAGE</code>)</h3>
+<p>持久存储是以块 (连续的字节) 为单位访问的存储设备：</p>
+<p><img alt="" class="center" src="../static/wiki/am/img/storage.png" width="400px"></img></p>
+<p>读取 <code>INFO</code> 获取持久存储的基本信息：每一个块 (block) 的大小 (字节数 <code>blksz</code>，是 2 的整数次幂) 和块的数量 <code>blkcnt</code>。通过写入 <code>RDCTRL</code>/<code>WRCTRL</code> 寄存器读取/写入数据。读取/写入均以块为单位。</p>
+<pre class="codehilite"><code class="language-c">STORAGE_INFO    uint32_t blksz  // 持久存储的块大小
+                uint32_t blkcnt // 持久存储的块数
+STORAGE_RDCTRL  void *buf       // 读取的缓冲区
+                uint32_t blkno  // 读取的起始块编号
+                uint32_t blkcnt // 读取的块数量
+STORAGE_WRCTRL  void *buf       // 写入的缓冲区
+                uint32_t blkno  // 写入的起始块编号
+                uint32_t blkcnt // 写入的块数量</code></pre>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

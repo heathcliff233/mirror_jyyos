@@ -1,0 +1,562 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>概述</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">概述</h1>
+<p>蒋炎岩 <a href="mailto:jyy@nju.edu.cn">jyy@nju.edu.cn</a>
+<img width="200px" class="float-right" src="http://moon.nju.edu.cn/people/yyjiang/img/yanyan-portrait.jpg"></img></p>
+<ul>
+<li>临时工，计算机软件研究所 (ICS)</li>
+<li>JSOI/南京大学ACM-ICPC集训队教练<ul>
+<li>2018 ACM SIGSOFT Distinguished Paper Award, 2016 南京大学学生年度人物, 2009 ACM-ICPC WF 49th Place</li>
+</ul>
+</li>
+<li>课程主页：<a href="http://moon.nju.edu.cn/~jyywiki">http://moon.nju.edu.cn/~jyywiki</a></li>
+</ul>
+<div class="fragment">
+
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>《计算机系统基础》习题课：负责一切练习、课堂部分的讲解和补充。虽然说是补充，但对大家来说最重要的技术还是：</p>
+<ul>
+<li>STFW, RTFM, RTFSC</li>
+</ul>
+<blockquote>
+<p>我不是PA的作者，我是yzh的地上代言人</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="pa0">📢 公告：PA0</h1>
+<p>提交截止日期2018/09/09 23:59:59</p>
+<p>你肯定很好奇：啥也不要做为什么还要提交个空的？</p>
+<blockquote>
+<p>框架代碼的壓縮包, 和pdf文檔</p>
+<p>第一次提交會有一大堆人不符合規範</p>
+<p>可以提前噴一下</p>
+<p>—— yzh</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>Q: 為什麼課堂slide和PA講義放在兩個不同的地方？</p>
+<p>A: 是有其他學校也會跟進PA的新版本, 所以PA講義放在gitbook上一直對外開放</p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">本次课内容</h1>
+<ul>
+<li>复习：C语言<ul>
+<li>C语言的语法和语义</li>
+<li>YEMU</li>
+<li>编程和测试</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>对不起，没有装机指导，STFW！</p></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="hello-c">Hello, C语言</h1></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="hello-c-world">Hello, C World!</h1>
+<p>欢迎！大家想必已经是(面向OJ编程)的C/C++高手了！</p>
+<pre class="codehilite"><code class="language-c">int main(int argc, const char *argv[]) {
+  printf("Hello, C World!\n");
+  return 0;
+}</code></pre>
+
+<p>ICS这门课的基本目标：(1) 理解程序是如何在计算机上运行的；(2) 做一个相对大，并且non-trivial的系统软件。</p>
+<p>本课程选择<strong>C语言</strong>作为官方语言，quiz：</p>
+<ul>
+<li><code>argc</code>是什么？<code>argv</code>是什么？</li>
+<li><code>printf</code>是怎么实现的？</li>
+<li>不<code>return 0</code>可以吗？</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="c1main">C语言复习1：<code>main</code>函数</h1>
+<p>所有C程序都是从<code>main</code>开始执行的，那谁执行的main呢？</p>
+<pre class="codehilite"><code class="language-c">int main(int argc, char *argv[]);</code></pre>
+
+<ul>
+<li>argc (argument count): 参数个数</li>
+<li>argv (argument vector): 参数列表(NULL结束)，它是一个<code>char *</code>的数组</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>编译好的C程序不仅可以“双击”调用，还可以传入参数</p>
+<ul>
+<li><code>ls -al</code></li>
+<li><code>python -c 'print(2**100)'</code></li>
+</ul>
+<blockquote>
+<p>这有啥用？</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="c2">C语言复习2：变量和类型</h1>
+<p>编程 = 写“说明书”，让电脑“按照步骤执行”。其中计算机只能理解数据和数据的运算。在C中，局部变量、全局变量、函数参数等都是数据。</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>数据都有类型，以下<code>argv</code>参数都可以作为<code>main</code>的参数，它们有什么区别？哪些<code>argv</code>执行<code>strcpy(argv[0], "a");</code>是合法的？</p>
+<ol>
+<li>(样例) <code>char *argv[]</code></li>
+<li>(经常见到的) <code>char **argv</code></li>
+<li>(?) <code>const char *argv[]</code></li>
+<li>(??) <code>char ** const argv</code></li>
+<li>(???) <code>const char ** const argv</code></li>
+</ol></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="c21">C语言复习2.1：类型</h1>
+<p>附加题：这是啥？</p>
+<pre class="codehilite"><code class="language-c">void (*signal(int sig, void (*func)(int)))(int);</code></pre>
+<div class="fragment">
+
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>说人话：</p>
+<pre class="codehilite"><code class="language-c">typedef void (*sig_t)(int);
+sig_t signal(int sig, sig_t func);</code></pre>
+
+
+<ul>
+<li>这辈子要遇到返回一个函数指针的情况还是有的。</li>
+<li>STFW: “顺时针法则”。</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="c3">C语言复习3：语句</h1>
+<p>变量/函数的声明/定义、数据类型定义、赋值语句、条件语句、函数调用、循环、switch-case、……</p>
+<ul>
+<li>好像就是C语言的全部了</li>
+<li>我们做的无非就是把数据算出来，算到另一个地方，然后最后调用库函数处理一下(比如输出)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>原则上，给你<code>gettime()</code>, <code>read_key()</code>和<code>draw_pixel(x, y, color)</code>，你就能做各种东西了！</p>
+<p>quiz: 如何用<code>draw_pixel</code>实现<code>putchar</code>，进而实现：</p>
+<pre class="codehilite"><code class="language-c">int printf(const char * restrict format, ...);</code></pre></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">常见的误解</h1>
+<p>“我们只要能写出程序就行了，语言特性关我X事！”</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>事实：</p>
+<ol>
+<li>总是可以用简单粗暴的编程方式写出正确的程序。</li>
+<li>随着项目的增长，这么做可能会让你的代码深陷泥潭。</li>
+</ol></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>为什么要好好学习学C语言？</p>
+<ol>
+<li><strong>简单</strong>。这是一个相对在可控时间成本里可以精通的语言。</li>
+<li><strong>通用</strong>。大量系统是用C语言编写的，例如Python。</li>
+<li><strong>对底层机器的精确控制</strong>。C语言几乎就是汇编，能够控制它在机器上的行为。</li>
+</ol></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><p>class: center, middle</p>
+<h1 id="_1">课堂小练习</h1>
+<p>编程能力摸底(请大家拿出一张纸)</p></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="yemu">课堂练习：YEMU实现</h1>
+<p>实现yemu.c (袁妈模拟器)中的<code>execute()</code>，要求正确支持教科书图1.3中load, mov, add, store指令。<code>execute</code>时的PC、寄存器、内存分别是(pc, R, M)，执行指令将会修改这些全局变量。</p>
+<blockquote>
+<p>剧透：这就是NEMU PA的简化版。</p>
+</blockquote>
+<pre class="codehilite"><code class="language-c">#include &lt;stdint.h&gt;
+#define NREG 4
+#define NMEM 16
+typedef uint8_t u8;
+u8 pc = 0, R[NREG], M[NMEM] = { ... };
+
+int main() {
+  while (!is_halt(M[pc])) {
+    execute();
+  }
+}</code></pre></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="1">代码例子1</h1>
+<pre class="codehilite"><code class="language-c">void execute() {
+  if ((M[pc] &gt;&gt; 4) == 0) {
+    R[(M[pc] &gt;&gt; 2) & 3] = R[M[pc] & 3];
+    pc++;
+  } else if ((M[pc] &gt;&gt; 4) == 1) {
+    R[(M[pc] &gt;&gt; 2) & 3] += R[M[pc] & 3];
+    pc++;
+  } else if ((M[pc] &gt;&gt; 4) == 14) {
+    R[0] = M[M[pc] & 0xf]; 
+    pc++;
+  } else if ((M[pc] &gt;&gt; 4) == 15) {
+    M[M[pc] & 0xf] = R[0];
+    pc++;
+  }
+}</code></pre></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="2">代码例子2</h1>
+<pre class="codehilite"><code class="language-c">void execute() {
+  u8 inst = M[pc++];
+  u8 op = inst &gt;&gt; 4;
+  if (op == 0x0 || op == 0x1) {
+    int rt = (inst &gt;&gt; 2) & 3, rs = (inst & 3);
+    if      (op == 0x0) R[rt]  = R[rs];
+    else if (op == 0x1) R[rt] += R[rs];
+  }
+  if (op == 0xe || op == 0xf) {
+    int addr = inst & 0xf;
+    if      (op == 0xe) R[0]    = M[addr];
+    else if (op == 0xf) M[addr] = R[0];
+  }
+}</code></pre></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="3">代码例子3</h1>
+<pre class="codehilite"><code class="language-c">typedef union inst {
+  struct { u8 rs  : 2, rt: 2, op: 4; } rtype;
+  struct { u8 addr: 4,        op: 4; } mtype;
+} inst_t;
+
+#define RTYPE(i) u8 rt = (i)-&gt;rtype.rt, rs = (i)-&gt;rtype.rs;
+#define MTYPE(i) u8 addr = (i)-&gt;mtype.addr;
+
+void execute() {
+  inst_t *cur = (inst_t *)&M[pc];
+  switch (cur-&gt;rtype.op) {
+  case 0b0000: { RTYPE(cur); R[rt]   = R[rs];   pc++; break; }
+  case 0b0001: { RTYPE(cur); R[rt]  += R[rs];   pc++; break; }
+  case 0b1110: { MTYPE(cur); R[0]    = M[addr]; pc++; break; }
+  case 0b1111: { MTYPE(cur); M[addr] = R[0];    pc++; break; }
+  default: assert(0);
+  }
+}</code></pre></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">不多，也不少</h1>
+<p>变量命名</p>
+<ul>
+<li>(无意义) r[n] = x;</li>
+<li>(太长) register[register_number] = fukingly_long_variable_name;</li>
+<li>(正好) reg[num] = alu_res;</li>
+</ul>
+<p>给表达式含义</p>
+<ul>
+<li>(#1) R[(M[pc] >> 2) & 3] → R[rt]</li>
+</ul>
+<p>代码克隆是维护的噩梦</p>
+<ul>
+<li>opcode发生了变化，(#2) op == 0xe的判断位于十万八千里之外，有一处忘记改了……</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">回归编程</h1>
+<p>C语言就是一个规范，规定啥是程序，怎么执行。</p>
+<p>在这个规范下，既可以写出好的程序，也可以写出糟糕的程序。</p></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="c">C语言：滥用</h1>
+<p>各种Hacking：展示智力/技术的时刻(<a href="http://ioccc.org">IOCCC</a>)</p>
+<pre class="codehilite"><code class="language-c">main(){char q=34,n=10,*a="main(){char q=34,n=10,*a=%c%s%c;printf(a,q,a,q,n);}%c";printf(a,q,a,q,n);}</code></pre>
+
+<p>任何Turing-Complete的语言都有这样的fixed-point。</p>
+<div class="fragment">
+
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>但如果要做个大程序，这一般就不灵了，对初学者就更不灵了。</p>
+<ul>
+<li>软件工程：让傻(新)子(手)也能编对程，编好程</li>
+<li>从此编程不再是智者的专长😭</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">编程的本质</h1>
+<blockquote>
+<p>Programs are meant to be read by humans and only incidentally for computers to execute. — <em>D. E. Knuth</em></p>
+<p>(程序首先是拿给人读的，其次才是被机器执行。)</p>
+</blockquote>
+<p>因此好的程序：</p>
+<ul>
+<li>不言自明：能立即知道是做什么的，即<em>specification</em>
+    > 因此代码<strong>风格</strong>很重要</li>
+<li>不言自证：能立即确认代码和specification是一致的    > 因此代码中可读的<strong>逻辑流</strong>很重要</li>
+</ul>
+<p>(让我们回到之前的yemu)</p></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="c">C语言：老码农的实践</h1>
+<p>知道什么能做、什么不能做。</p>
+<ul>
+<li><code>(i++) + (++i)</code> (<em>Unspecified</em> Behavior, C99 6.5.2.2 #10)</li>
+<li><code>INT_MAX + 1</code> (<em>Undefined</em> Behavior, C99 6.5.6 #8)</li>
+</ul>
+<div class="fragment">
+
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>写出正确、更优美、易读、易证明的代码* 二进制常量 (<code>0b0001</code>，比十六进制肉眼友好一些)
+* bitfields (<code>struct { u8 rs: 2, rt: 2, op: 4 };</code>) 
+* union (<code>union { ...rtype; ...mtype; };</code>)
+* 类型转换 (<code>(inst_t *)&M[pc]</code>)
+* 预编译指令 (<code>#define</code>，一会儿还会看到)</p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">最重要的事情说三遍</h1>
+<p>代码写得再好也会有bug (比如把<em>i</em>打成了<em>j</em>) * 3</p>
+<ul>
+<li>Linux Kernel, GCC, ... 到处都是bug</li>
+<li>(目前我们的研究关注怎么给这些软件找bug)</li>
+</ul>
+<div class="fragment">
+
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p><strong>正确性</strong>：代码的行为与程序的规约(specification)一致</p>
+<ul>
+<li>但有时候自己也说不清specification</li>
+<li>至少通过测试给我们一些信心吧</li>
+<li>OJ已经让你们体会到正确性的重要性(差一点都wa)，ICS更是这样：指令如果实现有误，大程序基本跑不起来。</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">测试</h1>
+<blockquote>
+<p>(IEEE 610, Software Engineering Terminology): The process of operating a system or componentunder specified conditions, observing or recording the results,and making an evaluation of some aspect of the system or component.</p>
+<p>(IEEE 892): The process of analyzing a software item to detect the difference between existing and required conditions (that is, bugs) and to evaluate the features of the software items.</p>
+<p>(BS 7925-1, Software Testing-Vocabulary): Process of exercising software to verify that it satisfies requirements and to detect errors.</p>
+</blockquote>
+<p>说白了就是“拉出去溜溜”，看是不是和预期一致。</p></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class=""><h1 id="yemu">实战：测试yemu</h1>
+<p>已经尽你所能实现好了yemu，不过怎么增加你对代码的信心呢？</p>
+<ul>
+<li><strike>面向OJ编程：管他呢，样例对了看着没毛病，先交为敬。</strike></li>
+<li>怎么又Wrong Answer/Runtime Error/...了？</li>
+</ul>
+<div class="fragment">
+
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>怎样测试你实现的yemu？</p>
+<ul>
+<li><a href="../static/wiki/ics/2018/files/yemutest.c">一个简易yemu测试框架</a></li>
+<li>给我们的信心：在随机的寄存器/内存值上，执行单条指令的行为表现得和我们写出的断言一致</li>
+</ul>
+<div class="fragment">
+
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><p>对于NEMU，你们会遇到测试噩梦的</p>
+<ul>
+<li>听说过differential testing？其实我觉得把它从PA里去掉比较好。</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">推荐的参考书</h1>
+<p>(大部分我都读过，剩下少部分也翻过，品质保证)</p>
+<ul>
+<li>Brian W. Kernighan and Dennis M. Ritchie. The C Programming Language (教科书)</li>
+<li>Peter van der Linden. Expert C Programming: Deep C Secrets (当闲书看不错)</li>
+<li>Andrew Koenig. C Traps and Pitfalls (也是闲书)</li>
+<li>Axel-Tobias Schreiner. Object-Oriented Programming with ANSI-C (我觉得有点搞笑的闲书，但有不少有用的编程技巧)</li>
+<li>Robert C. Seacord. The Cert C Coding Standard (编码实践，而且对新标准覆盖度比较高)</li>
+<li>C99/C11 Specification (最详尽，最难读，缺少解释)</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h1 id="_1">推荐的参考代码</h1>
+<p>互联网博客/问答</p>
+<ul>
+<li>🚫 不推荐CSDN/cnblogs/...的代码 (参差不齐)</li>
+<li>✅ Stackoverflow上的高票回答</li>
+</ul>
+<p>参考代码 (RTFSC)</p>
+<ul>
+<li>暂时没有想到好的ICS参考代码。想到可以告诉我。QEMU好像太复杂了点。</li>
+<li>OS课的参考代码：busybox (本课程也推荐), newlib, xv6 (进阶)<ul>
+<li>就像大家都喜欢把每天身边用的东西拆了看看怎么工作的，busybox就是个不错的简化版</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

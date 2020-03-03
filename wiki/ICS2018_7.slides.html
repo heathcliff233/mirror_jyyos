@@ -1,0 +1,397 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>NEMU上运行的程序</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# NEMU上运行的程序
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 概述
+
+⚠️ 警告：.red[HW2截止日期：10月25日]；Lab2 WiP
+
+----
+
+有同学的NEMU已经成功运行了各种程序啦！打字小游戏、马里奥……
+
+* 你想给x86虚拟机开发程序吗？
+* 你想把你的程序移植到自制的MIPS32 CPU吗？
+* 有兴趣参加龙芯杯吗？
+
+----
+
+AbstractMachine：帮你无痛为裸机(bare metal)编程
+
+---
+
+class: center, middle
+
+# 编写“可移植”的代码
+
+---
+
+# C语言：八卦
+
+1967年 BCPL语言
+
+```B
+LET START() = VALOF $(
+	WRITEF("HELLO, WORLD")
+	RESULTIS 0
+$)
+```
+
+浓浓的上世纪60年风格(也许有学过Visual Basic的同学……)
+
+----
+
+.float-right[<img src="../static/wiki/ics/2018/slides/img/cdc.jpg" width=150px/>] BCPL有一个巨大的特点：
+
+* 只有一种数据类型：word
+* 这样就可以编译到各种各样的计算机上啦！
+  * [IBM 360](https://en.wikipedia.org/wiki/IBM_System/360), [PDP-10](https://en.wikipedia.org/wiki/PDP-10), [CDC-6600](https://en.wikipedia.org/wiki/CDC_6000_series), ...
+
+---
+
+# C语言：八卦
+
+C语言：为了写操作系统诞生的语言
+
+* 保留B/BCPL的优点：可移植、精练、接近硬件
+* 克服B/BCPL的缺点：过于简单，连数据类型都没有……
+
+----
+
+C语言结合了.red[高级语言易用特性和低级语言对机器的控制]，可以看成是一个“高级汇编语言”
+
+* 既可以写出人很好读的代码
+* 又可以干很多low-level hacking
+* (无需多言，RTFM)
+
+---
+
+# 编写可移植代码
+
+只有一个C语言，但是程序运行在各种各样的机器上啊？
+
+* x86用栈传递参数([%ebp+8], [%ebp+12])，……
+* x64用寄存器(rdi, rsi, rdx, rcx, r8, r9)+堆栈传递参数，在Windows和Linux上行为还有差异
+* 其他计算机的数据大小、字节序等都不一样啊
+
+----
+
+.red[对正确性的更高要求]
+
+* 编写的C程序遵循.red[可移植]的规范，使它能在不同平台上运行
+
+---
+
+# 原则：跟着标准走
+
+C标准为了兼容尽可能多的计算机，不可避免会有规定不全之处：
+
+* 类型大小：char <= short <= int <= long；那么应该用哪种整数类型来存储.red[指针]？
+* `char`有无符号？
+* 字节序：大端/小端
+* 结构体对齐：结构体只保证按顺序存储
+* 求值顺序：`printf("%c%c", getchar(), getchar());` (今天标准设计者肯定想把这条去掉，无奈这样会让很多老代码违背标准)
+
+----
+
+同时，也不可避免会引入Undefined Behavior
+
+* 内存越界、有符号数溢出……
+* 但对于特定的机器，就有可能是defined (访问某个常数内存)
+
+---
+
+# 数据类型：例子
+
+在你的机器上，一切正常，在risc-v上出现问题：
+
+```c
+char s[MAX+1];
+int i;
+for (i = 0; i < MAX; i++)
+  if (((s[i] = getchar()) == '\n') ||
+      (s[i] == EOF)) break;
+s[i] = '\0';
+```
+
+----
+
+应该如何修复？
+
+---
+
+# 字节序：例子
+
+```c
+// 发送方, little-endian (x86)
+uint32_t x = 0x12345678; // [78,56,34,12]
+write(sock, &x, sizeof(x));
+
+// 接收方, big-endian (MIPS32)
+uint32_t x;
+read(sock, &x, sizeof(x)); // Get 0x78563412
+```
+
+----
+
+应该如何修复？
+
+> `man 3 byteorder`
+
+---
+
+# 例子：AM Apps
+
+你们已经玩过的videotest, MicroBench, LiteNes, ...
+
+* 所有这些程序都是.red[可移植]的
+* 能在本地(Linux native, 任何体系结构)、MIPS32虚拟机、x86虚拟机等执行(要求`sizeof(int) >= 4`)
+
+----
+
+```c
+int main() {
+  _ioe_init();
+  xmap_init();
+  fce_load_rom(rom_mario_nes);
+  fce_init();
+  fce_run();
+  return 1;
+}
+```
+
+
+
+---
+
+# 最后：一个小细节
+
+你试过链接C和C++代码吗？(现场尝试)
+
+--
+
+count: false
+
+----
+
+你也许看到AM里的很多代码有
+
+```c
+#ifdef __cplusplus
+extern "C" {
+}
+#endif
+
+... // 省略一堆代码
+
+#ifdef #ifdef __cplusplus
+#endif
+```
+
+其实AM apps可以用.red[C++]开发！使用的编译选项：
+
+* `-ffreestanding -fno-rtti -fno-exceptions`
+
+---
+
+class: center, middle
+
+# AbstractMachine
+
+---
+
+# 为什么需要AbstractMachine
+
+NEMU是一个x86“虚拟机”，上面需要运行.red[程序] (系统软件)，也不过是一些C程序
+
+* 大家已经运行过的：CPUtest, LiteNES, Typing, MicroBench, ...
+
+* 自制操作系统内核 (下学期见)
+* Linux Kernel (很大的程序)
+
+----
+
+不仅NEMU需要运行程序，其他的虚拟/实体硬件需要运行程序
+
+* 数字电路实课残疾MIPS32 CPU
+* 体系结构实验半残废MIPS32 CPU
+* 龙芯杯牛逼MIPS32 CPU
+* x86-QEMU模拟器
+* ...
+
+---
+
+# 编写可移植的代码
+
+你会发现没那么简单！.red[因为直接在硬件上运行的程序没有任何库可以用啊]！
+
+* `printf`, `memcpy`, `open`, ... 都不存在的
+* `printf("hello")`其实非常非常复杂：通过重定向就能实现输出到屏幕/文件/设备/… (一般作为本科毕业生的保研面试题，并且985大概率答不上来)
+
+----
+
+* 移植Hello World尚且容易(只要有`putchar()`就行)
+
+* 但移植LiteNES就远没那么容易了(不同硬件系统的绘图、键盘读取等机制完全不同)
+* 移植带中断、虚拟存储、多处理器的操作系统就更困难了
+
+---
+
+# 八卦 (1)：PA的由来
+
+yzh觉得……好像只有OS不够劲啊
+
+* 而且OSLab上来就把x86的手册丢给你好像不太好玩
+
+----
+
+那就让大家好好读读x86手册吧……那……
+
+* 就做个模拟器好啦，反正就是照着手册写一遍的事
+
+* 于是就有了PA：简易x86全系统模拟器
+
+* 目的是让大家知道“什么是计算机”
+
+---
+
+# 八卦 (2)：PA的后续
+
+某天我们几个在袁妈办公室讨论，觉得虽然体系里的确什么都有了，但还是不够劲啊，不如我们玩个大的吧：
+
+.red[.center[自己写个CPU
+
+上面跑自己的OS
+
+上面跑自己编译器编译出来的应用程序
+
+应用程序可以是NEMU
+
+NEMU又跑自己的OS
+
+咦好像绕圈圈了……]]
+
+----
+
+好吧我承认这有点炫酷
+
+* 但用Verilog写个x86的CPU好像夸张了点，万一哪个地方没搞对不就全垮了么
+
+---
+
+# 八卦 (3)：问题的解决
+
+.float-right[<img src="../static/wiki/ics/2018/slides/img/projectn.jpg" width=150px/>] 想法挺简单的：我们能不能在.red[一套API]上开发所有的.red[系统程序]，这套API又能在残疾/牛逼等.red[各种硬件]上实现？
+
+* 敢想就敢造(你们帅气的助教)：自制MIPS32处理器、自制操作系统、自制应用程序(窗口管理器等)
+* 操作系统层所有东西，换个选项就能上x86跑 (哇)
+
+--
+
+count: false
+
+----
+
+说来也简单，CPU最原始的抽象就是一个最小的C程序的Runtime，然后以extension API的形式访问CPU的功能：
+
+* I/O (IOE), 中断/异常 (CTE), 虚拟存储 (VME), 多处理器 (MPE)
+* 系统可以根据extension存在情况调整行为(例如OS是否开启多核)
+
+---
+
+# AbstractMachine：可移植
+
+抽象带来的好处
+
+* 写操作系统再也不用汇编了 (如果你们看过一些“自己动手写操作系统”类的书，前面讲x86的部分就根本不想看下去了)
+* 在正确的抽象层上写代码能减少细节纠结
+* 软件正确性可以互相验证 (软件在native调试，调试好了再上体系结构运行)
+
+----
+
+抽象带来的额外好处：trace (不过你们的实现好像没带)
+
+* 在每次AM API call/return的时候记录
+* 想想看这有什么好处？
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

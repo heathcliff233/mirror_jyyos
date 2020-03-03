@@ -1,0 +1,591 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>L2: 内核多线程 (kthreads)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="l2-kthreads">L2: 内核多线程 (kthreads)</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">截止日期</h4>
+<p>Soft Deadline: 5月19日23:59:59。</p>
+<p>你的所有操作系统实验将在你之前的代码上完成，你只需要维护一份内容不断增加的实验报告(pdf格式)，其中每次实验的内容不建议超过2页A4纸。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的bug等。</p>
+<p>发布的tty driver等是experimental状态(很多功能不全/未实现)，因此很可能有bug，发现问题请随时和jyy报告。</p>
+<p>一些FAQ/勘误：</p>
+<ul>
+<li>tty代码在申请内存时，会默认数据被清零。这个行为在L1中并没有document，因此如果希望跑起tty，请在你的实现中添加这个行为。</li>
+<li>teardown是设计为给大家Lab4时使用的，你可以不实现它，测试数据中没有teardown。</li>
+</ul>
+</div>
+<h3 id="_2">收到的作业</h3>
+<table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+
+<div class="fenced fenced-green">
+<h4 id="_3">实现分时多线程</h4>
+<p>大家在kalloc的实验中已经熟悉了如何为一个多处理器的bare-metal编程。借助AbstractMachine提供的机制(C Runtime、物理内存、中断/异常等)，我们可以很容易地实现能够管理多个共享内存程序运行(线程)的“操作系统”。甚至我们的课堂上也演示过两份短小的代码：</p>
+<ul>
+<li><a href="../static/wiki/os/2019/demos/thread-os.c">thread-os.c</a>：一个分时调度固定数量线程、round-robin调度的嵌入式操作系统；</li>
+<li><a href="../static/wiki/os/2019/demos/thread-os-mp.c">thread-os-mp.c</a>：把刚才的代码扩展到多处理器。</li>
+</ul>
+<p>大家在理解了框架代码以后，就能实现真正的“操作系统”啦！</p>
+</div>
+<h2 id="_4">背景</h2>
+<p>在之前的实验中，我们已经不知不觉为“实现操作系统”打下了很多基础。对第一次接触操作系统的同学们来说，虚拟化中的“虚拟CPU”，也就是让多个运行的程序能够分时共享处理器是操作系统中最神秘的部分之一。现在，从概念上我们已经知道这是由“中断机制”实现的，在进程/线程执行时中断到来，操作系统代码开始执行并保存处理器运行的寄存器现场；在中断返回时，可以选择任何一个进程/线程已经保存的寄存器现场恢复，从而实现上下文切换。</p>
+<p>在这个实验中，我们实现多处理器操作系统内核中的内核线程API (就像pthreads库，或是课堂上展示的<code>threads.h</code>)。在完成这个实验后，你已经得到了一个真正的嵌入式操作系统，它可以运行在没有MMU的硬件上！</p>
+<h2 id="_5">实验描述</h2>
+<p>在上一个实验中，我们已经实现了<code>pmm</code>模块，能够在多处理器中实现内存管理：</p>
+<pre class="codehilite"><code class="language-c">typedef struct {
+  void (*init)();
+  void *(*alloc)(size_t size);
+  void (*free)(void *ptr);
+} MODULE(pmm);</code></pre>
+
+
+<p>这个实验在<code>pmm</code>的基础上，进一步实现内核线程相关的操作系统内核API:</p>
+<pre class="codehilite"><code class="language-c">typedef _Context *(*handler_t)(_Event, _Context *);
+typedef struct {
+  void (*init)();
+  void (*run)();
+  _Context *(*trap)(_Event ev, _Context *context);
+  void (*on_irq)(int seq, int event, handler_t handler);
+} MODULE(os);
+
+typedef struct task task_t;
+typedef struct spinlock spinlock_t;
+typedef struct semaphore sem_t;
+typedef struct {
+  void (*init)();
+  int (*create)(task_t *task, const char *name, void (*entry)(void *arg), void *arg);
+  void (*teardown)(task_t *task);
+  void (*spin_init)(spinlock_t *lk, const char *name);
+  void (*spin_lock)(spinlock_t *lk);
+  void (*spin_unlock)(spinlock_t *lk);
+  void (*sem_init)(sem_t *sem, const char *name, int value);
+  void (*sem_wait)(sem_t *sem);
+  void (*sem_signal)(sem_t *sem);
+} MODULE(kmt);</code></pre>
+
+
+<p>其中有几个重要的数据结构，我们并没有定义，你需要在自己的头文件里定义它：</p>
+<pre class="codehilite"><code class="language-c">struct task; // 包含一个线程的所有资源
+struct spinlock; // 互斥锁
+struct semaphore; // 信号量</code></pre>
+
+
+<p>例如thread-os.c里的定义：</p>
+<pre class="codehilite"><code class="language-c">struct task {
+  const char *name;
+  _Context context;
+  char stack[4096];
+} tasks[] = ...</code></pre>
+
+
+<p>这些API实现的要求将在之后详细解释。</p>
+<div class="fenced fenced-blue">
+<h4 id="_6">获取实验代码</h4>
+<p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
+<p>在你获得os-workbench之后，执行</p>
+<pre class="codehilite"><code>git pull origin L2</code></pre>
+
+
+<p>会更新<code>kernel/</code>目录下的一些文件，包括刚才的<code>kmt</code>模块的声明。但模块没有定义，因此你需要新建一个文件并定义它。此外，你需要在klib中实现<code>memmove()</code>函数才能正确执行测试用的设备驱动程序。</p>
+</div>
+<h3 id="_7">得到一个真的操作系统</h3>
+<p>实现了这些API，我们就得到了真的操作系统吗？没错！框架代码里附带了一些“设备驱动程序”的代码，它们会调用大家实现的操作系统API，在操作系统中初始化设备、分配内存、创建线程……然后你就可以为我们的“操作系统”编程了！</p>
+<div class="fenced fenced-blue">
+<h4 id="_8">为“操作系统”编程</h4>
+<p>现在，我们的操作系统还不支持进程、文件系统等，但的确有了完善的物理内存管理和线程管理API。换句话说，我们实现的是一个支持线程的“嵌入式操作系统”，它能运行在没有MMU的硬件上。</p>
+<p>为这样的一个操作系统编写代码，就是直接在操作系统代码中静态链接一些函数，这些函数可以作为线程的入口，并且函数可以任意访问内核数据、直接以函数调用的形式调用操作系统内的API。</p>
+<p>例如，系统中有4个tty设备，我们可以为每一个设备创建一个“echo”线程：</p>
+<pre class="codehilite"><code class="language-c">void os_init() {
+  ...
+  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)), &quot;print&quot;, echo_task, &quot;tty1&quot;);
+  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)), &quot;print&quot;, echo_task, &quot;tty2&quot;);
+  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)), &quot;print&quot;, echo_task, &quot;tty3&quot;);
+  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)), &quot;print&quot;, echo_task, &quot;tty4&quot;);
+}</code></pre>
+
+
+<p>每个echo线程就是一个“迷你”的shell，它从tty中读取输入，然后翻译成操作系统内API的序列。在下面这个简单的实现里，我们并不实现shell的功能，而是在读取到输入之后把它回显到屏幕上(你能做到这一点，也就可以实现shell了，不是吗？)：</p>
+<pre class="codehilite"><code class="language-c">void echo_task(void *name) {
+  device_t *tty = dev_lookup(name);
+  while (1) {
+    char line[128], text[128];
+    sprintf(text, &quot;(%s) $ &quot;, name); tty_write(tty, text);
+    int nread = tty-&gt;ops-&gt;read(tty, 0, line, sizeof(line));
+    line[nread - 1] = '\0';
+    sprintf(text, &quot;Echo: %s.\n&quot;, line); tty_write(tty, text);
+  }
+}</code></pre>
+
+
+<p>上面这段屏幕录像中，键盘按键后，中断处理程序将会唤醒tty对应的线程，tty线程再通过终端驱动程序、显示驱动程序，在VGA控制器上绘制字符。<code>echo_task</code>通过调用tty驱动的<code>read()</code>函数，在没有数据时阻塞，在读取到数据后执行相应的处理代码。这个流程和真正操作系统中发生的事情是十分类似的——你看，操作系统的确就是个C程序。</p>
+</div>
+<p>因此，如果你实现得一切正确，你就已经获得了“操作系统”的体验：</p>
+<p><center markdown="1"><img alt="" src="../static/wiki/os/2019/img/os-demo.gif" width="480px" /></center></p>
+<p>甚至对于后面的实验来说，你不过是在编写一些功能性的代码而已，“操作系统”所有的神秘感都已经不再存在了。</p>
+<div class="fenced fenced-red">
+<h4 id="_9">运行框架代码</h4>
+<p>想要获得上图的效果，需要pmm, kmt模块全部实现正确，然后初始化dev模块(调用<code>dev-&gt;init()</code>)，一个示例<code>os_init</code>代码：</p>
+<pre class="codehilite"><code class="language-c">static void os_init() {
+  pmm-&gt;init();
+  kmt-&gt;init();
+  dev-&gt;init();
+  // 创建你的线程，线程可以调用`tty-&gt;ops-&gt;read`或`tty-&gt;ops-&gt;write`
+}</code></pre>
+
+
+<p>dev模块支持以下设备：</p>
+<pre class="codehilite"><code class="language-c">#define DEVICES(_) \
+  _(0, rd_t,    &quot;ramdisk0&quot;, 1, &amp;rd_ops) \
+  _(1, rd_t,    &quot;ramdisk1&quot;, 2, &amp;rd_ops) \
+  _(2, input_t, &quot;input&quot;,    1, &amp;input_ops) \
+  _(3, fb_t,    &quot;fb&quot;,       1, &amp;fb_ops) \
+  _(4, tty_t,   &quot;tty1&quot;,     1, &amp;tty_ops) \
+  _(5, tty_t,   &quot;tty2&quot;,     2, &amp;tty_ops) \
+  _(6, tty_t,   &quot;tty3&quot;,     3, &amp;tty_ops) \
+  _(7, tty_t,   &quot;tty4&quot;,     4, &amp;tty_ops)</code></pre>
+
+
+<p>其中有两个ramdisk、一个输入设备、一个fb、若干虚拟终端。dev模块会创建两个线程：</p>
+<pre class="codehilite"><code class="language-c">kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)), &quot;input-task&quot;, input_task, NULL);
+kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)), &quot;tty-task&quot;, tty_task, NULL);</code></pre>
+
+
+<p>其中会用到信号量和自旋锁，因此请确保它们实现正确:)</p>
+</div>
+<div class="fenced fenced-green">
+<h4 id="dont-panic">Don't Panic</h4>
+<p>你的代码如果有微小的bug，可能无法正确运行设备驱动程序。不要紧，我们有很简单温和的测试用例，实现正确即可得分。</p>
+</div>
+<h2 id="api">API解析</h2>
+<h3 id="os-operating-systems">OS (operating systems)模块</h3>
+<p><code>os</code>模块是操作系统主循环的代码，主要负责系统的初始化和中断响应。</p>
+<ul>
+<li><code>os-&gt;init()</code>会在系统启动时被启动的第一个处理器调用，负责完成系统的初始化；</li>
+<li><code>os-&gt;run()</code>是操作系统的主循环。我们假设<code>os-&gt;run()</code>时已经完成了所有初始化工作，每个处理器都会调用同一份<code>os-&gt;run</code>。</li>
+<li><code>os-&gt;trap(ev, context)</code>：中断/异常处理程序的唯一入口。中断后，AbstractMachine完成寄存器现场保存后，就会调用<code>os-&gt;trap()</code>，并且在函数返回后，将<code>os-&gt;trap()</code>返回的寄存器现场恢复到CPU上。</li>
+<li><code>os-&gt;on_irq(seq, event, handler)</code>：注册一个在中断时调用的callback，我们马上就解释。</li>
+</ul>
+<p>理解<code>os</code>模块，要从程序执行的入口开始。以下是上一个实验中的框架代码(<code>framework/main.c</code>)。在这个实验中，我们不改变这段代码：</p>
+<pre class="codehilite"><code class="language-c">#include &lt;kernel.h&gt;
+#include &lt;klib.h&gt;
+
+int main() {
+  _ioe_init();
+  _cte_init(os-&gt;trap);
+
+  // call sequential init code
+  os-&gt;init();
+  _mpe_init(os-&gt;run); // all cores call os-&gt;run()
+  return 1;
+}</code></pre>
+
+
+<p>直到<code>_mpe_init()</code>之前，都只有一个处理器在执行(CPU0，如果此时调用<code>_cpu()</code>会返回<code>0</code>)。<code>_cte_init(os-&gt;trap)</code>指定了<code>os-&gt;trap</code>是唯一的中断处理程序，所有的处理器发生中断都会调用<code>os-&gt;trap()</code>。</p>
+<div class="fenced fenced-red">
+<h4 id="_10">小心多处理器中断</h4>
+<p>这让<code>os-&gt;trap()</code>变成了被并行执行的代码。因此，如果里面有任何共享变量，你需要用自旋锁保护好——还记得“可见性”的例子吗？</p>
+</div>
+<p>调用<code>_mpe_init()</code>之后，所有的处理器都开始执行<code>os-&gt;run()</code>，操作系统正式启动。通常，<code>os-&gt;run()</code>的工作就是打开中断然后死循环，你不必修改<code>os-&gt;run()</code>的代码：</p>
+<pre class="codehilite"><code class="language-c">static void os_run() {
+  hello();
+  _intr_write(1);
+  while (1) {
+    _yield();
+  }
+}</code></pre>
+
+
+<div class="fenced fenced-red">
+<h4 id="_11">我们如何测试你的代码？</h4>
+<p>你提交的代码需要确保<strong>已经删除了你所有的测试代码</strong>，没有任何多余的输出：你提交的代码就好像是一个“什么也没有”的死循环操作系统内核，但中断不断到来，你的操作系统在每次中断到来后都调度idle线程用死循环消耗处理器。</p>
+<p>我们的测试代码会替换<code>main</code>的实现，在调用<code>os-&gt;run()</code>之前创建若干线程，完成测试。因此<strong>请不要修改<code>framework/</code>下的任何代码</strong>。大约，我们会把<code>main</code>函数替换成：</p>
+<pre class="codehilite"><code class="language-c">static void producer(void *arg) { ... }
+static void consumer(void *arg) { ... }
+static void create_threads() {
+  ...
+  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)),
+              &quot;test-thread-1&quot;, producer, xxx);
+  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)),
+              &quot;test-thread-2&quot;, consumer, yyy);
+  ...
+}
+int main() {
+  _ioe_init();
+  _cte_init(os-&gt;trap);
+  os-&gt;init();
+  create_threads();
+  _mpe_init(os-&gt;run); // all cores call os-&gt;run()
+  return 1;
+}</code></pre>
+
+
+<p>我们会观察操作系统是否正确实现了producer/consumer。你的自旋锁/信号量等可能有bug，但我们有很多足够简单的测试用例(类似thread-os.c里打印字符)，通过就能得到很多分数；此外自旋锁/信号量也有简单和复杂的测试用例。此外，我们在测试时会链接一个我们实现正确的klib，所以大家即便klib有bug，也不必太过担心。</p>
+<p>最后，如果你忘记注释掉框架代码(例如tty)，也没有关系。我们只增加我们的workloads (例如生产者-消费者问题)。</p>
+</div>
+<p>os模块的另一个重要功能是管理系统中的中断。我们已经知道，中断发生后会调用<code>os-&gt;trap()</code>，这是你需要实现的。<code>os-&gt;trap()</code>中另外需要完成的一个功能是执行<code>os-&gt;on_irq</code>注册的回调函数。</p>
+<pre class="codehilite"><code class="language-c">typedef _Context *(*handler_t)(_Event, _Context *);
+typedef struct {
+  ...
+  void (*on_irq)(int seq, int event, handler_t handler);
+} MODULE(os);</code></pre>
+
+
+<p><code>on_irq(seq, event, handler)</code>的含义是，在<code>os-&gt;trap(_Event ev, _Context *ctx)执行时</code>，当<code>ev.event</code> (事件编号)和<code>event</code>匹配时，调用<code>handler(event, ctx);</code>。其中：</p>
+<ul>
+<li><code>seq</code>决定了handler被调用的顺序，如果两个handler将会先调用<code>seq</code>小的。<code>seq</code>相同的按任意顺序调用即可；</li>
+<li>当<code>event == _EVENT_NULL</code>时，会在任何中断/异常时调用<code>handler</code>；</li>
+<li>我们允许handler返回一个<code>_Context</code>，在中断返回时恢复到这个conetxt。</li>
+</ul>
+<p>这个设计的好处是使得<code>os</code>模块就变得非常简单，它甚至完全不需要知道其他任何模块的存在，即便实现分时多线程，也不再需要修改os模块。在参考代码(JYY的实现，你们看不到啦！)中，<code>os-&gt;trap()</code>是这样实现的：</p>
+<pre class="codehilite"><code class="language-c">static _Context *os_trap(_Event ev, _Context *context) {
+  _Context *ret = NULL;
+  for_each (handler in handlers) {
+    if (handler-&gt;event == _EVENT_NULL || handler-&gt;event == ev.event) {
+      _Context *next = handler-&gt;handler(ev, context);
+      if (next) ret = next;
+    }
+  }
+  return ret;
+}</code></pre>
+
+
+<p>借助<code>os-&gt;on_irq</code>，我们可以“注册”若干中断处理程序，在适当的时机做适当的事情——这类似于“面向切面编程” (<a href="https://en.wikipedia.org/wiki/Aspect-oriented_programming">Aspected-Oriented Programming, AOP</a>)的设计。例如，我们的参考代码中寄存器现场保存、寄存器现场恢复、中断管理都是通过<code>on_irq</code>实现的：</p>
+<pre class="codehilite"><code class="language-c">// thread.c，线程管理
+void kmt_init() {
+  ...
+  os-&gt;on_irq(INT_MIN, _EVENT_NULL, kmt_context_save); // 总是最先调用
+  os-&gt;on_irq(INT_MAX, _EVENT_NULL, kmt_context_switch); // 总是最后调用
+  ...
+}
+
+// input.c，输入设备
+
+static _Context *input_notify(_Event ev, _Context *context) {
+  kmt-&gt;sem_signal(&amp;sem_kbdirq); // 在IO设备中断到来时，执行V操作唤醒一个线程
+  return NULL;
+}
+
+void input_init() {
+  ...
+  os-&gt;on_irq(0, _EVENT_IRQ_IODEV, input_notify); // 并不在意何时调用
+  ...
+}</code></pre>
+
+
+<p>大家在实验时，不必严格遵守<code>on_irq</code>的约定，只要能在<code>input_init()</code>中的<code>on_irq</code>能正确在IO设备中断到来时调用<code>input_notify()</code>即可。</p>
+<h3 id="kmt-kernel-multithreading">KMT (kernel multithreading)模块</h3>
+<p><code>kmt-&gt;init()</code>负责初始化必要的数据，例如分配一些重要的数据结构。我们预期你会在<code>os-&gt;init()</code>时调用<code>kmt-&gt;init()</code>。在我们的参考实现中，<code>os_init()</code>也是相当简单的，供大家参考(有些部分暂时不会用到)：</p>
+<pre class="codehilite"><code class="language-c">static void os_init() {
+  pmm-&gt;init(); // 初始化物理内存分配
+  kmt-&gt;init(); // 初始化内核多线程
+  _vme_init(pmm-&gt;alloc, pmm-&gt;free); // 虚拟存储，仅在CPU0执行，不过你不需要
+  dev-&gt;init(); // 初始化设备
+  vfs-&gt;init(); // 初始化虚拟文件系统
+}</code></pre>
+
+
+<p>除此之外，KMT模块的API分为几组</p>
+<h4 id="_12">线程管理</h4>
+<pre class="codehilite"><code class="language-c">// KMT 线程管理
+int (*create)(task_t *task, const char *name, void (*entry)(void *arg), void *arg);
+void (*teardown)(task_t *task);</code></pre>
+
+
+<p>其中<code>create</code>在系统中创建一个线程(<code>task_t</code>应当事先被分配好)，这个线程立即就可以被调度执行(但调用create时中断可能处于关闭状态，在打开中断后它才获得被调度执行的权利)。</p>
+<p><code>teardown</code>相应回收为线程分配的资源——<code>task_t</code>中部分内存可能是动态分配的：</p>
+<pre class="codehilite"><code class="language-c">int kmt_create(task_t *task, const char *name, void (*entry)(void *arg), void *arg) {
+  ...
+  task-&gt;stack = pmm-&gt;alloc(STACK_SIZE); // 动态分配内核栈
+  ...
+}</code></pre>
+
+
+<p>这部分的内存需要在<code>teardown()</code>时被回收。</p>
+<p>在任意时刻，操作系统中都可能有多个线程，你需要设计调度的策略在多个处理器中调度这些线程，使系统中能够被执行的线程尽可能不发生饥饿。</p>
+<h4 id="_13">自旋锁</h4>
+<pre class="codehilite"><code class="language-c">// KMT 自旋锁
+void (*spin_init)(spinlock_t *lk, const char *name);
+void (*spin_lock)(spinlock_t *lk);
+void (*spin_unlock)(spinlock_t *lk);</code></pre>
+
+
+<p>lock-unlock实现保护一段强原子性(任何其他线程、中断处理程序、其他处理器都不能同时得到同一把锁)：</p>
+<ul>
+<li>允许在中断处理程序中调用自旋锁。</li>
+<li>允许任意在任意处理器的任意线程中调用自旋锁。</li>
+<li><code>spin_lock</code>将会关闭处理器的中断，因此对一个处理器而言，持有任何一个自旋锁之后就不会再发生线程切换。</li>
+<li><code>spin_unlock</code>在解除最后一个当前处理器持有的自旋锁之后，需要将处理器的中断状态恢复。例如在中断处理程序中，中断是关闭的，因此<code>spin_unlock</code>不应该打开中断；但在一般的线程中，<code>spin_unlock</code>后应当恢复处理器的中断。</li>
+</ul>
+<h4 id="_14">信号量</h4>
+<pre class="codehilite"><code class="language-c">// KMT 信号量
+void (*sem_init)(sem_t *sem, const char *name, int value);
+void (*sem_wait)(sem_t *sem);
+void (*sem_signal)(sem_t *sem);</code></pre>
+
+
+<p>在信号量初始化时，<code>value</code>指定了它初始的数值。初始时<code>value == 1</code>可以把信号量当互斥锁；初始时<code>value == 0</code>可以把信号量作为生产者-消费者缓冲区管理实现。<code>sem_wait</code>和<code>sem_post</code>分别对应了P/V操作。</p>
+<ul>
+<li>允许在线程中执行信号量的<code>sem_wait</code>操作。在P操作执行没有相应资源时，线程将被阻塞(不再被调度执行)。中断没有对应的线程、不能阻塞，因此不能在中断时调用<code>sem_wait</code>。</li>
+<li>允许在任意状态下任意执行<code>sem_signal</code>，包括任何处理器中的任何线程和任何处理器的任何中断。</li>
+</ul>
+<p>在信号量实现时，大约需要做以下几件事(任何一本操作系统教材上都会提到类似的实现)：</p>
+<pre class="codehilite"><code class="language-c">void sem_wait(sem_t *sem) {
+  spin_lock(&amp;sem-&gt;lock); // 获得自旋锁
+  sem-&gt;count--; // 自旋锁保证原子性
+  if (...) {
+    // 没有资源，需要等待
+    ...
+    mark_as_not_runnable(current); // 当前线程不能再执行
+    _yield(); // 引发一次上下文切换
+  }
+  spin_unlock(&amp;sem-&gt;unlock);
+}</code></pre>
+
+
+<p>但这里有个很有意思的问题——在持有自旋锁的前提下<code>int $0x80</code>是非常危险的——那该怎么解决呢？当然是靠你的聪明才智啦！</p>
+<h3 id="_15">额外注意事项</h3>
+<div class="fenced fenced-blue">
+<h4 id="_16">我们的测试用例</h4>
+<p>我们会用线程API创建若干线程，并且使用信号量、锁完成各种同步任务。这部分代码你是看不见的。我们至多会创建16个线程，请保证你的操作系统支持16个以上的线程，测试线程永远不会退出。</p>
+</div>
+<p>比较重要的是，你的代码应当在多处理器、中断都存在的情况下保持正确，具体来说，你需要小心地理解以下需求是为什么：</p>
+<div class="fenced fenced-red">
+<h4 id="_17">保证多处理器/中断上的正确性</h4>
+<ul>
+<li>所有的代码都可以在多个处理器上被<strong>同时</strong>调用。因此你需要小心地保证原子性、顺序、可见性。万小心：<code>kmt-&gt;create()</code>, <code>kmt-&gt;sem_signal()</code>等所有函数都可能同时在多个处理器上被调用。你现在觉得这句话很可笑，但你调过bug就知道厉害了。</li>
+<li>在中断处理程序中可以调用自旋锁。实际上，一个CPU的中断处理程序可以和另一个CPU访问同一个共享数据结构(例如在中断中向链表里插入一个元素，这个链表被另一个线程读取)，因此自旋锁是保证正确性的重要手段。</li>
+</ul>
+</div>
+<h2 id="_18">实验指南</h2>
+<h3 id="_19">坐下来，读一读代码</h3>
+<div class="fenced fenced-green">
+<h4 id="_20">不知道实验要求在说什么？</h4>
+<p>不妨阅读一下代码。操作系统内核是从<code>main</code>函数开始执行的，然后完成一些初始化任务，之后启动多处理器。每个处理器再完成per-cpu的初始化之后，会进入“等待中断”的循环——这就是操作系统。</p>
+<p>带着这个理解再去看每个API，就不会觉得太困难了。</p>
+</div>
+<p>以及，其实课堂上已经讲解过了操作系统内核的工作原理：</p>
+<ul>
+<li><a href="../static/wiki/os/2019/demos/thread-os.c">thread-os.c</a>：一个分时调度固定数量线程、round-robin调度的嵌入式操作系统；</li>
+<li><a href="../static/wiki/os/2019/demos/thread-os-mp.c">thread-os-mp.c</a>：把刚才的代码扩展到多处理器。</li>
+</ul>
+<p>大家不妨在自己的机器上运行一下(你需要编写一个Makefile，用AM编译它)。以thread-os为例，比较关键的代码是它用</p>
+<pre class="codehilite"><code class="language-c">_cte_init(interrupt);</code></pre>
+
+
+<p>注册了一个callback function，在每次中断/异常时调用<code>interrupt()</code>函数执行，而中断处理的流程也非常简单：</p>
+<pre class="codehilite"><code class="language-c">_Context *interrupt(_Event ev, _Context *ctx) {
+  if (current) current-&gt;context = *ctx; // 把当前运行程序的寄存器现场保存到current中
+
+  // ”调度“下一个执行的线程
+  if (!current || current + 1 == &amp;tasks[LENGTH(tasks)]) {
+    current = &amp;tasks[0]; // back to the first task
+  } else {
+    current++;
+  }
+
+  // 把current中保存的寄存器现场恢复到处理器上执行
+  return &amp;current-&gt;context;
+}</code></pre>
+
+
+<p>在多处理器下，你会遇到一些额外的问题，但总体来说原理是相似的——实现操作系统没啥困难的，可以立即就动手啦！</p>
+<div class="fenced fenced-red">
+<h4 id="_21">其实我在骗你！</h4>
+<p>你们在编程的时候，会遇到无数诡异的bug，跑着跑着虚拟机就挂了，而且错得非常离谱，完全不知道发生了什么。对于并发程序，更难受的是可能要运行很多次，或者在某个特定的条件下bug才会触发。所以继续读下去吧。</p>
+</div>
+<h3 id="_22">调试操作系统内核</h3>
+<div class="fenced fenced-blue">
+<h4 id="_23">先回顾一下课上的内容</h4>
+<p>课上已经介绍过一些<a href="OS2019_C7.slides.html">调试操作系统内核</a>的经验，没上过课的同学，只能说你错过了一些很重要的内容。</p>
+</div>
+<p>很快写着写着你就会发现自己的代码出bug了，有可能是并发的，有可能只是顺序的逻辑实现错了。如果出现了莫名其妙的异常、虚拟机神秘重启等情况不要惊慌，<strong>机器永远是对的</strong>，坐下来调代码吧。</p>
+<p>要想快速知道代码出了什么问题，实现<code>printf</code>和<code>assert</code>就是非常重要的：</p>
+<pre class="codehilite"><code>#ifdef NDEBUG
+  #define assert(ignore) ((void)0)
+#else
+  #define assert(cond) \
+    do { \
+      if (!(cond)) { \
+        printf(&quot;Assertion fail at %s:%d\n&quot;, __FILE__, __LINE__); \
+        _halt(1); \
+      } \
+    } while (0)
+#endif</code></pre>
+
+
+<p>以及<code>panic</code>能帮你及时检测操作系统中不预期出现的状态：</p>
+<pre class="codehilite"><code class="language-c">void *ptr = pmm-&gt;alloc(size);
+if (!ptr) {
+  panic(&quot;memory allocation failed&quot;);
+}</code></pre>
+
+
+<p>在适当的地方加上printf和assert能帮助你快速定位到程序中出错的状态(比如在中断到来时打印寄存器的现场，能快速帮你定位出现异常的位置)，缩小bug的检查范围。</p>
+<div class="fenced fenced-green">
+<h4 id="printf">更好的<code>printf</code>方式</h4>
+<p>相信大家都有过不停地加<code>printf</code>, 删掉<code>printf</code>的调试体验吧。这感觉可不太好，找了一大圈，最后发现一开始删掉的<code>printf</code>打印的信息才是最有用的，不过一整天就已经过去了。</p>
+<p>下面的记录模式也许能帮到你：</p>
+<pre class="codehilite"><code>#define TRACEME
+
+// #include &lt;trace.h&gt;
+#ifdef TRACEME
+  #define TRACE_ENTRY printf(&quot;[trace] %s:entry\n&quot;, __func__)
+  #define TRACE_EXIT printf(&quot;[trace] %s:exit\n&quot;, __func__)
+#else
+  #define TRACE_ENTRY ((void)0)
+  #define TRACE_EXIT ((void)0)
+#endif
+
+void f() {
+  TRACE_ENTRY;
+  printf(&quot;This is f.\n&quot;);
+  TRACE_EXIT;
+}</code></pre>
+
+
+<p>可以在重要的函数上面加上这些日志，通过<code>TRACEME</code>宏来决定到底是否打印日志。</p>
+</div>
+<p>如果各种<code>printf</code>都没办法帮你找到问题，那就只能上gdb了。框架代码里<strong>故意</strong>没有提供<code>make debug</code>的选项，但这是做得到的，只需要用<code>qemu</code>提供的命令行选项。</p>
+<ul>
+<li><code>-gdb</code>能启动调试模式。</li>
+<li><code>-S</code>能让虚拟机在收到调试命令前不执行执行。</li>
+<li>在<code>gdb</code>中可以用<code>target</code>连接远程调试。</li>
+<li>用<code>.gdbinit</code>能把连接、加载调试信息、断点设置等一并自动化，这样<code>make debug</code>就能实现一键调试。</li>
+</ul>
+<div class="fenced fenced-red">
+<h4 id="_24">拖延症？</h4>
+<p>你在读完上面那些文字的时候，也许拖延症已经犯了：这么麻烦，关我<math>\times</math>事。对中枪的同学：当你实在找不到bug的时候，回来求gdb也许能帮你挽回几天的调试时间。这时候你就真正体会到<strong>基础设施的重要性</strong>了。</p>
+</div>
+<p>总的来说，如果只是写几十上百行的OJ程序，无论你习惯多么的坏，多多少少总是能调试出来的。但如果要维护更大的程序，用上<strong>正确的工具</strong>就能帮上大忙了。</p>
+<h3 id="_25">保护自己不受伤害</h3>
+<p>有些bug可能会非常难调试，这里举一个例子：栈溢出。也许已经有同学在Lab 0的时候吃过苦头了：栈空间不是无限大的，而如果我们带着很大的局部变量或者递归很多层，栈就悄悄溢出了……在操作系统内核中，内核线程栈的溢出就显得更危险了，因为你可能会定义：</p>
+<pre class="codehilite"><code class="language-c">struct thread_t {
+  int32_t id;
+  ...
+  uint8_t stack[STK_SZ];
+};</code></pre>
+
+
+<p>而栈溢出(x86的栈从高地址向低地址生长)的后果就是线程的信息可能被覆盖，出现各种诡异(难以理解)的情况，而且有可能bug若隐若现，加一条<code>printf</code>也许就不触发了。</p>
+<p>如果想避免这种情况的发生，可以给栈的前后加一些栅栏缓冲(fences)：</p>
+<pre class="codehilite"><code class="language-c">struct task_t {
+  int32_t id;
+  ...
+  uint8_t fence1[32];
+  uint8_t stack[STK_SZ];
+  uint8_t fence2[32];
+};</code></pre>
+
+
+<p>然后给这些fences赋上一些“magic numbers”，比如<code>0xcc</code>。随时我们检查这些fences是否被修改过(刚好全部写入相同数值的可能性几乎为0)，就能知道有没有栈溢出(under/overflow)了。</p>
+<div class="fenced fenced-blue">
+<h4 id="_26">烫烫烫和屯屯屯的故事</h4>
+<p>mscc在Debug模式编译时，未初始化的栈内存会填入<code>0xcc</code>，未初始化的堆区填入<code>0xcd</code>，堆内存的fences填入<code>0xfd</code>，被free的内存填入<code>0xdd</code>。这就是大家为什么会看到烫烫烫和屯屯屯了——刚好这些内存被解码成了中文的字符。</p>
+<p>以下笑话来自互联网：</p>
+<p><center>
+手持两把锟斤拷，<br/>
+口中疾呼烫烫烫。<br/>
+脚踏千朵屯屯屯，<br/>
+笑看万物锘锘锘。<br/>
+</center>
+</p>
+</div>
+<p>同理，我们可以在kalloc/free的时候做一些hacking：可以悄悄多分配一些内存作为fences，这样可以帮助你检查出很多类型的bugs，例如你可以在一些关键的pointer deference的地方插入</p>
+<pre class="codehilite"><code class="language-c">*ptr ... // important pointer, e.g., current
+if (0xcccccccc == *(uint32_t *)ptr) {
+  panic(&quot;dereference a freed memory&quot;);
+}</code></pre>
+
+
+<p>最后，这几节中介绍的知识都是<strong>完全没有用</strong>的——如果你不写够大的代码，做够系统的项目，你永远都不会用到这里的知识，永远都不会想把C语言的能力发挥到极致。这里的知识对考试也几乎完全没有任何帮助。但正是在种种细节上追求完美才成就了大型软件系统的成功。在阅读优雅的代码时总有赏心悦目的快乐。关于操作系统内核，<a href="http://pdos.csail.mit.edu/6.828/xv6">xv6</a>绝对是一份了不起的佳作，看似平淡无奇的代码里参透着系统设计的智慧，值得大家品位。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

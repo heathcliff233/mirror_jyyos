@@ -1,0 +1,109 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>加入我们 (申请攻读学位)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">加入我们 (申请攻读学位)</h1>
+<p>欢迎大家和你们的师兄师姐联系，了解在软件所做研究的体验——他们也许做过你的助教哦！我们也在努力让每一个同学都能得到更好地指导，做出有创造力而又扎实的研究工作。申请攻读学位的同学将在大四进入课题组开展相关研究。</p>
+<h2 id="_2">申请攻读学位</h2>
+<p>南京大学计算机软件研究所有统一的<a href="http://ics.nju.edu.cn/recruit/">招生流程</a>，请按流程投递简历、联系导师。推荐免试的同学需要参加本科生开放日的机试和面试、观看现场演示，并同时通过软件所和南京大学计算机系的考核。</p>
+<p><center><img alt="" src="../static/wiki/research/simcity.jpg" width="400px" /></p>
+<p>(本科生开放日“模拟城市”演示)
+</center></p>
+<h3 id="_3">硕士学位</h3>
+<p><del>硕士第一年要上课，第二年划划水，第三年就要出去实习找工作了</del>。因为硕士时间颇短且有科研 (论文发表) 的压力，我们建议对我们研究组有兴趣的同学从本科 research intern/毕业设计开始，连贯地完成硕士阶段的培养。参考<a href="NJUCS_Master_Requirements.html">南京大学计算机系硕士学位申请条件</a>。</p>
+<h3 id="_4">博士学位</h3>
+<p>先行劝退：JYY 的 “<a href="https://zhuanlan.zhihu.com/p/82579410">读博那些事儿</a>”。如果你看完后仍想读博士：博士研究生是研究组中的主力，获得更多的资助和指导。有强烈意愿成为独立研究者的同学，在经历严格的科研训练后，方可获得博士学位。在确定攻读博士学位之前，请了解<a href="NJUCS_PhD_Requirements.html">南京大学计算机系博士学位申请条件</a>，以及我们制定的 <a href="SPAR_PhD_Requirements.html">SPAR 组博士学位申请条件</a>。</p>
+<h2 id="_5">资助</h2>
+<p>软件所将为参与到软件所纵向/横向项目的研究生发放一定数量的助研费以帮助攻读学位的同学更好地完成学业。软件所有较为完善的奖励机制，发表高水平论文、对项目作出贡献等，均能获得一定奖励。此外，进入研究生阶段的同学可以申请本系课程的<a href="TA.html">助教工作</a>，由学校/院系发放一定数额的津贴。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

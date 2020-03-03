@@ -1,0 +1,169 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>设备管理</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">设备管理</h1>
+<h2 id="io">访问I/O设备</h2>
+<p>处理器的指令能够访问I/O设备，主要是通过两种方式实现的：</p>
+<ul>
+<li>端口I/O (Port IO, PIO)，相当于是为I/O设备提供了一个单独的地址空间，通过读/写端口的方式实现设备控制。通常，一个I/O设备的寄存器分为三类：状态寄存器、控制寄存器、数据寄存器。顾名思义，我们可以通过控制寄存器实现设备控制(例如设置设备的模式等)，从数据寄存器读写数据，并且读取状态寄存器来查看设备执行命令的状态。</li>
+<li>内存映射I/O (Memory-Mapped I/O, MMIO)。给特定的内存地址赋予特殊的含义，从而读/写内存地址就能实现设备的访问。在PA中，显存就是通过这种方式实现的。一方面，内存映射I/O完全可以用来实现状态/控制/数据寄存器，另一方面，在设备从外部看来是一段连续数据时(例如显存)，MMIO能减少I/O指令的数量。</li>
+</ul>
+<p>从道理上来说，I/O设备无非就是一组接口，能够读取/写入数据，I/O设备会根据自己的协议解读这些数据，并且反映到物理世界中去。我们每个人使用计算机，使用的都是它的I/O设备，因此对“计算机”的第一印象其实都来自这些设备——我们可以通过按键、移动鼠标，来改变屏幕上的内容。这一切都是用<strong>计算</strong>实现的——处理器读取二进制的数据、进行计算，再以二进制的形式输出。</p>
+<p>例如IBM PC键盘可以通过8042键盘控制器访问，AM中的实现如下：</p>
+<pre class="codehilite"><code class="language-c">size_t input_read(uintptr_t reg, void *buf, size_t size) {
+  ...
+  int status = inb(0x64); // 状态寄存器
+  kbd-&gt;keydown = 0;
+  kbd-&gt;keycode = _KEY_NONE;
+  if ((status &amp; 0x1) == 0) {
+    // 没有数据
+  } else {
+    if (status &amp; 0x20) {
+      // 鼠标事件
+    } else {
+      // 键盘事件
+      int code = inb(0x60) &amp; 0xff;
+      // 从数据寄存器读出扫描码
+    }
+  }
+  ...
+}</code></pre>
+
+
+<p>就这么简单，我们就能从键盘里读出数据了。为了完全理解这部分内容，你需要一些电路知识(手册里会描述键盘控制器的电气特性)，然后花时间阅读手册(因为控制器有多种功能，所以手册其实非常长)。管理实际的设备从来都不是一件容易的事情。不过AM给我们做了抽象，大家只要知道计算机系统为管理I/O设备提供的机制即可。</p>
+<div class="fenced fenced-green">
+<h4 id="mmio">MMIO的一致性</h4>
+<p>MMIO看起来很直观：直接写<code>fb[pixel] = color;</code>就能实现了，但里面有很多tricky的地方：</p>
+<ul>
+<li>编译器可能优化，把本来有的内存访问优化掉；</li>
+<li>内存被缓存，连续的内存访问(读/写)可能根本不会到达内存。</li>
+</ul>
+<p>编译器、硬件等到底是提供什么样的机制来保证MMIO的一致性？这个问题在引入DMA之后还会变得更严重，大家可以考虑一下，不过不做内核开发的同学就不用烦神这些问题了——为应用软件编程设计的高级语言都力图屏蔽这些细节，我们只要放心地使用符合人类编程直觉的API就好了。</p>
+</div>
+<h2 id="_2">中断</h2>
+<p>即便能通过PIO/MMIO访问I/O设备，这个机制依然是有短板的：我们必须询问设备，才知道设备上是否有就绪的数据。注意到很多设备和处理器的运行都是异步的，例如键盘、网卡(处理器不能预知何时会有数据到达)。因此如果只有MMIO/PIO，处理器就必须定时轮询设备、处理数据，而轮询的周期设定就很麻烦了：</p>
+<ul>
+<li>如果周期设定得太长，将会导致I/O处理的延迟。键盘还不是问题，但如果是网卡一类的高速设备，设备本身的缓存是有限的，一旦缓存的网络包未能得到及时处理，设备将会自动丢弃其他的网络包。</li>
+<li>如果周期设定得太短，则会给处理器带来很大的负担，在没有数据的时候浪费处理器资源。</li>
+</ul>
+<p>所以要是有另一个<strong>机制</strong>，能在发生一些外部事件的时候通知处理器，那就好了——于是就有了大家熟悉的中断机制，在事件发生时让处理器跳转到特定的中断处理程序，立即对外部事件作出响应。</p>
+<p>中断控制器也是一个I/O设备，通过配置这个设备，可以实现中断的屏蔽、响应等。现在的Intel处理器使用的是APIC (Advanced PIC)的扩展版xAPIC的扩展版x2APIC……如果你去看<a href="https://www.intel.com/content/dam/doc/specification-update/64-architecture-x2apic-specification.pdf">手册</a>，会发现原来一个I/O设备都那么复杂，牵涉到那么多概念，如果从事真正的系统编程，以前读的i386手册那简直太简单了，根本不是事儿。</p>
+<h2 id="dma">DMA</h2>
+<p>中断并没有完全解决问题。如果我们面对大量的I/O：</p>
+<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; nbytes; i++) {
+  outb(DATA_PORT, data[i]);
+}</code></pre>
+
+
+<p>这显然会占用很多宝贵的处理器资源。所以如果我们的电脑里可以有第二个处理器，它不用非常复杂，只要能被配置(称为可编程)，然后只执行一个非常固定的小程序就行：</p>
+<pre class="codehilite"><code class="language-c">// SRC是内存或I/O端口
+// DST是内存或I/O端口
+for (int i = 0; i &lt; nbytes; i += nmemb) {
+  value = read(SRC, nmemb);
+  write(DST, value);
+}
+send_interrupt();</code></pre>
+
+
+<p>这就是8237 DMA控制器，约等于一个小型的CPU，但只执行特定的代码(直接以状态机的形式写死在集成电路里)。可不要小看DMA控制器：它不仅能实现内存和I/O设备之间的传输(例如磁盘、网卡)，还能实现内存到内存之间的传输(可以实现异步的写显存)，能够非常明显地提升计算机系统的性能。今天DMA是所有高速I/O设备默认的传输方式，PCI总线自带DMA控制器。</p>
+<h2 id="_3">那么，到底是什么是设备？</h2>
+<p>我们之前讨论的都是I/O设备为我们提供的<strong>机制</strong>以实现设备更好的控制。但归根结底，I/O设备不过是一些对象，可以从中读取或向其中写入数据……咦？这不就是个“文件”吗？</p>
+<div class="fenced fenced-green">
+<h4 id="everything-is-a-file">Everything is a File</h4>
+<p>你说对了。设备真的就是一个文件。在<code>/dev/</code>下有虚拟和真实的设备文件，读写这些文件将会和设备驱动交互，最终实现(物理或虚拟)I/O设备的读写。</p>
+<p>试着玩一玩(参考互联网上的文档和博客)，有惊喜。</p>
+</div>
+<p>关于这段故事，请阅读<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/file-devices.pdf">参考书</a>的36.8节，它分析了xv6的磁盘驱动。你需要阅读xv6其他部分的代码，以理解这个驱动是如何最终被系统调用使用的。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

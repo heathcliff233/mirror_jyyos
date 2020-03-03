@@ -1,0 +1,174 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>互斥</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">互斥</h1>
+<p>为了防止多个线程之间出现“打架”的情况，保证一段代码能在不被干扰的情况下执行，就是互斥，就像之间我们看到的：</p>
+<pre class="codehilite"><code class="language-c">sum++; // 实际是tmp = sum;
+       //      tmp += 1;
+       //      sum = tmp;
+       // 如果多个线程同时执行会出现问题</code></pre>
+
+
+<p>因此，我们希望能有一组API，能让一段代码原子(atomically)地执行，消除特定的并发调度，这就是互斥(mutual exclusion, <em>mutex</em>)锁：</p>
+<pre class="codehilite"><code class="language-c">lock_t mutex;
+
+lock(&amp;mutex);    // -
+sum++;           // | &lt;- 保证其他lock(mutex)-unlock(mutex)不会与之并发
+unlock(&amp;mutex);  // -</code></pre>
+
+
+<p>如果互斥锁实现正确并且所有的<code>sum++</code>都被同一互斥锁保护，则<code>sum++</code>执行<math>n</math>次，最终就能看<math>n</math>。</p>
+<h2 id="_2">实现互斥</h2>
+<p>阅读<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/threads-locks.pdf">参考书 Section 28</a>。</p>
+<p>参考书实在是写得太好了，我完全没必要写这部分的讲义啊……</p>
+<h2 id="_3">互斥锁：应用</h2>
+<p>我们就沿用<code>mutex_t</code>, <code>lock</code>和<code>unlock</code>，它们在并发编程中，除了让<code>sum++</code>能正确执行外，有什么用呢？它们有大用处：体现了我们建模并发程序时做的抽象，降低理解并发程序的难度，例如如果我们想向链表中插入一个数据：</p>
+<pre class="codehilite"><code class="language-c">void insert(node_t *node, node_t *cur) {
+  node_t *prev = node;
+  node_t *next = node-&gt;next;
+  prev-&gt;next = next-&gt;prev = cur;
+  cur-&gt;prev = prev;
+  cur-&gt;next = next;
+}</code></pre>
+
+
+<p>你希望建模<code>insert</code>的并发行为——有点困难。不过呢：</p>
+<pre class="codehilite"><code class="language-c">// not very good practice
+// pthread_mutex系列操作都可能失败！
+#define atomic(lk) \
+  for (int __lock_var = pthread_mutex_lock(lk), i = 0; \
+       i &lt; 1; \
+       pthread_mutex_unlock(lk), i++)
+
+void insert(node_t *node, node_t *cur) {
+  atomic(&amp;global_lock) {
+    ...
+    // NO early return!
+  }
+}</code></pre>
+
+
+<p>以及C++版本：</p>
+<pre class="codehilite"><code class="language-c++">class HoldLock {
+  pthread_mutex_t *mutex;
+public:
+  HoldLock(pthread_mutex_t *m): mutex(m) {
+    pthread_mutex_lock(mutex);
+  }
+  ~HoldLock() {
+    pthread_mutex_unlock(mutex);
+  }
+}
+void insert(node_t *node, node_t *cur) {
+  HoldLock lk(&amp;global_lock);
+  ...
+}</code></pre>
+
+
+<p>这个trick称为“<a href="https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization">RAII</a>” (Resource Acquisition Is Initialization)，并且已经是C++11(及后续)标准的一部分，例如可以使用<code>std::lock_guard&lt;std::mutex&gt; lock(mutex);</code>。比起在代码里手动的释放，使用RAII无论函数在何时return，锁都能正确释放。</p>
+<p>Java也提供了类似的机制：</p>
+<pre class="codehilite"><code class="language-java">synchronized (list.lock) {
+  ...
+}
+
+class MyList {
+  synchronized void insert(...) {
+    ...
+  }
+}</code></pre>
+
+
+<p>所以互斥锁最大的应用就是把并发的逻辑编程“代码块”的逻辑。对于正确同步的代码来说，我们只需要考虑粗粒度的并发行为是否正确，通常这比细粒度的并发程序行为建模要容易得多。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

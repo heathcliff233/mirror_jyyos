@@ -1,0 +1,399 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>轮子是如何做成的 (2)</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# 轮子是如何做成的 (2)
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# ptrace 机制
+
+被追踪进程 (tracee)
+
+* 使用 ptrace 系统调用
+
+    ```c
+    long ptrace(enum __ptrace_request request, pid_t pid,
+                void *addr, void *data);
+    ```
+    * `PTRACE_(TRACEME|ATTACH)` - 设置追踪
+    * `PTRACE_PEEK(USER|DATA)` - 读取寄存器/数据
+    * `PTRACE_POKE(USER|DATA)` - 改写寄存器/数据 (gdb 就是靠这个在断点处 patch `INT3`)
+
+----
+
+追踪进程 (tracer)
+
+* 使用 waitpid 系统调用等待事件
+    * gdb 会捕捉到被调试进程的 `INT3`
+
+---
+
+# Trace 工具
+
+Trace (轨迹、踪迹、追踪)
+
+* 相当于自动的 “printf” 调试工具，非常好用
+* Linux 自带
+    * strace (system call trace)
+    * ltrace (library call trace)
+    * perf (Kernel profiler/trace)
+
+--
+count: false
+----
+
+strace 是基于 ptrace 实现的
+
+* [strace.c](/static/wiki/ics/2019/files/strace.c) 
+
+ltrace 是基于动态链接实现的
+
+---
+
+# 重复造轮子的乐趣
+
+“Stop trying to reinvent the wheel!”
+
+* 你现在费力实现的每一个功能，可能开源社区早已经有极好的解决方法了
+* 软件工程的黄金准则之一
+
+----
+
+站在同学们的角度
+
+* .red[造过轮子才知道其中的奥妙]
+    * Project-N (大轮子): 处理器/SoC、虚拟机、操作系统、编译器
+    * 课程实验/示例代码 (小轮子): setjmp/longjmp, debugger, strace, coroutine, kalloc, ...
+
+---
+class: center, middle
+
+# 二周目总结
+
+---
+
+# 已经解决的一周目问题
+
+逻辑跳跃
+
+* 每一次课都有主线和根据主线展开的内容
+* 三周目改进
+    * 预先规划好板书 (部分 lectures 取得了成功)
+
+----
+
+代码讲得还不够
+
+* 加入了一些示例代码
+* 三周目改进 (目前代码还不够多)
+    * 计算机系统中的抽象
+    * 存储器体系结构
+    * GPGPU
+    * 表达式版 gcc (编译、汇编、链接)
+
+---
+
+# 二周目问题
+
+部分课程效果不好
+
+* 有次讲代码讲到最后没人知道我在讲什么了……
+
+--
+count: false
+----
+
+对大家强制不够 (分班上课，平均进度差距 1.5 章)
+
+* 估计大家最后为了能过，多多少少只能抄了
+
+--
+count: false
+----
+
+代码学习没有管控
+
+* 的确有很多代码例子 (slides 中的链接)，架不住大家不看啊 😂
+
+--
+count: false
+----
+
+其他
+
+* 欢迎提出
+* 比如是不是我还是讲太快了……
+
+---
+class: center, middle
+exclude: true
+
+# 福利：期末试卷讲评
+
+---
+exclude: true
+
+# 代码 (main.c)
+
+```c
+typedef struct record {
+  ......
+} RECORD;
+typedef struct index {
+  unsigned char key;
+  RECORD *pdata;
+} INDEX;
+extern void sort();
+INDEX rec_idx[256];
+const int rec_num = 256;
+void main(int argc, char *argv[])
+{ FILE *fp = fopen(argv[1], "rb");
+  if (fp) {
+    fread(rec_idx, sizeof(INDEX), rec_num, fp);
+    fclose(fp);
+  } else exit(1);
+  sort();
+}
+```
+
+---
+exclude: true
+
+# 代码 (sort.c)
+
+```c
+extern INDEX rec_idx[];
+extern const int rec_num;
+void sort() {
+  int i, swapped;
+  INDEX temp;
+  do { swapped = 0;
+    for(i=0; i<rec_num-1; i++)
+    if (rec_idx[i].key > rec_idx[i+1].key) {
+      temp.key = rec_idx[i].key;
+      temp.pdata = rec_idx[i].pdata;
+      rec_idx[i].key = rec_idx[i+1].key;
+      rec_idx[i].pdata = rec_idx[i+1].pdata;
+      rec_idx[i+1].key = temp.key;
+      rec_idx[i+1].pdata = temp.pdata;
+      swapped = 1;
+    }
+  } while (swapped);
+}
+```
+
+---
+exclude: true
+
+# 题目主干
+
+假设在 IA-32/Linux 平台上用 GCC 编译驱动程序处理，`main.c` 和 `sort.c` 的可重定位目标文件名分别是
+`main.o` 和 `sort.o`，生成的可执行文件名为 `bubsort`。使用 `objdump –d sort` 得到反汇编部分结果如下：
+
+```assembly
+0 8048530 <sort>:
+1 8048530: push %ebp
+2 8048531: mov %esp, %ebp
+3 8048533: sub $0x10,%esp
+4 8048536: movl $0x0, -0x8(%ebp)
+5 804853d: movl $0x0, -0x4(%ebp)
+6 8048544: jmp 80485dc <sort+0xac>
+...
+```
+
+已知 IA-32 页大小为 4KB，主存地址位数为 32 位。 假设代码 Cache 和数据 Cache 的数据区大小皆为 8KB，采用 2 路组相联映射、LRU 替换算法和直写 (Write Through) 策略，主存块大小为 64B，系统中没有其他用户进程在执行，请回答下列问题或完成下列任务……
+
+---
+exclude: true
+
+# 考点解析
+
+1. 程序的机器表示 (.red[程序 → 机器代码] → 执行)
+2. 存储器体系结构 (程序 → 机器代码 → .red[执行])
+3. 存储器体系结构 (程序 → 机器代码 → .red[执行])
+4. 程序的机器表示 (.red[程序 → 机器代码] → 执行)
+5. 程序的机器表示 (.red[程序 → 机器代码] → 执行)
+6. 程序的机器表示 (程序 → .red[机器代码 → 执行])
+7. 程序的机器表示 (.red[程序 → 机器代码] → 执行)
+8. 程序的机器表示 (程序 → .red[机器代码 → 执行])
+9. 存储器体系结构 (程序 → 机器代码 → .red[执行])
+10. PA-3 系统调用实现 (.red[程序 → 机器代码 → 执行])
+
+---
+exclude: true
+
+# 理解了吗？
+
+.red[就考一个知识点]：
+* 程序 → 机器代码 → 执行
+
+----
+
+.red[就考你有没有做 PA/Labs]
+
+* (独立) 做了 PA/Labs → 调试过 n 多 C/汇编代码
+    * 熟悉指令和代码的对应 (p1, p4, p7, p8)
+    * 熟悉指令的语义 (p5, p6)
+    * 在指令级熟悉 cache 的行为 (p2, p3, p9)
+    * 操作系统的初步理解 (p10)
+
+----
+
+做过的同学：so easy，遇到不记得的指令查下手册就行
+
+没做过的同学：？？？
+
+---
+class: center, middle
+
+# 计算机系统基础：复习
+
+---
+
+# 课程 Take Away Messages
+
+程序经过编译、汇编、链接，最终被翻译成机器.red[指令序列]
+
+* 编译器 = 表达式求值 (文本到文本)
+* 汇编器 = 按照 ELF 格式填入汇编对应的机器指令
+* 链接 = 重定位 + 按照 ldscript 粘贴
+
+----
+
+计算机系统的功能就是.red[执行指令]
+
+* (详见下一页 slide)
+
+---
+
+# 课程 Take Away Messages (cont'd)
+
+计算机系统中的机制是.red[从简单到复杂演化而来]的
+
+* 应当顺着这个思路去理解
+* AbstractMachine
+    * TRM (最小的 program runtime)
+    * IOE (I/O 设备寄存器访问) → 批处理系统
+    * CTE (中断上下文管理) → 分时多线程
+    * VME (虚拟存储) → 分时多进程
+    * MPE (多处理器) → 现代计算机系统
+
+---
+
+# 课程 Take Away Messages (cont'd)
+
+执行指令可以理解为.red[状态机] <math>(M_0,R_0) \to (M_1,R_1) \to \ldots </math>
+
+* 数字电路模拟器 → 简单指令计算机模拟器 → NEMU
+
+----
+
+这个视角帮助我们想清楚很多之前比较难理解的内容
+
+* C 的指针/类型系统
+* `fork` 的行为
+* 中断机制
+* 分时多线程
+* debugger/tracer/...
+* ……
+
+---
+
+# 课程 Take Away Messages: 推论
+
+.red[思考问题的方式]：
+
+* There's no magic: 你看到的一切都是代码执行的结果
+    * 不论是普通程序还是系统工具 (gcc, gdb, ltrace, ...)
+
+----
+
+.red[编程] (CS 人的宿命)：
+
+* 机器永远是对的，未测代码永远是错的
+* 当你做一件事感到困难时，一定有工具能帮到你
+    * *The system will give you an explanation!*
+
+---
+
+# 明年再见！
+
+.center[![](/static/wiki/os/2019/img/ostep-fun.jpg)]
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

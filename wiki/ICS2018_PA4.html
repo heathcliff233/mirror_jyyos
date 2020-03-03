@@ -1,0 +1,105 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>PA4：服务器收到的提交</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="pa4">PA4：服务器收到的提交</h1>
+<h2 id="pa41">第一阶段(PA4.1)</h2>
+<table class="submissions"><tr><td>181220002<br><span class="submit-date">(17:57 Dec 13)</span></td><td>181220003<br><span class="submit-date">(08:22 Dec 14)</span></td><td>181220004<br><span class="submit-date">(11:04 Dec 14)</span></td><td>181220005<br><span class="submit-date">(08:01 Dec 12)</span></td><td>181220010<br><span class="submit-date">(01:00 Dec 16)</span></td><td>181220011<br><span class="submit-date">(09:34 Dec 14)</span></td><td>181220014<br><span class="submit-date">(13:10 Dec 15)</span></td></tr><tr><td>181220016<br><span class="submit-date">(14:08 Dec 15)</span></td><td>181220018<br><span class="submit-date">(22:54 Dec 13)</span></td><td>181220022<br><span class="submit-date">(22:06 Dec 15)</span></td><td>181220026<br><span class="submit-date">(20:00 Dec 12)</span></td><td>181220028<br><span class="submit-date">(00:24 Jan 05)</span></td><td>181220029<br><span class="submit-date">(19:04 Jan 01)</span></td><td>181220030<br><span class="submit-date">(17:53 Dec 22)</span></td></tr><tr><td>181220031<br><span class="submit-date">(15:17 Dec 11)</span></td><td>181220038<br><span class="submit-date">(22:08 Dec 15)</span></td><td>181220039<br><span class="submit-date">(22:16 Dec 11)</span></td><td>181220041<br><span class="submit-date">(21:04 Dec 13)</span></td><td>181220043<br><span class="submit-date">(00:19 Dec 18)</span></td><td>181220046<br><span class="submit-date">(10:09 Dec 15)</span></td><td>181220047<br><span class="submit-date">(10:49 Dec 31)</span></td></tr><tr><td>181220048<br><span class="submit-date">(20:55 Dec 16)</span></td><td>181220049<br><span class="submit-date">(19:20 Dec 14)</span></td><td>181220051<br><span class="submit-date">(09:30 Dec 18)</span></td><td>181220052<br><span class="submit-date">(18:36 Dec 21)</span></td><td>181220055<br><span class="submit-date">(17:44 Dec 14)</span></td><td>181220057<br><span class="submit-date">(18:59 Dec 15)</span></td><td>181220060<br><span class="submit-date">(21:38 Dec 22)</span></td></tr><tr><td>181220061<br><span class="submit-date">(19:34 Dec 16)</span></td><td>181220062<br><span class="submit-date">(19:07 Jan 17)</span></td><td>181220063<br><span class="submit-date">(18:01 Nov 18)</span></td><td>181220064<br><span class="submit-date">(19:46 Dec 15)</span></td><td>181220065<br><span class="submit-date">(16:46 Jan 12)</span></td><td>181220067<br><span class="submit-date">(21:24 Dec 14)</span></td><td>181220068<br><span class="submit-date">(18:32 Dec 22)</span></td></tr><tr><td>181220071<br><span class="submit-date">(15:48 Dec 15)</span></td><td>181220072<br><span class="submit-date">(21:44 Dec 16)</span></td><td>181220074<br><span class="submit-date">(22:21 Dec 15)</span></td><td>181220075<br><span class="submit-date">(16:31 Dec 17)</span></td><td>181220076<br><span class="submit-date">(16:25 Dec 11)</span></td><td>181220078<br><span class="submit-date">(14:14 Jan 12)</span></td><td>181220079<br><span class="submit-date">(15:20 Dec 13)</span></td></tr><tr><td>181220080<br><span class="submit-date">(20:35 Dec 15)</span></td><td>181240004<br><span class="submit-date">(22:19 Dec 15)</span></td><td>181240010<br><span class="submit-date">(16:16 Dec 14)</span></td><td>181240019<br><span class="submit-date">(23:46 Dec 15)</span></td><td>181240020<br><span class="submit-date">(21:03 Dec 11)</span></td><td>181240030<br><span class="submit-date">(23:45 Dec 15)</span></td><td>181240045<br><span class="submit-date">(20:28 Dec 19)</span></td></tr><tr><td>181240050<br><span class="submit-date">(21:23 Dec 31)</span></td><td>181240055<br><span class="submit-date">(21:18 Jan 12)</span></td><td>181240064<br><span class="submit-date">(10:59 Dec 14)</span></td><td>181240068<br><span class="submit-date">(19:05 Dec 15)</span></td><td>181240078<br><span class="submit-date">(21:13 Dec 19)</span></td><td>181240082<br><span class="submit-date">(21:34 Jan 12)</span></td><td>181250012<br><span class="submit-date">(21:56 Dec 05)</span></td></tr><tr><td>181250097<br><span class="submit-date">(15:39 Jan 03)</span></td><td>181250177<br><span class="submit-date">(19:54 Dec 07)</span></td><td>181250195<br><span class="submit-date">(00:52 Dec 03)</span></td><td>181830196<br><span class="submit-date">(21:43 Dec 15)</span></td><td>181840013<br><span class="submit-date">(22:57 Jan 11)</span></td><td>181840064<br><span class="submit-date">(10:55 Dec 15)</span></td><td>181840204<br><span class="submit-date">(19:48 Dec 15)</span></td></tr><tr><td>181840273<br><span class="submit-date">(19:42 Dec 12)</span></td><td>181840326<br><span class="submit-date">(21:44 Dec 08)</span></td><td>181850236<br><span class="submit-date">(12:47 Dec 13)</span></td><td>181860020<br><span class="submit-date">(15:35 Dec 15)</span></td><td>181860035<br><span class="submit-date">(08:58 Dec 03)</span></td><td>181860066<br><span class="submit-date">(10:39 Dec 20)</span></td><td>181860104<br><span class="submit-date">(21:13 Dec 15)</span></td></tr><tr><td>181860124<br><span class="submit-date">(14:34 Dec 07)</span></td><td>181860134<br><span class="submit-date">(19:28 Dec 07)</span></td><td>181860137<br><span class="submit-date">(17:55 Dec 16)</span></td><td>181860152<br><span class="submit-date">(14:53 Dec 26)</span></td><td>181860158<br><span class="submit-date">(20:04 Dec 24)</span></td><td>181870015<br><span class="submit-date">(16:49 Dec 20)</span></td><td></td></tr></table>
+
+<h2 id="pa42">第二阶段(PA4.2)</h2>
+<table class="submissions"><tr><td>181220002<br><span class="submit-date">(18:02 Dec 14)</span></td><td>181220003<br><span class="submit-date">(21:53 Dec 22)</span></td><td>181220004<br><span class="submit-date">(21:31 Dec 22)</span></td><td>181220005<br><span class="submit-date">(15:10 Dec 19)</span></td><td>181220014<br><span class="submit-date">(21:41 Dec 21)</span></td><td>181220016<br><span class="submit-date">(22:00 Dec 22)</span></td><td>181220018<br><span class="submit-date">(23:06 Dec 22)</span></td></tr><tr><td>181220019<br><span class="submit-date">(23:25 Jan 12)</span></td><td>181220022<br><span class="submit-date">(20:56 Jan 12)</span></td><td>181220026<br><span class="submit-date">(23:06 Dec 22)</span></td><td>181220028<br><span class="submit-date">(11:49 Jan 12)</span></td><td>181220029<br><span class="submit-date">(16:00 Jan 04)</span></td><td>181220031<br><span class="submit-date">(10:17 Dec 19)</span></td><td>181220039<br><span class="submit-date">(15:45 Dec 22)</span></td></tr><tr><td>181220041<br><span class="submit-date">(21:35 Dec 15)</span></td><td>181220043<br><span class="submit-date">(23:15 Dec 27)</span></td><td>181220046<br><span class="submit-date">(15:48 Jan 08)</span></td><td>181220048<br><span class="submit-date">(14:27 Dec 22)</span></td><td>181220049<br><span class="submit-date">(16:23 Dec 22)</span></td><td>181220051<br><span class="submit-date">(01:17 Dec 24)</span></td><td>181220055<br><span class="submit-date">(22:52 Dec 22)</span></td></tr><tr><td>181220056<br><span class="submit-date">(21:08 Jan 09)</span></td><td>181220057<br><span class="submit-date">(17:07 Dec 31)</span></td><td>181220061<br><span class="submit-date">(18:16 Dec 17)</span></td><td>181220063<br><span class="submit-date">(11:00 Nov 23)</span></td><td>181220064<br><span class="submit-date">(22:39 Dec 22)</span></td><td>181220067<br><span class="submit-date">(19:43 Jan 09)</span></td><td>181220068<br><span class="submit-date">(11:08 Jan 12)</span></td></tr><tr><td>181220071<br><span class="submit-date">(14:10 Dec 24)</span></td><td>181220072<br><span class="submit-date">(18:40 Dec 23)</span></td><td>181220074<br><span class="submit-date">(23:07 Jan 12)</span></td><td>181220075<br><span class="submit-date">(15:58 Jan 01)</span></td><td>181220079<br><span class="submit-date">(18:16 Dec 22)</span></td><td>181220080<br><span class="submit-date">(19:34 Dec 22)</span></td><td>181240004<br><span class="submit-date">(00:06 Dec 23)</span></td></tr><tr><td>181240019<br><span class="submit-date">(20:55 Dec 22)</span></td><td>181240020<br><span class="submit-date">(23:34 Dec 22)</span></td><td>181240045<br><span class="submit-date">(21:59 Jan 05)</span></td><td>181240050<br><span class="submit-date">(01:23 Jan 09)</span></td><td>181240055<br><span class="submit-date">(21:33 Jan 13)</span></td><td>181240064<br><span class="submit-date">(09:14 Dec 17)</span></td><td>181240068<br><span class="submit-date">(14:54 Dec 28)</span></td></tr><tr><td>181240078<br><span class="submit-date">(19:42 Jan 08)</span></td><td>181240082<br><span class="submit-date">(21:34 Jan 12)</span></td><td>181250012<br><span class="submit-date">(11:24 Dec 12)</span></td><td>181250177<br><span class="submit-date">(16:41 Dec 20)</span></td><td>181250195<br><span class="submit-date">(16:22 Dec 17)</span></td><td>181830196<br><span class="submit-date">(21:34 Dec 21)</span></td><td>181840064<br><span class="submit-date">(20:36 Dec 22)</span></td></tr><tr><td>181840204<br><span class="submit-date">(16:09 Dec 19)</span></td><td>181840273<br><span class="submit-date">(18:50 Dec 30)</span></td><td>181840326<br><span class="submit-date">(11:22 Dec 17)</span></td><td>181860020<br><span class="submit-date">(16:53 Dec 30)</span></td><td>181860035<br><span class="submit-date">(13:45 Dec 15)</span></td><td>181860066<br><span class="submit-date">(15:05 Dec 21)</span></td><td>181860104<br><span class="submit-date">(16:56 Dec 19)</span></td></tr><tr><td>181860124<br><span class="submit-date">(14:08 Dec 15)</span></td><td>181860134<br><span class="submit-date">(16:51 Dec 15)</span></td><td>181860137<br><span class="submit-date">(23:29 Jan 11)</span></td><td>181860158<br><span class="submit-date">(21:18 Dec 30)</span></td><td>181870015<br><span class="submit-date">(19:18 Jan 12)</span></td><td></td><td></td></tr></table>
+
+<h2 id="pa43">第三阶段(PA4.3)，按此阶段提交评分，需提交实验报告</h2>
+<table class="submissions"><tr><td>181220002<br><span class="submit-date">(11:52 Dec 19)</span></td><td>181220003<br><span class="submit-date">(21:46 Dec 30)</span></td><td>181220004<br><span class="submit-date">(23:07 Jan 12)</span></td><td>181220005<br><span class="submit-date">(17:38 Dec 30)</span></td><td>181220010<br><span class="submit-date">(00:41 Jan 12)</span></td><td>181220012<br><span class="submit-date">(09:06 Jan 09)</span></td><td>181220014<br><span class="submit-date">(21:41 Dec 21)</span></td></tr><tr><td>181220016<br><span class="submit-date">(23:46 Jan 11)</span></td><td>181220018<br><span class="submit-date">(15:13 Dec 25)</span></td><td>181220019<br><span class="submit-date">(23:25 Jan 12)</span></td><td>181220026<br><span class="submit-date">(00:18 Dec 31)</span></td><td>181220028<br><span class="submit-date">(12:11 Jan 12)</span></td><td>181220029<br><span class="submit-date">(01:44 Jan 12)</span></td><td>181220031<br><span class="submit-date">(16:31 Jan 12)</span></td></tr><tr><td>181220032<br><span class="submit-date">(23:42 Jan 12)</span></td><td>181220034<br><span class="submit-date">(18:20 Jan 06)</span></td><td>181220035<br><span class="submit-date">(00:23 Jan 04)</span></td><td>181220038<br><span class="submit-date">(08:25 Jan 12)</span></td><td>181220039<br><span class="submit-date">(09:56 Dec 23)</span></td><td>181220040<br><span class="submit-date">(23:30 Jan 17)</span></td><td>181220041<br><span class="submit-date">(12:14 Dec 31)</span></td></tr><tr><td>181220043<br><span class="submit-date">(15:13 Jan 01)</span></td><td>181220045<br><span class="submit-date">(23:23 Jan 09)</span></td><td>181220046<br><span class="submit-date">(19:46 Jan 12)</span></td><td>181220047<br><span class="submit-date">(23:08 Jan 12)</span></td><td>181220048<br><span class="submit-date">(21:35 Dec 24)</span></td><td>181220049<br><span class="submit-date">(23:44 Dec 23)</span></td><td>181220051<br><span class="submit-date">(23:36 Dec 24)</span></td></tr><tr><td>181220055<br><span class="submit-date">(22:55 Dec 22)</span></td><td>181220056<br><span class="submit-date">(11:11 Jan 12)</span></td><td>181220057<br><span class="submit-date">(21:50 Dec 31)</span></td><td>181220061<br><span class="submit-date">(21:37 Dec 17)</span></td><td>181220063<br><span class="submit-date">(15:19 Dec 05)</span></td><td>181220064<br><span class="submit-date">(23:13 Jan 11)</span></td><td>181220065<br><span class="submit-date">(23:58 Jan 12)</span></td></tr><tr><td>181220066<br><span class="submit-date">(23:18 Jan 12)</span></td><td>181220067<br><span class="submit-date">(21:49 Jan 09)</span></td><td>181220068<br><span class="submit-date">(11:09 Jan 12)</span></td><td>181220071<br><span class="submit-date">(22:42 Jan 03)</span></td><td>181220072<br><span class="submit-date">(18:40 Dec 23)</span></td><td>181220074<br><span class="submit-date">(23:10 Jan 12)</span></td><td>181220075<br><span class="submit-date">(20:44 Jan 01)</span></td></tr><tr><td>181220076<br><span class="submit-date">(17:46 Jan 04)</span></td><td>181220078<br><span class="submit-date">(15:07 Jan 12)</span></td><td>181220079<br><span class="submit-date">(01:10 Dec 23)</span></td><td>181220080<br><span class="submit-date">(12:23 Jan 02)</span></td><td>181240004<br><span class="submit-date">(23:53 Jan 12)</span></td><td>181240010<br><span class="submit-date">(15:18 Jan 11)</span></td><td>181240019<br><span class="submit-date">(17:32 Jan 12)</span></td></tr><tr><td>181240020<br><span class="submit-date">(23:23 Jan 12)</span></td><td>181240030<br><span class="submit-date">(20:31 Jan 12)</span></td><td>181240035<br><span class="submit-date">(21:33 Jan 12)</span></td><td>181240045<br><span class="submit-date">(00:32 Jan 12)</span></td><td>181240047<br><span class="submit-date">(17:01 Jan 11)</span></td><td>181240050<br><span class="submit-date">(18:02 Jan 11)</span></td><td>181240055<br><span class="submit-date">(21:35 Jan 13)</span></td></tr><tr><td>181240064<br><span class="submit-date">(12:13 Jan 12)</span></td><td>181240068<br><span class="submit-date">(18:22 Dec 28)</span></td><td>181240078<br><span class="submit-date">(22:11 Jan 10)</span></td><td>181240082<br><span class="submit-date">(21:33 Jan 12)</span></td><td>181250012<br><span class="submit-date">(19:46 Dec 13)</span></td><td>181250097<br><span class="submit-date">(23:40 Jan 12)</span></td><td>181250177<br><span class="submit-date">(17:43 Jan 03)</span></td></tr><tr><td>181250195<br><span class="submit-date">(15:43 Dec 20)</span></td><td>181830196<br><span class="submit-date">(22:11 Jan 05)</span></td><td>181840013<br><span class="submit-date">(23:53 Jan 12)</span></td><td>181840064<br><span class="submit-date">(21:39 Dec 27)</span></td><td>181840135<br><span class="submit-date">(20:33 Jan 08)</span></td><td>181840204<br><span class="submit-date">(16:09 Dec 19)</span></td><td>181840264<br><span class="submit-date">(20:36 Jan 12)</span></td></tr><tr><td>181840273<br><span class="submit-date">(10:42 Jan 04)</span></td><td>181840326<br><span class="submit-date">(19:08 Dec 17)</span></td><td>181850236<br><span class="submit-date">(09:03 Jan 12)</span></td><td>181860020<br><span class="submit-date">(18:48 Jan 06)</span></td><td>181860035<br><span class="submit-date">(09:48 Dec 20)</span></td><td>181860066<br><span class="submit-date">(20:12 Dec 23)</span></td><td>181860104<br><span class="submit-date">(22:30 Dec 20)</span></td></tr><tr><td>181860124<br><span class="submit-date">(17:49 Dec 19)</span></td><td>181860134<br><span class="submit-date">(23:55 Dec 19)</span></td><td>181860137<br><span class="submit-date">(18:42 Jan 12)</span></td><td>181860152<br><span class="submit-date">(23:07 Jan 12)</span></td><td>181860158<br><span class="submit-date">(19:38 Jan 04)</span></td><td>181870015<br><span class="submit-date">(19:18 Jan 12)</span></td><td></td></tr></table>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,728 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>理解并发程序的执行</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">理解并发程序的执行</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>“多处理器编程：从入门到放弃” 之后，我们依然不能放弃并发编程 (这门课的主要内容)</p>
+<ul>
+<li>要想编程，就要先能 “看懂” 已有的并发程序</li>
+<li>如何理解一个并发程序的行为？<ul>
+<li>科学的进步很大程度依赖于<span class="red">工具</span>的成熟 (微积分, PCR, ...)</li>
+<li>我们用什么工具理解并发程序？</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>串行程序的状态机模型 (工具)</li>
+<li>状态机模型的应用</li>
+<li>并发程序的状态机模型</li>
+<li>理解并发程序的执行</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">串行 (单线程) 程序的状态机模型</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="finite-state-machine-fsm">有限状态机 Finite State Machine (FSM)</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/fsm.jpg" width="450px"></img></p>
+<p>有向图 <math class="inline-math">G(V,E)</math></p>
+<ul>
+<li>节点 <math class="inline-math"> v\in V</math> 是 “状态”</li>
+<li>边 <math class="inline-math">e \in E</math> 是 “状态的转换”</li>
+<li>边上有 label 代表执行某个动作<ul>
+<li>一个事件</li>
+<li>一条指令</li>
+<li>一条语句</li>
+<li>……</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">程序 = 有限状态机</h2>
+<p>(操作系统上的) 程序执行时，状态是有限的</p>
+<ul>
+<li>寄存器 (包括 PC 指针)</li>
+<li>内存：代码、数据、堆栈 (暂时假设内存静态分配)</li>
+</ul>
+<hr></hr>
+<p>构造有限状态机：</p>
+<ul>
+<li>每个不同的 configuration (内存/寄存器) 都是状态机的节点<ul>
+<li><math class="inline-math">s = (M, R) \in V</math>，代表某个时刻程序内存/寄存器的<span class="red">快照</span></li>
+<li>16 MiB 内存就有 <math class="inline-math">2^{2^{24}}</math> 种不同的状态</li>
+</ul>
+</li>
+<li><math class="inline-math">s = (M, R)</math> 的下一个状态是执行 <math class="inline-math">M[R[{\textrm{\%rip}}]]</math> 处的指令得到 <math class="inline-math">s' = (M', R')</math> <ul>
+<li>取出 PC 指针处的指令、译码、执行、写回数据<ul>
+<li>被《计算机系统基础》PA 支配的恐惧</li>
+</ul>
+</li>
+<li><math class="inline-math">(s, s') \in E</math></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">程序 = 有限状态机 (cont'd)</h2>
+<p>大部分状态 <math class="inline-math">s</math> 有唯一的后续状态 (deterministic)</p>
+<ul>
+<li><p>执行一条指令，得到确定的结果</p>
+<pre class="codehilite"><code class="language-text">IF StackAddrSize = 64 THEN
+  IF OperandSize = 64 THEN
+    RSP ← RSP – 8;
+    Memory[SS:RSP] ← SRC;
+    (* push quadword *)
+  ELSE IF OperandSize = 32 THEN
+    ...</code></pre>
+
+</li>
+<li><p>can be tricky: <code>pushq %rsp</code></p>
+</li>
+</ul>
+<hr></hr>
+<p>思考题：<span class="green">如果程序是 deterministic 的，那我们的程序无论运行多少次，不都只有唯一的结果了吗</span>？</p>
+<ul>
+<li>我们学习的大多数算法都是 deterministic 的<ul>
+<li>输入确定，无论运行多少次都是一样的结果</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">程序 = 有限状态机 (cont'd)</h2>
+<p>不确定 (non-deterministic) 的指令可能有多个后续状态</p>
+<ul>
+<li>(时间) rdtsc/rdtscp<ul>
+<li>获取处理器的 “时间戳” 用于精确定时</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>(机器状态) rdrand<ul>
+<li>处理器自身提供的 “真” 随机数指令 (since Ivy Bridge, 2013)</li>
+<li><a href="../static/wiki/os/2020/demos/rdrand.c">rdrand.c</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>(系统调用) syscall <ul>
+<li>一般应用唯一不确定性的来源</li>
+<li>例子：<code>read(fd, buf, size)</code> <ul>
+<li>返回值不确定 (-1, 0, 1, 2, ...)</li>
+<li><code>buf</code> 中的数据不确定 (例如从键盘输入)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<hr></hr>
+<p>不确定性的来源：程序运行在操作系统/计算机硬件上，它们有自己的状态</p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="x86-64">x86-64 的例子</h2>
+<p>运行在 Ring 3 (低特权级) 的应用程序</p>
+<ul>
+<li>通用寄存器 16 个<ul>
+<li>rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp</li>
+<li>r8, r9, r10, r11, r12, r13, r14, r15</li>
+</ul>
+</li>
+<li>PC 指针/机器状态<ul>
+<li>rip, rflags, cs, ds, es, fs, gs</li>
+</ul>
+</li>
+<li>内存<ul>
+<li>操作系统分配；通过 procfs 查看</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>这些状态都可以被 gdb 观察到</p>
+<ul>
+<li>info registers 会列出所有的寄存器</li>
+<li><code>/proc/[pid]/maps</code> 有内存映射信息<ul>
+<li>例子：另一个 <a href="../static/wiki/os/2020/demos/minimal-with-data.S">minimal.S</a>;</li>
+<li>(vvar, vdso, vsyscall 是系统映射的内存，我们假设不使用)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="exciting">状态机模型：应用 (Exciting)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">程序 = 状态机</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2019/img/question.jpg" width="175px"></img></p>
+<p>Quite trivial</p>
+<ul>
+<li>我们在《数字逻辑电路》上第一次学</li>
+<li>在《计算机系统基础》又学了一遍</li>
+<li>《操作系统》上怎么又要学一遍？</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>“程序 = 状态机 = 有向图” 是一种理解程序、分析程序的<span class="red">工具</span></p>
+<ul>
+<li>计算机科学领域的基础工具之一</li>
+<li>用图的思路理解程序/计算机系统！</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">哲 ♂ 学探讨</h2>
+<p>我们的物理世界是 deterministic 的状态机吗？</p>
+<ul>
+<li>宏观物理世界近似于 deterministic 的状态机 (经典力学)</li>
+<li>微观世界可能是 non-deterministic 的 (量子力学)</li>
+</ul>
+<hr></hr>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/cellular-automaton-fluid.png" width="500px"></img></p>
+<p>把物理世界建模成粒子的 local-interactions 的状态机</p>
+<ul>
+<li><a href="https://conwaylife.com/">Conway's game of life</a></li>
+<li>可以在这个模型上严肃地定义很多概念：预测未来、时间旅行……<ul>
+<li><a href="https://writings.stephenwolfram.com/2015/12/what-is-spacetime-really/">What is spacetime, really?</a></li>
+<li>例子：预测未来<ul>
+<li>类似于 syscall 指令</li>
+<li>“Oracle” Turing Machine</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">状态机模型：应用</h2>
+<p>在计算机硬件上的应用：高性能处理器实现</p>
+<ul>
+<li>超标量 (superscalar) 处理器<ul>
+<li>insight: 允许在状态机上 “跳跃”</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>在计算机系统上的应用：程序分析技术</p>
+<ul>
+<li>静态分析：根据程序<span class="red">代码</span>推导出状态机的性质</li>
+<li>动态分析：检查运行时观测到状态机的<span class="red">执行</span></li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1-time-travel-debugging">应用 (1): Time-Travel Debugging</h2>
+<p>程序执行是随时间 “前进” 的 <math class="inline-math"> s_0 \to s_1 \to s_2 \to \ldots </math></p>
+<ul>
+<li>能否在时间上 “后退”？ (time-travel)<ul>
+<li>经常 gdb 不小心 step 过了，从头再来……</li>
+<li>记录所有的 <math class="inline-math">s_i</math>，就能实现任意的 time-traveling</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>记录所有 <math class="inline-math">s_i</math> 的开销太大 (<math class="inline-math">s_i</math> 由内存 + 寄存器组成)</p>
+<ul>
+<li>但<span class="red">一条指令的 side-effect 通常有限</span><ul>
+<li>只记录初始状态，和每条指令前后状态的 diff<ul>
+<li>diff 的例子: <a href="../static/wiki/os/2020/demos/s0.txt">s0.txt</a> <a href="../static/wiki/os/2020/demos/s1.txt">s1.txt</a></li>
+</ul>
+</li>
+<li><math class="inline-math">s_0, \Delta_{(s_0, s_1)}, \Delta_{(s_1, s_2)}, \ldots </math></li>
+<li>正向执行：<math class="inline-math">s_{i+1} = s_i \odot \Delta_{(s_i, s_{i+1})}</math></li>
+<li>反向执行：<math class="inline-math">s_{i-1} = s_i \odot \Delta_{(s_{i-1}, s_i)}^{-1}</math></li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1-time-travel-debugging-contd">应用 (1): Time-Travel Debugging (cont'd)</h2>
+<p>gdb 的隐藏功能 (大家读过 gdb 的手册了吗？)</p>
+<ul>
+<li><code>target record-full</code> - 开始记录 (需要程序开始执行)</li>
+<li><code>record stop</code> - 结束记录</li>
+<li><code>reverse-step</code>/<code>reverse-stepi</code> - “时间旅行调试”</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>例子：<a href="../static/wiki/os/2020/demos/rdrand.c">rdrand.c</a></p>
+<ul>
+<li><code>watch $rax</code></li>
+<li><code>si</code>/<code>rsi</code></li>
+</ul>
+<p>例子：<a href="../static/wiki/os/2020/demos/minimal.S">minimal.S</a></p>
+<ul>
+<li>对 syscall 指令不适用 (因为 side-effect 难以准确定义)</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2-record-replay">应用 (2): Record & Replay</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/record-replay.jpg" width="280px"></img></p>
+<p>在程序执行时记录信息，结束后重现程序的行为</p>
+<ul>
+<li>确定的程序不需要任何记录<ul>
+<li>假设 <math class="inline-math">s_0</math> 执行 1,000,000 条确定的指令后得到 <math class="inline-math">s'</math><ul>
+<li>那么只要记录 <math class="inline-math">s_0</math> 和 1,000,000</li>
+<li>就能通过 “再执行一次” 推导出 <math class="inline-math">s'</math></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>Record & Replay: 只需记录 non-deterministic 的指令的<span class="red">效果</span> (side-effect)</p>
+<ul>
+<li>(单线程) 应用程序<ul>
+<li>syscall, rdrand, rdtsc, ...</li>
+</ul>
+</li>
+<li>(单处理器) 操作系统<ul>
+<li>mmio, in, out, rdrand, rdtsc, 中断, ...</li>
+<li>QEMU 内置了 record/replay!</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>G. Dunlap, et al. ReVirt: Enabling intrusion analysis through virtual-machine logging and replay. In <em>Proc. of OSDI</em>, 2002.</p>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="3">应用 (3): 全自动测试</h2>
+<pre class="codehilite"><code class="language-c">int nread = read(fd, buf, size);
+...
+BUG_ON(nread == size); // 常见的错误，buffer overrun
+BUG_ON(nread == -1);   // 另一种常见错误
+                       // 通常很难测试到这些情况</code></pre>
+
+<p>(动态) 符号执行：把状态里的数值用符号 (变量) 代替，简化状态表示</p>
+<ul>
+<li>例如 <code>nread</code> 变量的值可以用 <math>x</math> 表示<ul>
+<li>例子：<a href="../static/wiki/os/2020/demos/dse-example.c">dse-example.c</a></li>
+</ul>
+</li>
+<li>每一个分支都可以用一个约束条件 <math>\Phi(\mathbf{x})</math> 表示<ul>
+<li>给定执行路径 <math>\Phi_1(\mathbf{x}) \land \Phi_2(\mathbf{x}) \land \ldots \land \Phi_k(\mathbf{x})</math></li>
+<li>满足 <math>\Phi_1(\mathbf{x}) \land \Phi_2(\mathbf{x}) \land \ldots \land \neg \Phi_k(\mathbf{x})</math> 的 <math>\mathbf{x}</math> 会执行另一条路径</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>C. Cadar, D. Dunbar, D. Engler. KLEE: Unassisted and automatic generation of high-coverage tests for complex systems programs. In <em>Proc. of OSDI</em>, 2008.</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="research-opportunities-are-open">Research Opportunities are Open!</h2>
+<p>我们也利用 “状态机” 这个视角做非常 cool 的研究</p>
+<ul>
+<li>程序的执行是 <math class="inline-math">s_0 \to s_1 \to s_2 \to \ldots </math></li>
+<li>我们可以在程序执行的过程中做<span class="red">快照</span> <math class="inline-math">s_i</math><ul>
+<li><math class="inline-math">s_i \to s_{i+1} \to \ldots </math> 继续执行 (原程序执行保持不变)</li>
+<li>快照的 <math class="inline-math">s_i</math> 可以探索不同的执行路径 (shadow execution)<ul>
+<li>容错、更新、测试……</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>M. Yabandeh, et al. CrystalBall: Predicting and preventing inconsistencies in deployed distributed systems. In <em>Proc. of NSDI</em>, 2009.</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">并发程序的状态机模型</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">并发程序的状态机模型</h2>
+<p>复习题：线程共享什么、独享什么？</p>
+<ul>
+<li>共享代码和数据</li>
+<li>拥有独立的寄存器和堆栈<ul>
+<li>堆栈也位于同一个地址空间中</li>
+<li>允许把局部变量的指针 (<code>&local_var</code>) 传递给另一个线程<ul>
+<li>实际用到的场景几乎没有</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/concurrent-state.png" width="900px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">并发程序的状态机模型 (cont'd)</h2>
+<p>系统中有 <math class="inline-math">n</math> 个线程，则并发程序的状态</p>
+<ul>
+<li><math class="inline-math">s = (M, R_1, R_2, \ldots, R_n)</math></li>
+<li>并发系统执行指令的顺序是<span class="red">不确定</span>的<ul>
+<li>每个 <math class="inline-math">(M, R_1), (M, R_2), \ldots, (M, R_n)</math> 都可以看成是一个<span class="red">串行程序</span></li>
+<li>在任意状态，都可以选择任意一个线程执行一条指令<ul>
+<li><math class="inline-math">s_i = (M, R_i)</math> 执行 <math class="inline-math">M[R_i[{\textrm{\%rip}}]]</math> 处的指令得到 <math class="inline-math">s_i' = (M_i', R_i')</math> </li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/state-space.png" width="700px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">并发程序的状态机模型 (cont'd)</h2>
+<p>计算题：</p>
+<ul>
+<li><math class="inline-math">n</math> 个线程、每个线程执行 <math class="inline-math">m</math> 个 <code>printf</code> (假设一次 <code>printf</code> 是原子的)、理论上有多少种不同的输出？</li>
+</ul>
+<pre class="codehilite"><code class="language-c">#include &lt;threads.h&gt;
+#include &lt;stdio.h&gt;
+
+void thread_entry(int tid) {
+  for (int i = 1; i &lt;= m; i++) {
+    printf("T%d's %d-th operation\n", tid, i);
+  }
+}
+
+int main() {
+  for (int i = 0; i &lt; n; i++)
+    create(thread_entry);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">这就是为什么并发程序很难写！</h2>
+<p>并发程序的状态机实在是太大了……</p>
+<ul>
+<li>就算是合并确定 (deterministic) 的状态，只要有共享内存，状态空间就很难画出了<ul>
+<li>还不考虑编译优化、多处理器之间的可见性 (memory model) 等问题</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<ul>
+<li>刚才介绍的各种状态机模型的应用，都需要为多线程<span class="red">重新设计</span><ul>
+<li>共享内存是 non-determinism 的重要来源</li>
+<li>time-travel debugging/record & replay 需要记录内存访问的顺序</li>
+<li>自动测试要考虑如何探索线程调度</li>
+<li>……</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">理解并发程序的执行</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">理解 (并发) 程序的执行</h2>
+<p>程序 </p>
+<ul>
+<li>指令序列的静态描述<ul>
+<li>高度概括、精简</li>
+<li>行为有时难以理解<ul>
+<li>循环、递归、分支的组合</li>
+<li>不确定的共享内存</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>状态机</p>
+<ul>
+<li>所有动态行为的集合<ul>
+<li>静态时的分支、循环全部被展开了为顺序结构</li>
+<li>大量的冗余和重复 (verbose)</li>
+<li>行为明确，容易理解 ← <span class="red">本课程中最重要的工具之一</span></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">例子：实现互斥</h2>
+<p>希望实现 lock/unlock，保证</p>
+<ul>
+<li>(顺序) 编译优化不能越过 lock/unlock</li>
+<li>(原子) lock 返回后 unlock 之前，其他线程 lock 不得返回</li>
+<li>(可见) unlock 之前执行的写操作，在 unlock 之后对其他线程可见</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void do_sum() {
+  for (int i = 0; i &lt; n; i++) {
+    lock(); // 保证顺序、原子性、可见性
+    // critical section; 临界区
+    sum++;
+    unlock();
+  }
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="peterson-2">Peterson 算法：实现 2 人的互斥</h2>
+<ul>
+<li>想上厕所的人：(1) 首先举起有自己名字的旗子 (2) 挂上有对方名字的牌子；后挂的牌子会覆盖先前的 (3) 环顾四周，当对方没有举旗或牌子上是自己名字的时候，进入 WC (4) 出 WC 时放下旗子<ul>
+<li>只有旗子的时候/只有牌子的时候都是有问题的 (为什么？)</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/peterson.jpg" width="600px"></img></p>
+<div class="fragment">
+<ul>
+<li>理解并发的另一个工具：<span class="red">把线程想象成人、把共享内存想象成物理世界</span><ul>
+<li>抢厕所时，牌子起了礼让的作用</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="peterson">Peterson 算法：代码</h2>
+<pre class="codehilite"><code class="language-c">int turn = T1, x = 0, y = 0;
+
+void thread1() {
+  [1] x = 1; turn = T2;
+  [2] while (y && turn == T2) ;
+  [3] // critical section
+  [4] x = 0;
+}
+
+void thread2() {
+  [1] y = 1; turn = T1;
+  [2] while (x && turn == T1) ;
+  [3] // critical section
+  [4] y = 0;
+}</code></pre>
+
+
+<p>假设：机器每次原子地 (atomically) 执行一行代码，内存访问立即可见</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="peterson">Peterson 算法：构造状态机</h2>
+<p>状态表示：<math class="inline-math">(\textrm{PC}_1, \textrm{PC}_2, x, y, \mathit{turn})</math></p>
+<ul>
+<li>初始状态：<math class="inline-math">(1, 1, 0, 0, T_1)</math></li>
+<li>每一步可以不确定地选择一个线程执行一行代码<ul>
+<li>状态空间是有限的：<math class="inline-math">5 \times 5 \times 2 \times 2 \times 2</math><ul>
+<li>但如果算法正确，有些状态应该是不可达的</li>
+<li>例如 <math class="inline-math">(3, 3, x, y, t)</math></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="peterson">Peterson 算法：正确性</h2>
+<p>Safety: <span class="red">坏事永远不会发生</span></p>
+<ul>
+<li>在任意执行中，<math class="inline-math">\textrm{PC}_1 = 3 \land \textrm{PC}_2 = 3</math> 不会出现<ul>
+<li>图论的语言：<math class="inline-math">\textrm{PC}_1 = 3 \land \textrm{PC}_2 = 3</math> 的节点在 <math class="inline-math">G</math> 上不可达</li>
+</ul>
+</li>
+</ul>
+<p>Liveness: <span class="red">好事总会发生</span></p>
+<ul>
+<li>在任意执行中，有限步之内 <math class="inline-math">\textrm{PC}_1 = 3 \lor \textrm{PC}_2 = 3</math> 会出现<ul>
+<li>图论的语言：不存在 <math class="inline-math">G</math> 的一条 (无穷) 路径，每个线程都执行了无穷多步，且所有经过的节点 <math class="inline-math">\textrm{PC}_1 \ne 3 \land \textrm{PC}_2 \ne 3</math></li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>理解并发程序：prove by brute force 演示</p>
+<ul>
+<li>我们的第一个 non-trivial 并发程序的理解和证明 (撒花)</li>
+<li>“model checking”<ul>
+<li>R. Jhala and R. Majumdar. Software model checking. <em>ACM Computing Surveys</em>, 41(4), 2009.</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="take-aways-and-wrap-up">Take-aways and Wrap-up</h2>
+<p>程序 = 状态机 = 有向图</p>
+<ul>
+<li>这门课用到最 fundamental 的抽象和理论工具<ul>
+<li>理解 (reasoning about) 程序/操作系统的行为</li>
+<li>证明程序的正确性/找到反例</li>
+<li>构造程序分析</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>尝试一下 gdb 的 time-travel debugging 功能</li>
+<li>假设 Peterson 算法的实现每一步执行一次 load/store (而不是一行)<ul>
+<li>用 brute force 方法证明它的正确性</li>
+</ul>
+</li>
+<li>假设 Peterson 算法执行时，处理器能交换不同变量的内存访问<ul>
+<li>用 brute force 方法证明它违背 safety</li>
+<li>(你会发现这是上次课讲过的例子)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

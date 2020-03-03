@@ -1,0 +1,179 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>M4: Malloc &amp; Free</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="m4-malloc-free">M4: Malloc &amp; Free</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">概述</h4>
+<p>这个实验和之前的实验不太一样——之前的实验都是“利用操作系统提供的功能实现应用需求”，而在这个实验里，我们则是打开操作系统中的库函数(libc)，实现libc中非常重要的两个函数：<code>malloc</code>和<code>free</code>，而且有两个额外的要求：<strong>线程安全</strong>(允许多个线程并发分配)，同时<strong>性能尽可能地高</strong>。</p>
+<p>这主要是让大家体会一下共享内存并发编程中的各种神坑，以及应对这些神坑的常用技巧。</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="_2">截止日期</h4>
+<p>5月6日(周日)晚23:59:59。</p>
+</div>
+<h3 id="_3">收到的作业</h3>
+<p><table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></p>
+<h2 id="_4">实验描述</h2>
+<h3 id="_5">总览</h3>
+<p>实现用于内存分配的C函数(系统里已经有实现好的<code>malloc</code>和<code>free</code>了，而且表现很正确)。</p>
+<pre class="codehilite"><code class="language-c">void* do_malloc(size_t size) {
+    return malloc(size);
+}
+
+void do_free(void *ptr) {
+    free(ptr);
+}</code></pre>
+
+
+<h3 id="_6">描述</h3>
+<p>其中<code>do_malloc</code>用于分配<code>size</code>字节的内存，返回分配内存的地址；<code>do_free</code>用于回收一个已分配的内存地址。如果<code>ptr</code>为<code>NULL</code>，不执行任何操作。</p>
+<p>如果执行成功，<code>do_malloc</code>返回分配的内存地址，否则返回<code>NULL</code>，并且<code>errno</code>设置为<code>ENOMEM</code>。<code>do_free</code>不返回任何数值。</p>
+<p>更直观地说，<code>malloc(s)</code>返回一个指针<math>p</math>，并且保证内存的<math>[p,p+s)</math>被“分配”，即能被进程(包括进程内的所有线程)使用，直到调用<code>free(p)</code>为止，这段内存再次被“释放”，释放后再访问这段内存的行为未定义(use-after-free bug)。</p>
+<p>你需要自己手工实现<code>malloc</code>和<code>free</code>的山寨版：<code>do_malloc</code>和<code>do_free</code>。在此过程中，你可以通过<code>mmap</code>系统调用向操作系统请求内存。此外，你的<code>do_malloc</code>和<code>do_free</code>需要和libc中的行为一致：它们是<strong>线程安全</strong>的，即允许多个共享内存的线程并发调用<code>do_malloc</code>和<code>do_free</code>。</p>
+<h3 id="_7">解释</h3>
+<p>在这里我们看到了库函数的返回值。每一个库函数都可能会失败——<code>malloc</code>可能因为空间不足而失败，此时会更新C标准定义的<code>errno</code> (可以用<code>man 3 errno</code>查看手册)。<code>errno</code>是一个线程本地的l-value数值(可以修改；每个线程拥有自己的<code>errno</code>)，用于获取错误的具体原因(库函数/系统调用可能有多种出错可能)，<code>strerror</code>函数能把错误编号转换为人类可读的字符串。</p>
+<h2 id="_8">注意事项</h2>
+<div class="fenced fenced-red">
+<h4 id="mini-programming-labs">Mini Programming Labs注意事项</h4>
+<ol>
+<li><strong>在Linux下完成</strong>。请尽量写出可移植的代码(考虑<code>-std=c99</code>)，兼容32/64位环境。</li>
+<li><strong>全程只有一个C源代码文件，控制在500行以内</strong>。参考实现一般在100-200行，指定功能实现正确就能得满分。Mini Programming Labs的扩展性极高，顺着写下去，1,000行，10,000行，100,000行都是有可能的，克制你的欲望，想发挥可以自己开个项目。</li>
+<li><strong>只允许使用指定的Makefile编译(使用<code>make</code>)、只允许编辑已有的一个<code>.c文件</code></strong>，以便我们追踪代码修改。一方面这是预防抄袭的手段，另一方面也是我们研究编程规律的数据。Git记录不全将被视为抄袭，如Git出现问题请及时和助教联系。</li>
+<li><strong>如果在多个地点完成作业，请将整个目录完整移动</strong>，以保持Git记录的完整。</li>
+<li><strong>不需要实验报告</strong>。助教将会编译运行代码并根据实现正确性评分。重要的话可以写在注释里。</li>
+</ol>
+</div>
+<p>在命令行使用<code>git clone https://github.com/NJU-ProjectN/malloc.git</code>将代码下载(将会创建一个名为<code>crepl</code>的目录)，与之前实验相同。配置好<code>STUID</code>和<code>STUNAME</code>之后<code>make submit</code>即可提交——你应该想到把这两个环境变量默认<code>export</code>到你的shell中。</p>
+<p>为了降低本次实验的难度，助教为我们提供了测试代码，测试代码会创建若干并发的线程并调用<code>malloc</code>/<code>free</code>，之后会检测并发实现是否正确。这次的Makefile中提供了<code>make run</code>，会自动执行测试代码并检验。请大家阅读相关代码。</p>
+<div class="fenced fenced-blue">
+<h4 id="_9">对测试代码有疑问？</h4>
+<p>这次代码jyy甩锅了给助教陈冬杰(midwinter1993@gmail.com)。对这部分代码有任何问题请联系他(当然也可以联系我)。</p>
+</div>
+<h2 id="_10">实现线程安全</h2>
+<p>这个实验看起来挺简单的，CSAPP就有这么个习题，而且网上有大把大把的代码，即便我不抄代码，看一下这些代码的实现思路也是不错的。要实现线程安全的内存分配也不难，上课已经讲过互斥锁了，我们直接用POSIX线程库里提供的就行：</p>
+<pre class="codehilite"><code class="language-c">void *do_malloc(size_t size) {
+  pthread_mutex_lock(&amp;mutex); // 上锁
+  malloc_unsafe(size); // 具体实现分配的算法
+  pthread_mutex_unlock(&amp;mutex); // 解锁
+}
+
+void do_free(void *ptr) {
+  pthread_mutex_lock(&amp;mutex); // 上锁
+  free_unsafe(ptr); // 具体实现释放的算法
+  pthread_mutex_unlock(&amp;mutex); // 解锁
+}</code></pre>
+
+
+<p>但<code>lock</code>/<code>unlock</code>带来非常严重的问题：在多处理器计算机上，如果多个处理器核心同时请求分配内存，它们就被迫只能一个一个进行(由锁保证)了。回顾一下课上讲过的内容，在实际中，互斥锁(mutex lock)的实现会包含两部分：</p>
+<ol>
+<li>先试着获取锁，如果成功万事大吉。</li>
+<li>借助原子操作自旋(spin)一会儿，如果有人释放了锁，万事大吉。</li>
+<li>如果spin了一段时间都没有等到锁，那我还是不要浪费CPU资源来得好，所以线程会通过系统调用睡眠。</li>
+</ol>
+<p>所以如果大量的线程并发调用malloc/free，spin的成功可能性也不大，这就导致了大量浪费的操作：spin; 睡眠; 唤醒……每一个都需要消耗相当的CPU资源。</p>
+<p>所以如果你有兴趣，可以试着不使用锁来提升malloc/free的效率。</p>
+<div class="fenced fenced-green">
+<h4 id="_11">线程安全？</h4>
+<p>还记得讲memory model时黑人问号的例子吗？如果你直接实现无锁的算法，通常都会得到错误的结果。这时候你需要gcc内置的<a href="https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html">atomic builtins</a>的帮助。</p>
+<p>警告：<strong>这个实验难度很大，如果你搞不定的话，就交一个互斥锁的版本吧</strong>。</p>
+</div>
+<h2 id="mallocfree">评价malloc/free的性能指标</h2>
+<p>对于一组malloc/free的请求(又称为workload)，我们很自然希望关注以下评价指标：</p>
+<ul>
+<li>使用内存的峰值。如果你的malloc设计成直接分配，永远不free的话，通常能获得很不错的性能。但可惜的是对于long-running的程序，这么做根本不可取。</li>
+<li>每次请求所用的时间。因为请求数量很多，所以通常需要用一些统计量来总结所用的时间：平均值、方差、最大/最小值、百分位点……</li>
+</ul>
+<p>你可以试着在代码里统计这些信息，在实现正确的前提下对malloc/free进行优化。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

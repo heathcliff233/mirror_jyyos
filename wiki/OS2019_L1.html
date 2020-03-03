@@ -1,0 +1,301 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>L1：内核内存分配 (kalloc)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="l1-kalloc">L1：内核内存分配 (kalloc)</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">截止日期</h4>
+<p>Soft Deadline: 4月14日23:59:59。</p>
+<p>你的所有操作系统实验将在你之前的代码上完成，你只需要维护一份内容不断增加的实验报告(pdf格式)，其中每次实验的内容<strong>不建议超过2页A4纸</strong>。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的bug等。</p>
+</div>
+<h3 id="_2">收到的作业</h3>
+<table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+
+<div class="fenced fenced-green">
+<h4 id="_3">真正的“操作系统”</h4>
+<p>这次我们真的来写操作系统了，有一点小激动嘛！框架代码的目录名也变成了“kernel”。框架代码与游戏十分类似，甚至比游戏还更少一些，不过这次<code>main</code>函数上来就开启了多处理器。</p>
+<p>多处理器编程多多少少让大家有些陌生，因此在我们进一步向前之前，我们先在多处理器上实现一个简单的程序——内存分配和回收。物理内存管理是操作系统内核中最重要的基础设施之一，因此也值得花一个实验的时间好好研究一下。</p>
+</div>
+<h2 id="_4">背景</h2>
+<p>在实现操作系统内核时，我们经常会面对存储空间的分配：当我们创建一个进程/线程时，我们需要分配数据结构(相应在终止的时候回收)；打开一个文件时，需要分配空间存储偏移量；……很自然我们要实现一组API来管理内存空间的分配和释放，否则对于每一种类型的资源，都要手工实现分配和释放。</p>
+<p>在多处理器系统中，各个处理器上的代码会<strong>并发</strong>地申请或释放内存。这就给内存分配和释放带来额外的挑战：一方面，我们希望不同处理器能并行、高效地申请内存，不会因为同时申请而发生一个处理器等另一个处理器的情况，且在很短的时间内完成分配；另一方面，在此要求下实现malloc/free (尤其是不使用互斥锁)又是十分困难的。做好准备好了？做不好也得做好了。</p>
+<h2 id="_5">实验描述</h2>
+<div class="fenced fenced-blue">
+<h4 id="_6">获取实验代码</h4>
+<p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
+<p>在你获得os-workbench之后，执行</p>
+<pre class="codehilite"><code>git pull origin L1</code></pre>
+
+
+<p>会得到<code>kernel/</code>目录。它与Lab0的框架十分类似(但目录组织和Makefile稍有区别，大家可以阅读一下。</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="_7">实验提交</h4>
+<p>在<code>kernel/</code>执行<code>make submit</code>提交。考虑到以后实验都使用这个目录，我们没有设置<code>TASK</code>环境变量，请设置成正确的名称(L1)后<code>make submit</code>。</p>
+</div>
+<p>在这个实验中，实现以下函数：</p>
+<pre class="codehilite"><code class="language-c">static void *kalloc(size_t size) {
+  // 内存分配
+}
+
+static void kfree(void *ptr) {
+  // 内存释放
+}</code></pre>
+
+
+<h3 id="_8">功能描述</h3>
+<p>在AM启动后，<code>[_heap.start, _heap.end)</code>都是可用的内存，<code>kalloc/kfree</code>会管理这个区域的内存。其中<code>dkalloc</code>用于分配<code>size</code>字节的内存，返回分配内存的地址；<code>kfree</code>用于回收一个已分配的内存地址。如果<code>ptr</code>为<code>NULL</code>，不执行任何操作。</p>
+<p>更直观地说，<code>kalloc(s)</code>返回一个指针<math>p</math>，并且保证内存的<math>[p,p+s)</math>被“分配”，即能被进程(包括进程内的所有线程)使用，直到调用<code>kfree(p)</code>为止，这段内存再次被“释放”，释放后再访问这段内存的行为未定义(use-after-free bug)。你基本上可以把本实验理解成在bare-metal上实现C标准库中的<code>malloc</code>/<code>free</code>。</p>
+<p>允许在中断处理程序中使用<code>kalloc/kfree</code>。(提示：使用自旋锁时应当关闭当前处理器上的中断)。</p>
+<h3 id="_9">功能正确性</h3>
+<p>我们希望你尽可能保证算法实现的正确性——但这不是绝对的，例如你可以不实现free：</p>
+<pre class="codehilite"><code class="language-c">static void free(void *ptr) {}</code></pre>
+
+
+<p>这样<code>kalloc</code>的实现就非常简单了——简单到只需要维护一个指针即可。我们不严格禁止这样的实现，而且你会发现，即便这样实现，在内存充足的系统里，你编写的操作系统依然是可以运行的(只是运行一段时间以后，就会out of memory无法再运行下去)。</p>
+<p>此外，因为内存分配无法“预测未来”，一旦内存分配出去，就不能移动了，从而可能在系统中总可用内存充足时，无法分配足够的连续内存。所以根据分配策略不同，实际内存分配成功与否也是不确定的。你只需要尽力实现kalloc/kfree的正确性即可，我们允许在内存紧张时分配失败。</p>
+<p>因此，你可以选择任意你喜欢的分配策略，但你需要设计测试用例尽可能地测试你的算法。</p>
+<div class="fenced fenced-green">
+<h4 id="_10">设计测试框架</h4>
+<p>你不能修改<code>framework/</code>目录下的代码。我们在测试时，会使用我们自己实现的主函数，在<code>os-&gt;init()</code>完成后执行我们的测试代码。为了尽可能地从测试中生还下来，你当然希望自己设计好测试框架，实现<code>make test</code>可以自动完成对你代码的测试。</p>
+<p>实现测试，你需要的是：(1) 好的workload，在多个处理器上模拟各种不同类型的内存访问模式：频繁的小内存申请；频繁的大内存申请；混杂的申请；多处理器竞争的申请/释放…… (2) 验证在workload下的正确性。能够快速反复运行测试是成功的第一步。</p>
+<p>一个额外的提示是，在native上测试会更容易一些。</p>
+</div>
+<h3 id="_11">线程安全性</h3>
+<p>大家第一次在多处理器上编程，一定会遇到很多麻烦。因此我们提供了多处理器测试的途径：</p>
+<pre class="codehilite"><code>make run2
+make run4</code></pre>
+
+
+<p>分别可以运行在2个/4个处理器上，每个处理器都会打印出一个Hello信息，例如一次执行看到的结果：</p>
+<pre class="codehilite"><code>Hello from CPU #2
+Hello from CPU #3
+Hello from CPU #4
+Hello from CPU #1</code></pre>
+
+
+<div class="fenced fenced-green">
+<h4 id="_12">打印的顺序</h4>
+<p>为什么顺序是2, 3, 4, 1，而不是1, 2, 3, 4呢？结合AM代码可以回答这个问题。</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="vs">虚拟机 vs. 真机</h4>
+<p>我们<strong>强烈建议在物理机上安装Linux完成实验</strong>，此时QEMU可以开启KVM硬件虚拟化(我们已经帮大家开启了)，从而更好地暴露你程序中的bug。如果在虚拟机中完成实验，虚拟机用<strong>线程</strong>模拟处理器，很多在真实机器上可能产生的调度，在tcg模式下可能被屏蔽，从而导致损失成绩。</p>
+<p>当然我们也会在tcg模式下测试你的代码，如果正确可以得到较多的基本分数。</p>
+</div>
+<p>联想到之前课上各种黑人问号的例子，你不禁想，要不还是上个锁吧：</p>
+<pre class="codehilite"><code class="language-c">void *kalloc(size_t size) {
+  spin_lock(&amp;alloc_lk); // 上锁
+  void *ret = kalloc_unsafe(size); // 具体实现分配的算法
+  spin_unlock(&amp;alloc_lk); // 解锁
+  return ret;
+}
+void kfree(void *ptr) {
+  spin_lock(&amp;alloc_lk); // 上锁
+  kfree_unsafe(ptr); // 具体实现释放的算法
+  spin_unlock(&amp;alloc_lk); // 解锁
+}</code></pre>
+
+
+<p>如果你希望实现各种fancy的算法，这是个不错的主意——从一个你几乎能确信正确性的策略开始，再逐步把锁拆开，例如在大内存分配时上锁，小内存时则使用无锁的算法。</p>
+<div class="fenced fenced-red">
+<h4 id="_13">顺序测试下功能正确不等于并发意义下功能正确</h4>
+<p>很可能你的顺序测试完全通过，但多处理器跑起来就挂了。不要慌，多加点printf logs，慢慢诊断可能的问题。</p>
+<p>然后你会惊奇地发现，也许加了一个printf，错误就不见了。这时候你可能需要调整workloads、增加延迟等保证bug的稳定再现，然后再进行诊断。</p>
+</div>
+<h3 id="_14">性能</h3>
+<p>因为kalloc/kfree类似于操作系统的“轮子”——各种操作系统服务都建立在内存管理的基础上。因此这个轮子实现的好坏直接关系了操作系统的性能。所以如果大家查看Linux Kernel的内存管理算法，会发现它为了能在各种内存分配场景下都有不错的表现，非常复杂。</p>
+<p>在这个实验里，你可以自由体验任何内存管理算法。以下事实可能会对你有帮助：</p>
+<ul>
+<li>在我们的操作系统里，内存分配并不是非常频繁的操作，因此通常不会是性能瓶颈；</li>
+<li>考虑操作系统中实际的workload，主要是频繁的小内存分配和不太频繁的大内存分配；</li>
+<li>分配内存的主要是操作系统中的对象，少部分时候是字符串。</li>
+</ul>
+<div class="fenced fenced-red">
+<h4 id="workload">抛开workload谈优化，就是耍流氓</h4>
+<p>怎么获得workloads呢？请参考课程的<a href="OS2019_C3.slides.html">课件</a>。</p>
+</div>
+<h2 id="_15">实验指南</h2>
+<p>这个实验给你的完全是“白板”的代码，不包含任何测试。你必须为你自己的代码负责，自己写好测试，自己说服自己你的代码是正确的——迟早有一天大家需要脱离框架，自己写出正确的代码。</p>
+<h3 id="_16">代码组织</h3>
+<p>实验框架代码由三个目录组成：</p>
+<ul>
+<li>framework - 框架代码，你不能修改其中的文件。我们会通过替换框架代码来测试你提交的作业。</li>
+<li>include - 你的头文件存放的目录，可以在其中建立任意的头文件，例如<code>my_os.h</code>，在源代码中使用<code>#include &lt;my_os.h&gt;</code>引用。</li>
+<li>src - 实际实现的源代码目录。添加的<code>.c</code>文件都会被编译。</li>
+</ul>
+<p>理解框架代码的编译，最好的办法是看Makefile啦：</p>
+<pre class="codehilite"><code class="language-makefile">NAME           := kernel
+SRCS           := framework/main.c $(shell find -L ./src/ -name &quot;*.c&quot;)
+INC_DIR        := include/ framework/</code></pre>
+
+
+<p>然后：</p>
+<pre class="codehilite"><code class="language-makefile">export AM_HOME := $(PWD)/../abstract-machine
+ifeq ($(ARCH),)
+export ARCH := x86-qemu
+endif
+
+PREBUILD := git
+include $(AM_HOME)/Makefile.app
+include ../Makefile.lab</code></pre>
+
+
+<p>最后</p>
+<pre class="codehilite"><code class="language-makefile">QEMU_FLAGS := -serial stdio -machine accel=kvm:tcg -drive format=raw,file=$(BINARY)
+run2: image
+    qemu-system-i386 -smp 2 $(QEMU_FLAGS)
+run4: image
+    qemu-system-i386 -smp 4 $(QEMU_FLAGS)</code></pre>
+
+
+<h3 id="_17">静态内核模块</h3>
+<p>我们用C语言实现了简单的“模块”机制，这样可以帮助大家理解操作系统执行的流程，更好地理解操作系统是如何实现的。让我们看看模块是如何组织的。使用模块分为模块的声明和定义两部分，和C中变量的声明/定义类似。</p>
+<pre class="codehilite"><code class="language-c">#define MODULE(name) \
+  mod_##name##_t; \
+  extern mod_##name##_t *name
+#define MODULE_DEF(name) \
+  extern mod_##name##_t __##name##_obj; \
+  mod_##name##_t *name = &amp;__##name##_obj; \
+  mod_##name##_t __##name##_obj = </code></pre>
+
+
+<p>我们的实现主要在PMM模块：</p>
+<pre class="codehilite"><code class="language-c">typedef struct {
+  void (*init)();
+  void *(*alloc)(size_t size);
+  void (*free)(void *ptr);
+} MODULE(pmm);</code></pre>
+
+
+<p>模块包含三个函数指针：<code>pmm-&gt;init()</code>初始化模块，在系统初始化时，由启动的一个处理器调用(在<code>os-&gt;init()</code>中调用，而这是在<code>_mpe_init()</code>调用前调用的)。你会在这里完成你表示堆区数据结构的初始化、锁的初始化等内容。<code>pmm-&gt;alloc()</code>和<code>pmm-&gt;free()</code>负责内存管理。</p>
+<p>模块的声明(<code>MODULE(pmm)</code>)宏展开如下：</p>
+<pre class="codehilite"><code class="language-c">typedef struct {
+  void (*init)();
+  void *(*alloc)(size_t size);
+  void (*free)(void *ptr);
+} mod_pmm_t;
+extern mod_pmm_t *pmm;</code></pre>
+
+
+<p>声明了<code>pmm</code>这个模块变量，实际的定义在<code>alloc.c</code>：</p>
+<pre class="codehilite"><code class="language-c">MODULE_DEF(pmm) {
+  .init = pmm_init,
+  .alloc = kalloc,
+  .free = kfree,
+};</code></pre>
+
+
+<p>它会定义<code>pmm</code>，并在静态时完成函数指针的初始化。</p>
+<h3 id="_18">框架代码的运行流程</h3>
+<p>AbstractMachine应用的代码都从<code>main</code>开始执行，非常简单：</p>
+<pre class="codehilite"><code class="language-c">int main() {
+  _ioe_init();
+  _cte_init(os-&gt;trap);
+  // call sequential init code
+  os-&gt;init();
+  _mpe_init(os-&gt;run); // all cores call os-&gt;run()
+  return 1;
+}</code></pre>
+
+
+<p>处理器首先执行一定的初始化操作。初始时，只有一个处理器(编号为0)运行代码：</p>
+<ul>
+<li>初始化IOE;</li>
+<li>初始化CTE中断管理，在每次中断/异常到来时都执行os模块的代码<code>os-&gt;trap()</code>；</li>
+<li>调用os模块的初始化；</li>
+<li>启动多处理器，每个处理器都执行<code>os-&gt;run()</code>。</li>
+</ul>
+<p>os模块中的<code>trap</code>和<code>on_irq</code>将会在下个实验中用到，大家留空即可。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

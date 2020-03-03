@@ -1,0 +1,152 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>虚存抽象</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">虚存抽象</h1>
+<h2 id="_2">进程眼中的内存</h2>
+<p>我们都知道，操作系统为进程提供了虚拟的内存(进程不可见、不可调的虚拟内存映射<math>\textit{VM}</math>，能把每一个虚拟地址<math>x</math>的访问转换成物理地址<math>\textit{VM}(x)</math>的访问)，让进程仿佛独占整个内存。</p>
+<p>那么问题来了：进程眼中的内存到底长什么样呢？为了回答这个问题，就回到“什么是程序”上——程序的执行需要内存里有什么？顺着这个思路，不难得到地址空间里应该有的东西：</p>
+<ol>
+<li>程序的<strong>代码</strong>和<strong>数据</strong>。代码可以是只读的；数据也有很多种，例如字符串常量(你可以试试把一个字符串强制类型转换成<code>char *</code>，然后修改它)，例如全局变量(在全局作用域定义的<code>int x;</code>)，以及动态分配内存的区域(例如<code>malloc()</code>的返回值)。</li>
+<li>程序执行的<strong>堆栈</strong>。堆栈是实现函数调用必不可少的，虽然原则上并不需要，但既然指令集里有了这个概念，总要为它分配空间。</li>
+<li>动态链接库的<strong>代码</strong>和<strong>数据</strong>。动态链接库不需要堆栈，为什么？</li>
+</ol>
+<p>除此之外，现代操作系统还玩了一个非常有趣的小trick：<strong>操作系统的代码和数据也映射到进程的地址空间中</strong>，只是进程无权访问。</p>
+<p>这么做有非常明显的好处：当进程请求操作系统运行(系统调用)或中断到来时，不需要切换<math>\textit{VM}</math>就能执行操作系统代码，而操作系统代码执行后就能直接访问进程的地址空间(例如我们执行<code>read(fd, buf, size)</code>的时候，操作系统代码立即就能访问<code>buf</code>)。通过硬件的访问权限管理，进程一旦访问属于操作系统的内存，就会触发非法操作，由操作系统杀死。</p>
+<div class="fenced fenced-green">
+<h4 id="_3">事情没那么简单</h4>
+<p>虽然我们都觉得这么做很安全也提高了性能，但偏偏硬件还有漏洞。有兴趣的同学可以看看<a href="https://zhuanlan.zhihu.com/p/32757727">Spectre和Meltdown</a>的故事，课程会在操作系统安全部分回到这个话题。</p>
+</div>
+<p>回到进程眼中的内存：无论是代码、数据、bss、堆区、栈区、操作系统……这些空间通常都是连续的，想办法把它们排在地址空间里就行了。在64位的系统中，这并不是什么问题——空间非常充足，只需要把大块的空间留出来就行了；在32位系统里，空间就需要精打细算了，附上32位x86进程的地址空间：</p>
+<p><center><img alt="" src="../static/wiki/os/2018/img/proc-vm.jpg" /></center></p>
+<div class="fenced fenced-green">
+<h4 id="ldd">思考题：ldd的输出</h4>
+<p>如果我们用<code>ldd</code>命令查看动态链接库在地址空间中的位置，我们发现：</p>
+<ol>
+<li>每次地址都不太一样；</li>
+<li>动态链接库并不是真的加载到<code>0x40000000</code>附近的；</li>
+</ol>
+<p>这是为什么？如何让动态链接库加载到<code>0x40000000</code>附近？</p>
+</div>
+<h2 id="_4">库函数眼中的内存</h2>
+<p>虽然库函数可以看成是程序的一部分，但它们还肩负了特别的使命：它们需要管理进程地址空间中可用的内存，为程序使用提供便利。其中最重要的两个函数就是</p>
+<pre class="codehilite"><code class="language-c">void *malloc(size_t size);
+void free(void *ptr);</code></pre>
+
+
+<p>实现这两个函数可不是个简单的问题。虽然现在大家普遍都接受了libc里的内存分配器，但Managed Runtime里的垃圾回收至今还是open problem——支付宝有那么一拨人，整天对着几十GB的堆区调节各种内存管理的参数。</p>
+<p>我们已经知道，从进程数据区的最后一个位置(<code>end</code>符号)之后的内存就可以用来分配了。所以malloc/free就是一组算法，它与操作系统交互要来更多的连续空间，并在一段连续的空间里管理所有内存分配和释放的请求。在早期的操作系统，这是通过<code>brk</code>系统调用实现的(今天仍然保留了这两个接口)：</p>
+<blockquote>
+<p><code>brk()</code> and <code>sbrk()</code> change the location of the program break, which defines the end of the process's data segment (i.e., the program break is the first location after the end of the uninitialized data segment). Increasing the program break has the effect of allocating memory to the process; decreasing the break deallocates memory.</p>
+<p><code>brk()</code> sets the end of the data segment to the value specified by addr, when that value is reasonable, the system has enough memory, and the process does not exceed its maximum data size.</p>
+<p><code>sbrk()</code> increments the program's data space by increment bytes. Calling <code>sbrk()</code> with an increment of 0 can be used to find the current location of the program break.</p>
+</blockquote>
+<p>当然，之前我们已经说到，进程眼中的内存无非就是地址空间中的块块。所以，我们只需要能把地址空间中的连续一段进行映射，就能满足所有的需求了：</p>
+<ol>
+<li>把一段内存<math>[x,y)</math>映射到一个文件的一段(或没有文件，纯粹的数据)；</li>
+<li>能对一段映射的内存设置访问权限(读/写/执行)；</li>
+<li>能控制文件映射的策略(是进程间共享，还是自己拥有一个独立的拷贝)。</li>
+</ol>
+<p>今天，Linux系统的内存管理是通过<code>mmap</code>实现的，甚至<code>brk</code>/<code>sbrk</code>也是<code>mmap</code>实现的一部分。与之相关的还有<code>mprotect</code>——能修改一段内存的访问权限。Just-in-time的编译器就需要借助它把即时编译出的代码标记为可执行。</p>
+<div class="fenced fenced-green">
+<h4 id="_5">思考题：线程安全的内存分配</h4>
+<p>过去我们都写顺序程序。但如果有多个线程能共享一个堆区呢？如果每个线程都以非常频繁的频率malloc/free，我们的库函数还能撑得住吗？答案当然是能的。我们会在之后的课程回到这个问题。</p>
+</div>
+<div class="fenced fenced-green">
+<h4 id="mmapbrk">思考题：<code>mmap</code>和<code>brk</code></h4>
+<p><code>brk</code>是个很老也看起来很不错的API。但不要忘记系统里还有<code>mmap</code>：能用<code>mmap</code>在地址空间里不断挖出“洞”来。</p>
+<p>在这个时候，库函数和操作系统的行为是怎样的？glibc是如何应对这种情况的？可以通过malloc的结果和strace来观察glibc的行为。</p>
+</div>
+<p>至此，你应该能解释每一个指针的来龙去脉了：无论它是在代码、栈区、堆区还是共享库。你可以试着把各种指针强制类型转换成<code>uintptr_t</code>输出它们的地址，然后解释这些地址位于哪里，它们为什么会是这样的。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

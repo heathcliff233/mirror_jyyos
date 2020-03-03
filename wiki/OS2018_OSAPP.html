@@ -1,0 +1,170 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>应用眼中的操作系统</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">应用眼中的操作系统</h1>
+<h2 id="_2">应用眼中的操作系统</h2>
+<p>让我们回顾一下应用程序和计算机硬件。</p>
+<ul>
+<li>应用程序：持有和访问资源、与其他程序通信协作完成任务。</li>
+<li>计算机硬件：执行指令、修改处理器/外部设备状态。</li>
+</ul>
+<p>操作系统作为二者之间的中间层，提供<strong>系统调用</strong>“让应用程序得到它们应有的服务”。所以应用看到的操作系统不过是一组API，以及它们的<a href="https://en.wikipedia.org/wiki/Specification_(technical_standard)">规约 (<em>specification</em>)</a>，也就是对它们行为的精确定义。</p>
+<p>每当应用程序(比如在你编写应用程序的时候)需要完成纯粹计算以外的功能时，就需要借助库函数，最终借助系统调用完成。系统调用的设计并不是唯一的。如果你设计自己的操作系统，你完全可以把<code>printf</code>作为系统调用(虽然这没有很明显的好处)。这门课程主要会讲授一个好的设计——UNIX。</p>
+<p>操作系统不是凭空设计的，而是用来支持各种应用的，所以就让我们先从应用程序学起。</p>
+<div class="fenced fenced-red">
+<h4 id="_3">初学者的困难</h4>
+<p>很多初学编程、Linux、操作系统的同学都会在一开始感到非常绝望：我什么都不知道，不知道做什么，就连错误信息也看不懂。也许你也有类似的困惑。</p>
+<p>总的来说，计算机系统是建立在严格规约(specification)基础上的。所有的东西的行为都有精确的逻辑定义(处于逻辑世界)。和人类世界类似，计算机程序只会响应他听得懂的指令，所以学习的历程主要就是<strong>学习理解规约</strong>。感到困难的原因是面对了一个全新的概念体系，不知从何下手。</p>
+<p>如果你对Linux还不熟悉，你可以先从文件、命令行入手。作为操作系统用户，我们无非就是用一些工具，读取、修改、显示文件，再存储到其他文件中嘛。考虑一下：写作业、打游戏都不过如此。可以试着从一些身边的需求开始——你能知道libc的大小吗？比如你能把分章节下载的操作系统教材pdf文件拼接成一个大文档吗？</p>
+<p>理解文件系统和命令行的约定，是打开大门的钥匙。</p>
+</div>
+<h2 id="busyboxunix">Busybox眼中的UNIX操作系统</h2>
+<p>我们已经学写过了很多类型的应用程序，大家编过OJ题、游戏、各种有趣的应用程序。为了更好地了解“应用程序”，我们介绍一个开源项目：<a href="https://busybox.net/">BusyBox: The Swiss Army Knife of Embedded Linux</a>，其中包含了很多操作系统用户需要的应用程序：</p>
+<blockquote>
+<p>BusyBox combines tiny versions of many common UNIX utilities into a single small executable. It provides replacements for most of the utilities you usually find in GNU fileutils, shellutils, etc. The utilities in BusyBox generally have fewer options than their full-featured GNU cousins; however, the options that are included provide the expected functionality and behave very much like their GNU counterparts. BusyBox provides a fairly complete environment for any small or embedded system.</p>
+</blockquote>
+<p>最新的稳定版本1.28.1可以从<a href="../static/wiki/os/2018/files/busybox-1.28.1.tar.bz2.tar">本地镜像</a>下载。项目总共有25.9万行C代码，其中最大的C文件是Shell (<code>shell/ash.c</code>)。我们从这里入手理解“操作系统和应用程序之间的约定”。</p>
+<div class="fenced fenced-green">
+<h4 id="_4">思考题：项目有多少代码？</h4>
+<p>busybox最新的版本有多少个<code>.c</code>文件？一共有多少行代码？最大的文件是哪个？如何画出文件大小的<a href="https://en.wikipedia.org/wiki/Histogram">直方图</a>？这是操作系统的<strong>用户</strong>常用的操作：查看系统里文件的各类信息。操作系统里的应用程序如何为用户提供服务，使得用户能方便地完成他们想做的事？</p>
+<p>Windows的终端用户一般没有这个需求，所以Windows的GUI Shell和应用程序没有直接提供这类功能。但对于程序员来说，这些功能都是很重要的，所以在没有PowerShell的时代，他们更喜欢Linux或者macOS——它们的应用程序能帮我们方便地完成这些操作。</p>
+</div>
+<h3 id="_5">简单的应用程序</h3>
+<p>最简单的应用程序是<code>true</code>和<code>false</code>，它们只有一行代码：</p>
+<pre class="codehilite"><code class="language-c">int true_main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM)
+{
+    return EXIT_SUCCESS;
+}</code></pre>
+
+
+<p>真的只有一行，<code>true</code>返回<code>EXIT_SUCCESS</code>，<code>false</code>返回<code>EXIT_FAILURE</code>。此外，<code>main</code>函数有两个参数：<code>argc</code>和<code>argv</code>。这就是操作系统在程序之间传递信息之间的一种约定：<strong>程序启动时能从外界传入参数，并且能用返回值表示自己执行的情况</strong>。整数<code>argc</code>表示参数的个数，<code>argv</code>是指向<code>char *</code>的指针，用<code>argv[i]</code>可以取得程序的参数。在Shell中，命令的参数就是这样传递的，比如</p>
+<pre class="codehilite"><code class="language-bash">find . -name &quot;*.c&quot; -o -name &quot;*.h&quot;</code></pre>
+
+
+<p>能列出当前目录和子目录下的<code>.c</code>和<code>.h</code>文件。<code>find</code>程序就是从<code>argv</code>中读取这些参数的。你既可以手工解析这些参数，也能用<code>getopt</code>之类的库函数。使用<code>man 3 getopt</code>查看它的用法。搜索互联网能得到更多的信息。</p>
+<div class="fenced fenced-green">
+<h4 id="unused_param">思考题：<code>UNUSED_PARAM</code></h4>
+<p>看起来像是unused parameter的缩写，意思是说这个参数并没有用到。它到底是什么？在哪里定义的？也许你需要RTFM。</p>
+</div>
+<h3 id="coreutils">Coreutils</h3>
+<p><a href="https://en.wikipedia.org/wiki/GNU_Core_Utilities">Coreutils</a>是一组支持系统管理的基本命令行工具，你可以直接在命令行里运行它们(系统里已经安装了GNU Coreutils，busybox对它们做了简化的实现)。<code>true</code>, <code>false</code>都是其中的工具。有些大家已经知道如何实现了，比如<code>expr</code>：</p>
+<pre class="codehilite"><code class="language-bash">expr \( 1 + 2 \) \* \( 3 + 4 \)</code></pre>
+
+
+<p>其中用到一些库函数，它们都在<code>libbb</code>目录。比如<code>expr_main</code>里会看到<code>bb_error_msg_and_die</code>，它的定义在<code>libbb/verror_msg.c</code>。然后它用了一个相当直接的算法去求解表达式的值。</p>
+<div class="fenced fenced-green">
+<h4 id="_6">思考题：浏览代码</h4>
+<p>阅读代码的时候经常会要找函数、宏定义等。我是怎么知道<code>bb_error_msg_and_die</code>在哪里的？新手在阅读别人代码的时候肯定会遇到很多这样的困难。这时候，你会想到——<strong>我遇到的困难别人一定也遇到过了</strong>。于是在网上用适当的关键字，就能找到更高效阅读代码的方式了。无论是导入IDE还是在命令行里阅读，一定要选取高效、方便的方式。</p>
+</div>
+<p>Coreutils包含了大量实用的程序，它们体现了UNIX和<strong>用户</strong>的一些约定：</p>
+<ul>
+<li>一切皆文件(Everything is a file)。</li>
+<li>每个程序只做一件事，并把事情的方方面面都做好。</li>
+<li>应用之间尽量用文本传递数据。</li>
+</ul>
+<p>程序员们通过随时编写短小的程序，就能在短时间内实现各种自己想要的功能：系统管理、文本处理……也难怪这个设计对用户既友好又不友好了。对于新手来说，UNIX世界是完全懵逼的：一个命令提示符，别无他物了。但对熟悉理解这个概念体系的人，却觉得无比好用。</p>
+<p>从coreutils里最简短的命令开始，你可以看到不同的命令是如何和操作系统交互的，一个好的例子是<code>rm</code>。<code>rm -rf</code>递归删除是个相当有趣的功能，你能找到它的实现在哪里吗？顺便可以看一下<a href="https://www.zhihu.com/question/29438735"><code>rm -rf</code>的一些故事</a>。</p>
+<h3 id="_7">自由探索</h3>
+<p>busybox提供了全面、短小的各种应用程序实现，比如简易的<code>vi</code>——它比你想象得简单地多，就是不断读取输入，然后把输入转换成编辑器的内部状态，再转换成<a href="https://en.wikipedia.org/wiki/ANSI_escape_code">ANSI Escape Code</a>输出。</p>
+<p>欢迎进入UNIX世界！配合系统自带的man pages和代码，你就可以理解所有的应用程序是怎样实现的了。</p>
+<h3 id="_8">一些皆文件</h3>
+<p>约定中很重要的就是“一切皆文件”。</p>
+<p>什么是文件？不过是一些数据(也许是一个数据流，也许是一个数组)，数据能被定位、写入或读出。说到底，在计算机系统中一切东西都是数据——这已经在ICS课上学习过了。所以很自然会联想到一个推论：是不是计算机系统里的一切东西都可以是文件呢？</p>
+<p>答案是肯定的。UNIX就给我们做出了这样的设计。UNIX的文件系统里，不仅有我们传统意义上“磁盘上保存的数据”的这些文件，像系统的设备、运行状态、调节参数……这些都是文件。</p>
+<p>例如，<code>/dev/</code>下就有所有的系统设备。有些是真正的设备，例如<code>/dev/sda</code>就是磁盘。<code>fdisk</code>工具就是读取一个设备文件，然后直接写入它们完成分区的；也有些是模拟的设备，例如<code>/dev/zero</code>永远返回0；<code>/dev/null</code>是一个“黑洞”，把任何输出重定向到<code>/dev/null</code>就能把它们丢弃；<code>/dev/random</code>/<code>/dev/urandom</code>是系统提供的随机数，在x86平台上，这是由软硬件配合实现的，有兴趣的同学可以阅读<a href="https://en.wikipedia.org/wiki/RdRand">RDRAND指令</a>。</p>
+<p>此外，<code>/proc</code>和<code>/sys</code>包含了进程的信息和系统的信息。大家可以阅读<a href="http://lucasvr.gobolinux.org/etc/Killian84-Procfs-USENIX.pdf">1984年的Processes as Files原文</a>，再对比一下今天的procfs和sysfs。</p>
+<p>一切皆文件的好处是显而易见的：<strong>所有用来处理文本的工具，都能应用在操作系统的所有数据中</strong>。所以想获取/修改操作系统的状态，只要在命令行里用常见的find, grep, cat, echo等工具就行了。这也是大家喜欢用UNIX/Linux的原因——我们随时随地都能用自己熟悉的工具玩转整个系统，难道不是一件很酷的事情吗？</p>
+<p>当然它们的坏处也是显而易见的：丢失了类型、结构信息，并且会损失一些效率。因此系统中的设计没有绝对的对与错、好与坏，更多的是体现了为了达成目标作出的取舍。另外关于这两个设计的好与坏，也有<a href="https://www.zhihu.com/question/35745351/answer/334610655">知乎讨论</a>，里面还有关于Worse is Better的讨论。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

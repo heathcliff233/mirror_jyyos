@@ -1,0 +1,178 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>[PA2] jmtrace</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="pa2-jmtrace">[PA2] jmtrace</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">背景</h4>
+<p>仅仅依靠程序自身的 log (<code>printf</code>) 很难诊断一些运行时发生的问题，例如 GC 过于频繁等。此时，动态分析工具能在运行时收集 (或打印) 额外的信息以帮助问题的诊断。在正式进入实验之前，推荐大家了解一下 <a href="https://visualvm.github.io/">VisualVM</a>，它是 Java 程序的动态分析框架，并且能将 JVM 的状态可视化地展示出来。</p>
+<p>在这个实验中，我们用过程序插桩的方式 hack Java 程序，使程序在运行时，能在每次访问共享内存时，都打印一个日志。内存访问日志能用于 race detection 等动态分析。</p>
+</div>
+<h2 id="_2">实验描述</h2>
+<p>针对一个已打包为 jar 包的 Java 程序，你希望了解程序对共享内存的读写，即为每一个共享内存访问输出一条日志信息。输出一个列表，每个条目输出一行，包含用空格分开的三部分内容：</p>
+<ul>
+<li>R/W 表示读或写</li>
+<li>一个十进制表示 32 位整数，访问的线程号</li>
+<li>一个十六进制表示的 64 位整数，对象标识。尽量使不同对象有不同标识，虽然你很难对于 long-running 的程序绝对做到这一点 (思考为什么？)。简单起见，可以考虑直接使用 <code>System.identityHashCode()</code>。</li>
+<li>对象/类访问的成员 (或数组的下标)</li>
+</ul>
+<p>你可以将你的工具实现成命令行工具，用法同 <code>java</code> (你会在你的命令行工具中调用 java)：</p>
+<pre class="codehilite"><code class="language-text">$ jmtrace -jar something.jar &quot;hello world&quot; # jmtrace 用法用 java
+R 1032 b026324c6904b2a9 cn.edu.nju.ics.Foo.someField
+W 1031 e7df7cd2ca07f4f1 java.lang.Object[0]
+W 1031 e7df7cd2ca07f4f2 java.lang.Object[1]
+...</code></pre>
+
+
+<p>你可以只输出 jar 包中类的内存访问日志，忽略库函数 (<code>java.lang</code>, <code>java.util</code> 等) 中的内存访问。</p>
+<h2 id="mtrace">实现 mtrace</h2>
+<p>不同于 ltrace (通过劫持 GOT 表中的跳转地址) 和 strace (使用操作系统提供的 ptrace 机制)，如果希望在更细的粒度上追踪程序的行为，通常需要对程序进行一些改写，即插桩 (program instrumentation)，例如，我们可以在源代码级进行插桩：</p>
+<pre class="codehilite"><code class="language-java">static void foo() {
+  int[] a = new int [10];
+  for (int i = 0; i &lt; a.length; i++) {
+    a[i] = 0;
+  }
+  SomeClass.staticField = 1;
+  someObj.otherField = someObj.field;
+}</code></pre>
+
+
+<p>通过自动化的改写工具 (改写 AST 后再生成程序)，我们可以得到 “插桩” 后的版本： </p>
+<pre class="codehilite"><code class="language-java">static void foo() {
+  int[] a = new int [10];
+  for (int i = 0; i &lt; a.length; i++) {
+    int $t0 = 0;
+    a[i] = $t0;
+    mtrace.traceArrayWrite(a, i, $t0); // instrument added
+  }
+
+  int $t1 = 1;
+  SomeClass.staticField = $t1;
+  mtrace.traceStaticWrite(SomeClass, &quot;staticField&quot;, $t1); // instrument added
+
+  SomeType $t2 = someObj.field;
+  mtrace.traceFieldRead(someObj, &quot;field&quot;, $t2); // instrument add
+
+  someObj.otherField = $t2;
+  mtrace.traceFieldWrite(someObj, &quot;otherField&quot;, $t2); // instrument add
+}</code></pre>
+
+
+<p>可以看到，插桩前后程序的行为是完全一样的，但变量访问进行了一定的改写，并且在每次 field 或 array 读写之后都插入了一条 log。本质上，这是一种文本的替换，只是我们一般借助 AST 能简化这样的转换。插桩后的程序功能与原先程序等价，但可以输出额外的 trace log (在 <code>mtrace</code> 的方法中实现)。</p>
+<p>Java 的源代码将会被编译成字节码 (bytecode)。Bytecode 的形式比源代码简单的多，因此对字节码进行插桩是更方便的选择。例如，字节码分析工具 <a href="https://asm.ow2.io/">ASM</a> 能非常容易地对字节码进行改写。通过在访问内存的指令之后插入相应的记录 (访问内存的指令只有 <code>getstatic</code>/<code>putstatic</code>/<code>getfield</code>/<code>putfield</code>/<code>*aload</code>/<code>*astore</code>)，通常是一个向 <code>trace</code> 方法的调用。如果考虑插桩内存访问，在字节码插桩会简单地多。</p>
+<p>最后，我们推荐使用 JVMTI (JVM Tool Interface) 捕获 class loading 时的回调 (callback)。相当于 JVMTI 能够劫持所有 Java 的类加载，并且在加载时获得被加载类的字节码。此时就是进行插桩的最佳时机——这样甚至不会错过任何动态生成的类的插桩！</p>
+<p>你也可以搜索互联网，查找其他可能的解决方案。例如，Java 提供了 <code>java.lang.Instrument</code>，相当于是刚才过程的包装——这能省去不少事情，但也减少了 hacking 的乐趣。你可以自由选择实现的方式。</p>
+<h2 id="_3">提交方法与评分准则</h2>
+<div class="subbox fenced fenced-blue">
+<h4>作业提交，截止日期：2019 年 12 月 27 日 23:59:59</h4>
+<form method="POST" action="../store.html" enctype = "multipart/form-data">
+<p>
+学号：<input class="gser-input" type="text" name="stuid">
+<input type="file" name="submission">
+</p>
+<input type="hidden" name="task" value="JMTRACE">
+<p>
+<input type="submit" value="提交 (可多次提交，以最后一次提交为准)">
+</p>
+</form>
+</div>
+
+<p>将以下内容打成压缩包 (zip 或 tar) 上传：</p>
+<ul>
+<li>(必要) 工具的源代码和编译说明</li>
+<li>(必要) pdf 格式的实验报告，简述你实现 jmtrace 时主要使用的技术和遇到的挑战。实验报告不宜超过 2 页 A4 篇幅</li>
+<li>(可选) 工具的 binary，可能包含 jar 包、可执行文件等</li>
+</ul>
+<p>本实验按照实现的正确性评分。我们会运行一些较小 (数百万次内存访问以内) 的基准程序，并检查程序的输出结果。注意并发是 Java 语言/虚拟机的一部分，这些程序可能启动多个线程。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

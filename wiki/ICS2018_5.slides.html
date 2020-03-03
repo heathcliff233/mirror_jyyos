@@ -1,0 +1,597 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>Lab1/PA2选讲</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# Lab1/PA2选讲
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 概述
+
+进入学期的中段
+
+* 中秋小长假、十一长假
+* 沉迷学习；做作业、OJ、PA；进组搬砖
+* 也同时进入社团/游戏/恋爱“松懈期”
+
+----
+
+.red[PA2 (真正的x86模拟器)来啦！]
+
+- PA1中框架代码的一些补充
+- PA2指令解释部分代码框架导读
+
+---
+
+class: center, middle
+
+# Lab1
+
+---
+
+# 计算`(a * b) % m`
+
+为什么这段代码不能正确计算`(a * b) % m`？
+
+```c
+int64_t multmod(int64_t a, int64_t b, int64_t m) {
+  assert(a >= 0 && b >= 0 && m > 0);
+  return (a * b) % m; // Integer Overflow is UB!
+}
+```
+
+首先，这段代码里有UB，但我们看看编译器编译成了什么
+
+```bash
+   0:	48 89 f8       mov    %rdi,%rax
+   3:	48 89 d1       mov    %rdx,%rcx
+   6:	48 0f af c6    imul   %rsi,%rax
+   a:	48 99          cqto
+   c:	48 f7 f9       idiv   %rcx
+   f:	48 89 d0       mov    %rdx,%rax
+  12:	c3             retq   
+```
+
+---
+
+# 汇编代码？
+
+在课程中已经多次出现“看看汇编代码”了
+
+- .red[如何获取二进制文件的汇编代码]？
+- 我.red[怎么知道这些玩意是什么意思]？
+  - x86手册太长，我的时间太短
+  - x86-64手册更长，根本来不及读了啊
+
+--
+
+count: false
+
+------
+
+坚信：我的疑惑别人早就有过一万遍了
+
+- 当然有更好读的文档：介绍了ABI、指令等重要知识
+- RTFM之前：阅读[本地副本](/static/wiki/ics/asm64-handout.pdf)
+  - 仅46页，涵盖了几千页手册中的最基础内容
+  - 面壁反思：.red[我之前看过这个文档吗？]
+
+---
+
+# 汇编代码解析
+
+```
+   0:	48 89 f8       mov    %rdi,%rax // %rax(a)
+   3:	48 89 d1       mov    %rdx,%rcx // %rcx(m)
+   6:	48 0f af c6    imul   %rsi,%rax // -> %rdx:%rax
+   a:	48 99          cqto   // %rdx:%rax <- SignExt(%rax)
+   c:	48 f7 f9       idiv   %rcx      // %rdx:%rax mod m
+   f:	48 89 d0       mov    %rdx,%rax
+  12:	c3             retq   
+```
+
+------
+
+从指令的角度，没有任何UB
+
+- 按照符号扩展`a * b`的低64位 (其实x86-64是支持128位运算的)
+- 执行除`m`的操作得到余数
+- .red[那这段代码错哪了]？
+
+---
+
+# 计算`(a * b) % m`
+
+假设整数乘法溢出没有UB
+
+- 乘法的结果按照128位乘法取低64位
+- 可能出现.red[正正得负]，以及多出的.red[模2^64]运算
+  - `(3 * 7) % 8 % 5 = 0`
+  - `(3 * 7) % 5 = 1`
+
+------
+
+为了实现`a * b % m`，中间结果需要128位整数才能存储
+
+---
+
+# 问题1：把它搞对
+
+这好办：实现一个BigInt就行了
+
+<br>
+
+<br>
+
+留作习题啦(小学生都会写)
+
+* 除法很麻烦
+
+---
+
+# 问题2：快速计算
+
+假设`b >= 0`写成二进制是`b = b[62]*2^62 + ... + b[0]*2^0`。
+
+`a * b`可以写成另一个形式：
+
+```
+a * b = a*b[62]*2^62 + a*b[61]*2^61 + ... + a*b[0]*2^0
+      = (b[62] == 1 ? a * 2^62 : 0) +
+        (b[61] == 1 ? a * 2^61 : 0) + ...
+        (b[ 0] == 1 ? a * 2^0  : 0)
+```
+
+我们只需要知道`a`, `2a`, `4a`, ... mod m的余数就行了……
+
+用到的主要性质：`(a + b + c) % m = ((a + b) % m + c) % m` 
+
+------
+
+.red[提示]：`2a = a + a; 4a = (2a + 2a); 8a = (4a + 4a)...`
+
+---
+
+# 问题2：运行了多久？
+
+看起来很容易嘛：
+
+```c
+void run(int64_t a, int64_t b, int64_t m) {
+  for (int i = 0; i < N; i++) {
+    mult_mod(a, b, m);
+  }
+}
+...
+t1 = get_time();  run(a, b, m);  t2 = get_time();
+printf("Time is: %.2lf\n", t2 - t1);
+```
+
+结果：无论N是100、1,000还是1,000,000,000，时间都是一样的：
+
+```
+0000000000400510 <run>:
+  400510:	f3 c3                	repz retq
+```
+
+- 解决办法：<font color="red">STFW</font>，此外有更好的度量时间的办法(精确到时钟周期数)
+
+---
+
+# 问题3：神奇的代码
+
+阅读代码的技巧
+
+- “盯着看”是没有用的，先<font color="red">试试</font> (拿一些大值对比一下)
+- 试图真正<font color="red">理解</font>：从你容易理解的部分开始
+  - 表达式如何解析？每一个表达式的类型是什么？
+  - 每一个数值的含义是什么？
+
+------
+
+```c
+int64_t multmod_fast(int64_t a, int64_t b, int64_t m) {
+  int64_t t = a * b -                        // Overflow
+    (int64_t)((double)a * b / m + 1e-8) * m; // Overflow (??)
+  return t < 0 ? t + m : t;
+}
+```
+
+---
+
+# 一些Comments
+
+如果我们希望能对任意的`uint64_t`的a, b, m都正确，这个问题就没有那么简单了
+
+------
+
+STFW: [Montgomery multiplication](https://en.wikipedia.org/wiki/Montgomery_modular_multiplication)，这是一个<font color="red">严肃的研究问题</font>
+
+- 数论是现代密码学的奠基石
+- 很多加密算法都依赖于数论函数的性质
+- 乘法和取模是非常常见的操作
+
+------
+
+提示：Lab1神奇程序的正确性依赖于<font color="red">同余</font>
+
+---
+
+class: center, middle
+
+# PA1
+
+---
+
+# 回到`init_monitor`
+
+运行nemu，即遇到出错
+
+```c
+for (i = R_EAX; i <= R_EDI; i ++) {
+  sample[i] = rand();
+  reg_l(i) = sample[i];
+  assert(reg_w(i) == (sample[i] & 0xffff));
+ }
+```
+
+这是啥玩意啊…….red[大家是如何理解这里的代码的]？
+
+--
+
+count: false
+
+----
+
+手工展开宏：
+
+```c
+cpu.gpr[R_EAX] = xxxxx;
+assert(cpu.gpr[R_EAX]._16 == (xxxxx & 0xffff));
+```
+
+---
+
+# 从assert中得到.red[需求]
+
+`cpu.gpr`是一个数组，我们希望其中每一个东西`reg`
+
+* `reg._32`是个32位数<math>x</math>，可以读写
+* 访问`reg._16`对应<math>x</math>的低16位
+* 访问`reg._8[0], reg._8[1]`分别是低16位中的两个8位
+
+以及更诡异的`assert(sample[R_EAX] == cpu.eax)`
+
+* `cpu.gpr[R_EAX]`和`cpu.eax`是同一个东西！
+* 写一个，另一个也要变
+
+--
+
+count: false
+
+----
+
+费劲.red[千辛万苦]找到答案？还是.red[抱了大腿]改了三行？
+
+* 不建议抱大腿的行为，这样会使你们和大腿的差距越来越大
+
+---
+
+# PA1正式开始
+
+剩下的函数(`load_img`, `restart`, ...)没有太多阅读的障碍
+
+有些不太明白的，暂时也不解释了
+
+麻烦的是`init_regex`……
+
+* 表达式求值……
+
+----
+
+之后就进入了`ui_mainloop`
+
+* 用`rl_gets()`获得命令
+* 解释执行命令
+* 主要麻烦是解析表达式和求值
+
+---
+
+class: center, middle
+
+# PA2
+
+---
+
+# 进入`cpu_exec(n)`
+
+真正进入“模拟计算机执行”了。在yemu里，我们已经有一个还不错的`execute`：
+
+* 每次从pc处取出指令
+* 根据指令的类型，解析其中用到的中间结果
+
+```c
+switch (cur->rtype.op) {
+  case 0b0000: { RTYPE(cur); R[rt]   = R[rs];   pc++; break; }
+  case 0b0001: { RTYPE(cur); R[rt]  += R[rs];   pc++; break; }
+  case 0b1110: { MTYPE(cur); R[0]    = M[addr]; pc++; break; }
+  case 0b1111: { MTYPE(cur); M[addr] = R[0];    pc++; break; }
+  // ...
+}
+```
+
+----
+
+实际上nemu代码的实现<font color="red">思想</font>是类似的
+
+---
+
+# (1) 模拟x86计算机的状态
+
+在yemu中，计算机的状态是由(pc, R, M)决定的
+
+* `u8 pc, regs[NREG], mem[NMEM]`
+
+在nemu中，计算机状态由(cpu)
+
+* 寄存器在`CPU_state`中(包含eip)，内存则是`pmem[PMEM_SIZE]` 
+
+----
+
+模拟器每次执行一条指令
+
+```cassandra
+void exec_wrapper(bool print_flag) {
+  decoding.seq_eip = cpu.eip;
+  exec_real(&decoding.seq_eip);
+  update_eip();
+}
+```
+
+* decoding就是CPU的内部状态(相当于yemu中的rs, rt, ...)
+
+---
+
+# (2) 解释执行指令
+
+难题：<font color="red">压根就没有exec_real()啊</font>！我grep了，真的没有啊
+
+--
+
+count: false
+
+----
+
+其实它的代码就在不远处：
+
+```c
+#define make_EHelper(name) \
+  void concat(exec_, name) (vaddr_t *eip)
+make_EHelper(real) {
+  uint32_t opcode = instr_fetch(eip, 1);
+  decoding.opcode = opcode;
+  set_width(opcode_table[opcode].width);
+  idex(eip, &opcode_table[opcode]);
+}
+```
+
+这些宏展开已经很大程度影响了我阅读理解了
+
+* 原则：<font color="red">当你感到不爽时，一定有解决办法</font>
+* 动脑筋、STFW
+
+---
+
+# (3) Hacking the Makefile
+
+nemu的编译方式和yemu非常类似，源代码是这样编译的：
+
+```makefile
+$(OBJ_DIR)/%.o: src/%.c:
+	@$(CC) $(CFLAGS) -c -o $@ $<
+```
+
+> RTFM: 这些奇怪的变量都是“automatic variables (Manual 10.5.3)”，`$@`是target，`$<`是第一个prerequisite
+
+----
+
+既然可以编译，我们也可以<font color="red">预处理</font>，添加一个命令：
+
+```makefile
+@$(CC) $(INCLUDES) -E $< | grep -ve '^#' | bcpp > $(basename $@).i
+```
+
+编译的同时也生成预处理的结果，这里就能找到exec_real的宏展开结果了 (bcpp的风格可以定制)
+
+---
+
+# (4) 取指令
+
+`exec_real`首先是得到opcode的第一个字节，而且会跳过这个字节：
+
+```c
+static inline uint32_t instr_fetch(vaddr_t *eip, int len) {
+  uint32_t instr = vaddr_read(*eip, len);
+  (*eip) += len;
+  return instr;
+}
+uint32_t opcode = instr_fetch(eip, 1);
+```
+
+然后计算出**操作数**的宽度：
+
+```c
+decoding.opcode = opcode;
+set_width(opcode_table[opcode].width);
+```
+
+然后继续译码执行执行：
+
+```c
+idex(eip, &opcode_table[opcode]);
+```
+
+---
+
+# (5) 译码、执行
+
+```c
+static inline void idex(vaddr_t *eip, opcode_entry *e) {
+  if (e->decode) e->decode(eip);
+  e->execute(eip);
+}
+```
+
+看一眼就明白的代码，不错
+
+----
+
+跳转表：`opcode_table`使用结构体数组初始化，前两个成员是函数指针 (XHelper)，第三个成员是width：
+
+```c
+opcode_entry opcode_table[512] = {
+  { NULL, inv, 0 },
+  ...
+  { decode_I2E, exec_gp1, 0 },
+  ...
+}
+```
+
+---
+
+# (6) 译码、执行 (cont'd)
+
+nemu的框架与yemu本质上是一样的 (decode, execute, update pc)，但换了一种方式
+
+```c
+/* nemu - 跳转表 */
+opcode_entry opcode_table[512] = { ...
+  { decode_I2E, exec_gp1, 0 },     ... }
+/* yemu - switch/case */
+case 0b0000:
+  { RTYPE(cur); R[rt] = R[rs]; pc++; break; }
+```
+
+--
+
+count: false
+
+----
+
+剩下的事情：<font color="red">抄手册</font>
+
+* 根据手册的规定，写出每条指令的代码就完事了
+* 很快你就会发现：代码风格和架构对维护性有巨大影响
+* 学习一下nemu中的做法，你会有收获的
+
+---
+
+# 八卦：面向copy-paste的编程
+
+PA刚开始出现的时候，大家不由自主地写出如下代码：
+
+```c
+if (opcode == XX) { ... }
+else if (opcode == XX) { ... }
+...
+```
+
+----
+
+而代码之中有很多公共的部分，于是：
+
+1. 好办，先.red[复制粘贴]一份写着再说
+2. 之后发现好像写个函数更好，但已经写了几个了好麻烦啊……
+3. 复制了20份以后发现有个地方要改…….red[然后有个漏了] 💥
+
+----
+
+不听话的，你们会吃苦头的
+
+---
+
+# Happy Hacking!
+
+>  这里要再次强调, 你务必通过i386手册来查阅指令的功能, .red[不能想当然].
+>
+> 手册中给出了指令功能的完整描述(包括做什么事, 怎么做的, 有什么影响),
+>
+> 一定要仔细阅读其中的每一个单词, 对指令功能理解错误和遗漏都会给以后的调试带来巨大的麻烦. 
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,326 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>计算机系统：基础</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+
+class: center, middle
+
+# 计算机系统：基础
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 概述
+
+学习计算机系统之“盲人摸象”
+
+* 数据的机器级表示
+* 程序的机器级表示
+* 中断、I/O设备
+* 虚拟存储管理
+* ……
+
+----
+
+所有这些都是一个.red[整体]，硬件 + 软件才是完整的计算机系统
+
+* AbstractMachine; Nanos-lite; Navy-apps
+
+---
+
+class: center, middle
+
+# 应用程序
+
+navy-apps
+
+---
+
+# 复习：程序的机器级表示
+
+程序就是地址空间里的一堆代码和数据(8048xxx)
+
+操作系统负责程序的加载和执行(跳转到main对应的EIP执行)
+
+----
+
+应用程序能执行什么指令？
+
+* `mov %eax, (x)`
+* `cli`
+* `call printf_chk@plt`
+* `mov -67108864(%ebp), %ebx`
+* `outb %dx, %al`
+
+* `int $0x80`
+
+---
+
+# 应用程序的边界
+
+应用程序可以在虚拟地址空间中做任意的计算
+
+但.red[不能随意改变系统的状态] (该程序执行了非法操作)
+
+* 读写端口、开关中断、设置GDT/IDT……
+
+----
+
+这样应用程序就完全被.green[架空]了
+
+* 如果想做什么，就必须请示操作系统(.red[系统调用, system call])
+* 如果不小心做了不该做的(比如null pointer dereference, 除0)，操作系统就立即接管
+* 操作系统可以随时拒绝请求
+
+---
+
+# 程序 = C代码 + 库
+
+虽然这么说不严谨，但的确可以这么理解
+
+----
+
+navy-apps: 应用程序和库
+
+* 每个库编译成若干.o，打包成一个.a (newlib, libndl, ...)
+* 每个应用程序和库静态链接 (ELF32 binary)
+
+----
+
+如果不考虑库，C程序就真的只能“计算”了(类似TRM)
+
+* 这种代码我们都会写
+* AM API也是库
+
+---
+
+class: center, middle
+
+# 库函数
+
+libndl, newlib
+
+---
+
+# 图形库
+
+.float-right[<img width=200px src="../static/wiki/ics/2018/slides/img/projectn.jpg"/>] NDL: 图形控制库，山寨SDL，有这个就能实现“操作系统上的游戏”
+
+* 开发板上运行的仙剑奇侠传是NEMU同款 (一行代码都没改)
+* 思考题：如何在native上实现libndl？
+
+```c
+int NDL_OpenDisplay(w, h);
+int NDL_CloseDisplay();
+int NDL_DrawRect(pixels, x, y, w, h);
+int NDL_Render();
+int NDL_WaitEvent(NDL_Event *event);
+int NDL_LoadBitmap(NDL_Bitmap *bmp, const char *filename);
+int NDL_ReleaseBitmap(NDL_Bitmap *bmp);
+```
+
+---
+
+# 思考题
+
+目前，NDL的实现是非常.red[暴力]的
+
+- `NDL_DrawRect`是直接在本地维护的`canvas`上绘图 (canvas的大小从环境变量中得到，还记得什么是环境变量吗？)
+- `NDL_Render`是直接把整个canvas (窗口)传递给操作系统
+
+------
+
+当然，这使得最后MIPS32的实现非常.red[卡顿]
+
+- 那个截图看起来很酷，但跑起来完全就是幻灯片 (FPGA的时钟为100MHz，加上自制CPU的弱鸡性能……)
+- .green[如何修改NDL API、操作系统、计算机硬件，实现加速的图形渲染？] (提示：回顾第10讲)
+
+---
+
+# C库
+
+libc是.red[常用(经典)系统调用的包装]，属于国际标准(ANSI C规定了C需要提供的运行库)
+
+* fopen, fclose, fread, fwrite, ... (问题：为啥不叫open/close/...?)
+* printf, fprintf, sprintf, snprintf, vprintf, vfprintf, vsprintf, vsnprintf, ...
+* malloc, free, ...
+* ...
+
+----
+
+在这些API上，可以实现普通应用程序
+
+* 但如果要实现系统管理功能，则需要使用系统调用/库
+* try man 2 open; man 3 fopen
+
+---
+
+# 系统调用：库函数的基础
+
+系统调用统统是需要访问I/O设备、更改程序运行状态等对进程而言是“非法操作”的功能
+
+* 文件读写：open, close, read, write (实现fopen, fclose, printf, ...)
+* 目录操作：getdents (实现readdir)
+* 时间：clock_gettime (实现各种时间相关函数)
+* 睡眠：nanosleep (实现sleep)
+* 内存：mmap/sbrk (实现malloc/free)
+
+----
+
+思考题：`memcpy`是否用系统调用实现？为什么？
+
+---
+
+# 库函数：实现
+
+库函数和C代码是没有区别的 (通过call/jmp指令到达)
+
+* `oj_killer`: 动态链接，跳转到`printf@plt`，间接跳转到实现
+* navy-apps: 静态链接，直接call到实现
+
+----
+
+有些直接实现，有些包裹系统调用
+
+* 代码展示
+
+---
+
+class: center, middle
+
+# 操作系统
+
+(下学期见)
+
+---
+
+# 系统调用的实现
+
+操作系统是一个AM C程序
+
+----
+
+1. 操作系统代码从main开始执行
+2. 操作系统会创建若干进程(创建虚拟地址空间、分配各种资源……)，然后切换到某一个进程执行，main永远就消失了
+3. 应用程序执行系统调用(`int $0x80`)会切换到操作系统代码执行(nanos-lite)
+4. 中断(行为类似`int`指令)也会切换到操作系统代码执行
+
+----
+
+基本上操作系统就是一个`interrupt_handler()`函数的事
+
+* 也就10,000,000行级别的代码
+
+---
+
+# Nanos-lite
+
+Nanos-lite is the simplified version of Nanos (<http://cslab.nju.edu.cn/opsystem>，好怀念啊，那时候我还是个无知少年啊). It is ported to the [AM project](https://github.com/NJU-ProjectN/nexus-am.git). It is a two-tasking operating system with the following features
+
+- ramdisk device drivers
+- raw program loader
+- memory management with paging
+- a simple file system
+  - with fix number and size of files, without directory, some device files
+- 8 system calls
+  - open, read, write, lseek, close, brk, exit, execve
+- scheduler with two tasks
+
+---
+
+# Hello, World
+
+保研面试题：`printf("Hello, World\n");`到底是怎么执行的？
+
+---
+
+# 一个完整的计算机系统(基础)
+
+「编写不朽的传奇」
+
+1. 仙剑奇侠传 (通过`int $0x80`请求系统调用)
+2. nanos-lite (操作系统，C程序，调用AM API)
+3. AbstractMachine API (x86-nemu)
+4. x86模拟器 (作为进程运行在本地操作系统上，使用系统调用)
+5. 本地计算机、操作系统
+
+----
+
+所有的部件都是可以.red[替换]的！
+
+* 4 → 自制MIPS32处理器; 2 → 自制操作系统; 1 → Lua解释器
+* 我们可以尝试更多有趣的东西：VM snapshot & replay (学长的毕业设计); GPGPU, ...
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,130 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>加入软件所大家庭</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">加入软件所大家庭</h1>
+<p><img class="float-right" width="64px" style="margin-left:15px" src="../static/wiki/spar.png"/>
+蒋炎岩来自<a href="http://ics.nju.edu.cn/">南京大学计算机软件研究所</a>的 <a href="http://ics.nju.edu.cn/spar/">SPAR (System and Program Analysis Research)</a> 小组。软件所有多个研究方向，加入课题组的同学可以根据自己的研究兴趣联系指导老师 (发邮件即可)。</p>
+<ul>
+<li><a href="Join_Undergrad.html">本科生 (Research Intern)</a> 🙇‍♂️</li>
+<li><a href="Join_Grad.html">硕士/博士研究生 (申请攻读学位)</a> 👨‍🎓</li>
+</ul>
+<div class="fenced fenced-green">
+<h4 id="_2">为什么要做软件方面的研究？</h4>
+<p>如今，软件已经像水、电、<del>Wifi</del> 一样成为人类生活不可缺少的基础设施。大家都没少吃过编程的苦，也一定体会过编程的乐趣——你是否发自内心地想拯救水深火热中的码农们，帮助他们又快又好地生产软件？</p>
+<p>JYY 认为软件方面的研究同时兼顾了“追求真理” (for fun)、“创造价值” (for profits)。一方面解决软件问题会涉及编程语言、计算机系统中的本质问题，另一方面软件方面的研究能做出真正实用的成果，回馈开源社区乃至整个社会。</p>
+</div>
+<hr />
+<p>无论你在哪里做研究，起步时都会相当迷茫。因此我们准备了一些材料，帮助大家在找不到方向时重温一下“我们应该做什么”。</p>
+<h3 id="_3">入门和基本功</h3>
+<ul>
+<li><a href="SystemReading.html">计算机系统相关的阅读材料</a>。只要你觉得非常热爱编程，那就足够了！</li>
+<li>组内代码和论文都使用 Git 管理，因此有必要阅读 <a href="UsingGit.html">Git Best Practices</a>。</li>
+<li>做实验：<a href="https://www.cse.unsw.edu.au/~gernot/benchmarking-crimes.html">Benchmarking crimes</a>。</li>
+</ul>
+<h3 id="_4">写作</h3>
+<p>“The Elements of Style” 是一本很棒的小册子。如果你不是写作的老手，在读它的时候一定是不断在中枪的。网上也有很多有用的资料：<a href="../static/wiki/research/specs/writing.pdf">常见写作问题  by Tao Xie</a> 和<a href="https://www.zhihu.com/question/35471133/answer/290793269">知乎大神的帖子</a>。</p>
+<p>此外，你需要会用 <a href="">LaTeX</a>，并且绝对有必要知道 <a href="http://jcsmith.people.clemson.edu/tips/LaTeX.html">LaTeX 里一些容易犯错误的地方</a>。此外，<a href="">表格</a>、<a href="">流程图</a>、<a href="">Plotting</a> 等都有相应的技巧——你经常能读到让你赏心悦目的论文，也一定会想写得和它们一样好。最后，用什么能在两周内搞定 150 页的毕业论文？<a href="https://github.com/jiangyy/njuthesis">南京大学山寨 (LyX) 毕业论文模板</a>。</p>
+<p>在实际写作时，你会用到一些<a href="Writing_Aids.html">写作工具</a>，例如给你的工具起一个好的缩写。</p>
+<h3 id="_5">科研训练</h3>
+<ul>
+<li>《<a href="GSER2019.html">软件工程研究入门</a>》研究生课程能带领大家走向软件工程研究，欢迎大家选修 (选课人数有限，主要对组内同学开放)</li>
+<li><a href="SPAR_Seminar_2019Fall.html">SPAR Paper Reading Seminar</a></li>
+</ul>
+<h3 id="_6">在你迷茫的时候</h3>
+<ul>
+<li>Manuel Blum (1995 Turing Award Winner) 给<a href="http://www.cs.cmu.edu/~mblum/research/pdf/grad.html">给研究生的建议</a>，绝对推荐每一个研究生仔细阅读；</li>
+<li>Michael Ernst 给<a href="https://homes.cs.washington.edu/~mernst/advice/">研究者和学生的建议</a>。</li>
+</ul>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,575 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>[C1] 应用眼中的操作系统</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="c1">[C1] 应用眼中的操作系统</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>我们已经知道操作系统是支持应用程序运行的软件，定义了操作系统里的<span class="red">对象</span>和<span class="red">操作它们的 API</span></p>
+<ul>
+<li>但什么是应用程序？</li>
+<li>它们怎么调用操作系统？</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>什么是应用程序</li>
+<li>Hello World 程序的编译/链接/加载</li>
+<li>Hello World 程序使用的系统调用</li>
+<li>其他应用程序使用的系统调用</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">什么是应用程序？</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">(应用) 程序</h2>
+<blockquote>
+<p>来自软件所的经典问题：什么是软件？</p>
+</blockquote>
+<ul>
+<li>可执行的文件 (程序的二进制代码和数据）和其他数据文件<ul>
+<li>Linux 支持多种可执行文件格式</li>
+<li>ELF (Executable Linkable Format) 是其中最常用的</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<ul>
+<li>运行的程序称为进 (正在运行的) 程 (程序)<ul>
+<li>操作系统中有很多进程对象</li>
+<li>在运行时，进程会<ul>
+<li>在 CPU 上执行，进行计算</li>
+<li>使用操作系统 API 访问操作系统中的其他对象</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>(这个说法真抽象)</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">系统中常见的应用程序</h2>
+<p>Core Utilities (coreutils)</p>
+<ul>
+<li><em>standard</em> programs for text and file manipulation</li>
+<li>系统中安装的是 GNU Coreutils<ul>
+<li>有较小的替代品 busybox</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>系统/工具程序</p>
+<ul>
+<li>bash, apt, ip, ssh, vim, tmux, jdk, python, ...<ul>
+<li>这些工具的原理都不复杂，例如 apt 的主要功能是把文件复制到指定的地方；有时会执行脚本/trigger</li>
+<li><a href="https://packages.ubuntu.com/">Ubuntu Packages</a> 支持文件名检索；因此缺少什么东西这是最佳 STFW 的入口<ul>
+<li>例子：搜索 <code>SDL2/SDL.h</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>其他各种应用程序</p>
+<ul>
+<li>浏览器、音乐播放器……</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="elf">(我们主要谈论) ELF 二进制文件</h2>
+<p>首先，可执行文件也是普通的<span class="red">文件</span></p>
+<ul>
+<li>操作系统里的一个对象</li>
+<li>一个存储在文件系统 (通常是存储设备) 上的<span class="red">字节序列</span><ul>
+<li><span class="red">与大家平时创建的文本文件 (例如程序) 没有本质区别</span></li>
+<li>操作系统提供 API 打开、读取、改写 (都需要相应的权限)</li>
+<li>因此我们可以用 <code>vim</code>, <code>cat</code>, <code>xxd</code> 等命令查看可执行文件<ul>
+<li>在 <code>vim</code> 中打开，二进制的部分显示异常，但可以看到字符串常量 (例子：<code>vim /bin/ls</code>)</li>
+<li>使用 <code>xxd</code> 可以看到文件以 <code>"\x7f" "ELF"</code> 开头</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="elf">解析 ELF 文件</h2>
+<p><code>readelf</code> 是专门解析 ELF 可执行文件的工具；我们主要关注：</p>
+<ul>
+<li>ELF 文件的 header (元数据)<ul>
+<li>文件内容的分布</li>
+<li>指令集体系结构</li>
+<li>入口地址</li>
+<li>……</li>
+</ul>
+</li>
+<li>ELF 的 program headers<ul>
+<li>决定 ELF 应该如何被加载器<span class="red">加载</span> (执行)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>如果需要用代码解析，<code>/usr/include/elf.h</code> 提供了必要的定义</p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="hello-world">应用程序 (Hello World) 怎么调用操作系统？</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1">失败的尝试 #1</h2>
+<p>希望实现一个操作系统上 “最小” 的 Hello World</p>
+<pre class="codehilite"><code class="language-c">int main() {
+  printf("Hello World!\n");
+  // C 标准默认 main 返回 0
+}</code></pre>
+
+<p>(失败)</p>
+<pre class="codehilite"><code class="language-text">$ gcc -c hello.c
+$ ld hello.o
+ld: warning: cannot find entry symbol _start; defaulting to 00000000004000b0
+hello.o: In function `main':
+hello.c:(.text+0xc): undefined reference to `puts'</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">为什么？</h2>
+<ul>
+<li>为什么是 <code>puts</code>，不是 <code>printf</code>？<ul>
+<li>gcc 在 <code>-O0</code> 选项下依然会进行一定程度的编译优化</li>
+<li>是导致<a href="http://ics.nju.edu.cn/spar/publication/yang_automatic_2019.pdf">一些编译器 bugs 的源头</a></li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<ul>
+<li>undefined reference to <code>puts</code><ul>
+<li><code>puts</code> 是库函数 (libc)</li>
+<li>把库也链接进来 (<code>gcc hello.c</code>) 就不是 “最小” 了</li>
+<li>方案已被放弃</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<hr></hr>
+<ul>
+<li>cannot find entry symbol <code>_start</code>？<ul>
+<li><code>_start</code> 是连接器默认的入口</li>
+<li>可以用 <code>-e</code> 指定，比如 <code>-e main</code>
+<code>printf</code> (被优化成的 <code>puts</code>) 是库函数的一部分</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2">失败的尝试 #2</h2>
+<pre class="codehilite"><code class="language-c">int main() {
+}</code></pre>
+
+
+<p>这总行了吧？</p>
+<p>(失败)</p>
+<pre class="codehilite"><code class="language-text">$ gcc -c hello.c
+$ ld -e main hello.o
+$ ./a.out
+zsh: segmentation fault (core dumped)  ./a.out
+$ </code></pre>
+
+
+<p>为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么？</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">想知道为什么？</h2>
+<p>我们需要一个工具帮助我们<span class="red">观察程序的执行</span></p>
+<ul>
+<li>什么工具能做到呢？</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>gdb!</p>
+<p>经过 STFW/RTFM (在这个例子上，<a href="http://sourceware.org/gdb/documentation/">M 非常有用</a>)</p>
+<ul>
+<li><code>starti</code> 可以帮助我们从第一条指令开始执行程序</li>
+<li><code>layout asm</code> 可以更方便地查看汇编</li>
+<li><code>info register</code> 可以查看寄存器</li>
+<li>(指令讲解)</li>
+</ul>
+</div>
+<div class="fragment">
+<hr></hr>
+<p>操作系统做了什么？</p>
+<ul>
+<li><span class="red">加载程序，并初始化运行环境</span> (寄存器、代码、数据、堆栈)</li>
+<li>从 <code>_start</code> 开始执行 (初始的 <code>%rip</code>, PC)</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">成功的尝试：汇编</h2>
+<p><code>main</code> 函数的确开始运行了；只是返回时 crash 了</p>
+<ul>
+<li>我们只要写出正确的指令序列，就能在操作系统上正常执行了</li>
+<li>例子：<a href="../static/wiki/os/2020/demos/minimal.S">minimal.S</a><ul>
+<li>执行了 100% 我们自己的代码</li>
+<li>调用 API 打印 Hello World<ul>
+<li>访问的<span class="red">对象</span>：编号为 1 的文件描述符</li>
+<li>执行的<span class="red">操作</span>：写入一串字节序列</li>
+</ul>
+</li>
+<li>调用 API 退出</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>x86-64 Linux 系统 API：“<span class="red">系统调用</span>”</p>
+<ul>
+<li>使用 <code>syscall</code> 指令进行系统调用</li>
+<li><code>man 2 syscall</code> 可以查看 Linux 系统调用的 ABI<ul>
+<li>ABI: Application Binary Interface</li>
+</ul>
+</li>
+<li>C 语言版本：<a href="../static/wiki/os/2020/demos/syscall-demo.c">syscall-demo.c</a></li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="hello-c-world">Hello, C World!</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="syscall"><code>syscall</code> 的代码在哪里？</h2>
+<p>使用 <code>objdump</code> 命令查看</p>
+<ul>
+<li>在《计算机系统基础》课中频繁使用；本课程也会频繁使用</li>
+<li>object (目标文件) dump</li>
+<li>“displays information about one or more object files”</li>
+<li><code>-d</code>: disassemble; <code>-S</code>: source (需要 <code>-g</code> 选项支持)</li>
+</ul>
+<hr></hr>
+<pre class="codehilite"><code class="language-text">syscall(SYS_write, 1, hello, LENGTH(hello));
+  1139: b9 1d 00 00 00          mov    $0x1d,%ecx
+  113e: 48 8d 15 cb 0e 00 00    lea    0xecb(%rip),%rdx  # 2010 &lt;hello&gt;
+  1145: be 01 00 00 00          mov    $0x1,%esi
+  114a: bf 01 00 00 00          mov    $0x1,%edi
+  114f: b8 00 00 00 00          mov    $0x0,%eax
+  1154: e8 d7 fe ff ff          callq  1030 &lt;syscall@plt&gt;</code></pre>
+
+<ul>
+<li><code>syscall@plt</code> - 动态链接 (来自 libc 的代码)<ul>
+<li>看来 <code>main()</code> 在执行之前，程序已经执行过很多代码了</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="main"><code>main()</code> 之前发生了什么？</h2>
+<p>(面试题) 一个普通的 C 程序执行的第一条指令在哪里？</p>
+<div class="fragment">
+<ul>
+<li><code>main</code> 的第一条指令 ❌</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><code>libc</code> 的 <code>_start</code> ❌</li>
+</ul>
+</div>
+<div class="fragment">
+<pre class="codehilite"><code class="language-text">(gdb) starti
+Starting program: /tmp/a.out 
+
+Program stopped.
+0x00007ffff7dd6090 in _start () from /lib64/ld-linux-x86-64.so.2
+(gdb) bt
+#0  0x00007ffff7dd6090 in _start () from /lib64/ld-linux-x86-64.so.2
+#1  0x0000000000000001 in ?? ()</code></pre>
+
+
+<ul>
+<li>查看此时的进程状态<ul>
+<li><code>info registers</code></li>
+<li><code>!pmap [pid]</code> (或 <code>cat /proc/[pid]/maps</code>)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="main-contd"><code>main()</code> 之前发生了什么？ (cont'd)</h2>
+<p>进程初始时到 <code>main()</code> 执行时，进程的内存中多了 <code>libc-2.27.so</code></p>
+<ul>
+<li><code>ld-linux-x86-64.so</code> 加载了 libc</li>
+<li>之后 libc 完成了自己的初始化<ul>
+<li><code>main()</code> 的开始/结束并不是整个程序的开始/结束<ul>
+<li>例子：<a href="../static/wiki/os/2020/demos/hello-goodbye.c">hello-goodbye.c</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>main 执行之前，<span class="red">发生了哪些操作系统 API 调用？</span></p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="trace">Trace (踪迹)</h2>
+<blockquote>
+<p>In general, trace refers to the process of following <em>anything</em> from the beginning to the end. For example, the <code>traceroute</code> command follows each of the network hops as your computer connects to another computer.</p>
+</blockquote>
+<p>这门课中很重要的工具：<span class="red">strace</span></p>
+<ul>
+<li>system call trace</li>
+<li>理解程序运行时使用的系统调用<ul>
+<li>demo: <code>strace hello-goodbye</code></li>
+<li>学完这门课，你就能理解 strace 的输出；并且你会在你自己的操作系统里实现相当一部分系统调用 (mmap, execve, ...)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">应用眼中的操作系统</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hello-world">本质上，所有的程序和 Hello World 类似</h2>
+<ul>
+<li>被操作系统加载<ul>
+<li>通过父进程的 execve</li>
+</ul>
+</li>
+<li>不断执行系统调用<ul>
+<li>进程管理：fork, execve, exit, ...</li>
+<li>文件/设备管理：open, close, read, write, ...</li>
+<li>存储管理：mmap, brk, ...</li>
+</ul>
+</li>
+<li>直到 _exit (exit_group) 退出</li>
+</ul>
+<hr></hr>
+<p>(对部分初学者来说，会对这一点感到非常惊讶)</p>
+<ul>
+<li>这么炫酷的操作系统、这么炫酷的程序，就这些 API？</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="demos">更多的 Demos</h2>
+<p>编译器 (gcc)</p>
+<ul>
+<li><code>strace -f gcc a.c</code> (gcc 会启动其他进程)<ul>
+<li>主要的系统调用：execve, read, write</li>
+<li>执行程序：<ul>
+<li>cc1 - 编译器 (C → 汇编)</li>
+<li>as - 汇编器 (汇编 → ELF relocatable)</li>
+<li>collect2 - 收集器 (收集构造函数信息)</li>
+<li>ld - 链接</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>图形界面程序 (xedit)，本质上和其他任何图形界面程序 (例如 vscode) 类似</p>
+<ul>
+<li><code>strace xedit</code><ul>
+<li>主要的系统调用：poll, recvmsg, writev</li>
+<li>图形界面程序和 X-Window 服务器按照 X11 协议通信</li>
+<li>虚拟机中的 xedit 将 X11 命令通过 ssh (X11 forwarding) 转发到 Host</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">各式各样的应用程序</h2>
+<p>都是在这非常精简的一套操作系统 API 上构建的！</p>
+<ul>
+<li>窗口管理器：管理设备和屏幕 (read/write/mmap)；进程间通信 (send, recv)</li>
+<li>任务管理器：访问操作系统提供的进程对象 (readdir/read)</li>
+<li>杀毒软件：文件静态扫描 (read)；动态防御 (ptrace)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/osapp.jpg" width="600"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="take-aways-and-wrap-up">Take-aways and Wrap-up</h2>
+<blockquote>
+<p>一个 “最小” (不依赖任何库函数) 的程序</p>
+<ul>
+<li>经过编译链接，被操作系统加载</li>
+<li>调用操作系统 API (系统调用)</li>
+</ul>
+<p>粗浅地讲述了应用程序使用何种 API 实现</p>
+<ul>
+<li>编译器、图形界面程序、仓库管理器</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<hr></hr>
+<p>复习题：</p>
+<ul>
+<li>在 gdb 中调试 <a href="../static/wiki/os/2020/demos/minimal.S">minimal.S</a>，初步理解操作系统和应用程序之间的 ABI (Application Binary Interface)</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>列举你熟悉操作系统 (Windows, Android, iOS 等) 上的应用程序——例如浏览器、游戏、命令行工具等</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>根据你的理解，操作系统中 (应当) 有哪些类型的对象、提供什么样的 API，才能实现上述应用程序？</li>
+</ul>
+</div></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

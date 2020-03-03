@@ -1,0 +1,248 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Lab2：链接与加载 (1)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="lab2-1">Lab2：链接与加载 (1)</h1>
+<div class="fenced fenced-red">
+<h4 id="20181112-235959">⚠️ 截止日期：2018年11月12日 23:59:59</h4>
+<p>给大家一个买买买的机会</p>
+</div>
+<h2 id="_1">提交</h2>
+<div class="fenced fenced-red">
+<h4 id="_2">提交方法</h4>
+<p>将所有待提交的文件保存到同一目录中(包括以学号命名的pdf实验报告)，设置好<code>STUID</code>和<code>STUNAME</code>环境变量后，在命令行中(当前工作目录为提交文件所在目录)，执行</p>
+<pre class="codehilite"><code>bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</code></pre>
+
+
+<p>(复制上述命令，没有连字符)，输入<code>Lab2</code>提交(注意大小写)。</p>
+</div>
+<h3 id="_3">收到的提交</h3>
+<table class="submissions"><tr><td>161240007<br><span class="submit-date">(21:09 Jan 20)</span></td><td>161240045<br><span class="submit-date">(20:16 Dec 28)</span></td><td>171180589<br><span class="submit-date">(22:25 Dec 25)</span></td><td>171180593<br><span class="submit-date">(15:18 Dec 30)</span></td><td>171820548<br><span class="submit-date">(14:23 Jan 01)</span></td><td>171860609<br><span class="submit-date">(20:13 Jan 11)</span></td><td>181180200<br><span class="submit-date">(04:43 Jan 12)</span></td></tr><tr><td>181220001<br><span class="submit-date">(20:34 Jan 12)</span></td><td>181220002<br><span class="submit-date">(17:58 Dec 24)</span></td><td>181220003<br><span class="submit-date">(01:57 Jan 12)</span></td><td>181220004<br><span class="submit-date">(16:37 Dec 20)</span></td><td>181220005<br><span class="submit-date">(23:08 Dec 25)</span></td><td>181220010<br><span class="submit-date">(19:18 Dec 26)</span></td><td>181220011<br><span class="submit-date">(20:37 Dec 26)</span></td></tr><tr><td>181220012<br><span class="submit-date">(17:12 Jan 10)</span></td><td>181220013<br><span class="submit-date">(08:42 Jan 12)</span></td><td>181220014<br><span class="submit-date">(15:10 Dec 31)</span></td><td>181220016<br><span class="submit-date">(21:54 Dec 22)</span></td><td>181220018<br><span class="submit-date">(15:34 Jan 08)</span></td><td>181220019<br><span class="submit-date">(00:40 Dec 31)</span></td><td>181220022<br><span class="submit-date">(21:48 Dec 19)</span></td></tr><tr><td>181220026<br><span class="submit-date">(14:05 Jan 02)</span></td><td>181220028<br><span class="submit-date">(23:54 Dec 30)</span></td><td>181220029<br><span class="submit-date">(21:29 Dec 24)</span></td><td>181220030<br><span class="submit-date">(00:03 Dec 20)</span></td><td>181220031<br><span class="submit-date">(15:24 Dec 25)</span></td><td>181220032<br><span class="submit-date">(23:04 Jan 11)</span></td><td>181220033<br><span class="submit-date">(15:47 Jan 12)</span></td></tr><tr><td>181220034<br><span class="submit-date">(00:40 Dec 27)</span></td><td>181220035<br><span class="submit-date">(23:09 Jan 05)</span></td><td>181220036<br><span class="submit-date">(14:22 Dec 29)</span></td><td>181220038<br><span class="submit-date">(22:17 Dec 21)</span></td><td>181220039<br><span class="submit-date">(20:48 Jan 08)</span></td><td>181220040<br><span class="submit-date">(15:49 Jan 12)</span></td><td>181220041<br><span class="submit-date">(19:48 Jan 01)</span></td></tr><tr><td>181220043<br><span class="submit-date">(13:53 Jan 04)</span></td><td>181220044<br><span class="submit-date">(22:40 Jan 12)</span></td><td>181220045<br><span class="submit-date">(23:35 Dec 26)</span></td><td>181220046<br><span class="submit-date">(16:09 Dec 25)</span></td><td>181220047<br><span class="submit-date">(20:50 Jan 11)</span></td><td>181220048<br><span class="submit-date">(17:57 Dec 30)</span></td><td>181220049<br><span class="submit-date">(19:07 Dec 17)</span></td></tr><tr><td>181220051<br><span class="submit-date">(21:37 Jan 12)</span></td><td>181220052<br><span class="submit-date">(00:05 Dec 20)</span></td><td>181220054<br><span class="submit-date">(22:35 Jan 12)</span></td><td>181220055<br><span class="submit-date">(16:16 Dec 26)</span></td><td>181220056<br><span class="submit-date">(20:59 Dec 30)</span></td><td>181220057<br><span class="submit-date">(20:53 Jan 09)</span></td><td>181220058<br><span class="submit-date">(22:23 Jan 12)</span></td></tr><tr><td>181220060<br><span class="submit-date">(00:01 Dec 20)</span></td><td>181220061<br><span class="submit-date">(22:44 Dec 21)</span></td><td>181220062<br><span class="submit-date">(22:53 Jan 21)</span></td><td>181220063<br><span class="submit-date">(17:04 Oct 29)</span></td><td>181220064<br><span class="submit-date">(15:52 Dec 21)</span></td><td>181220065<br><span class="submit-date">(16:56 Jan 12)</span></td><td>181220067<br><span class="submit-date">(23:24 Dec 20)</span></td></tr><tr><td>181220068<br><span class="submit-date">(19:57 Jan 17)</span></td><td>181220071<br><span class="submit-date">(00:21 Dec 28)</span></td><td>181220072<br><span class="submit-date">(19:11 Dec 23)</span></td><td>181220073<br><span class="submit-date">(23:43 Jan 12)</span></td><td>181220074<br><span class="submit-date">(10:30 Dec 28)</span></td><td>181220075<br><span class="submit-date">(13:18 Dec 23)</span></td><td>181220076<br><span class="submit-date">(23:54 Jan 11)</span></td></tr><tr><td>181220077<br><span class="submit-date">(15:15 Jan 11)</span></td><td>181220078<br><span class="submit-date">(01:23 Dec 27)</span></td><td>181220079<br><span class="submit-date">(23:40 Jan 12)</span></td><td>181220080<br><span class="submit-date">(21:16 Dec 22)</span></td><td>181220081<br><span class="submit-date">(23:58 Jan 12)</span></td><td>181240004<br><span class="submit-date">(15:44 Dec 29)</span></td><td>181240008<br><span class="submit-date">(18:45 Jan 12)</span></td></tr><tr><td>181240010<br><span class="submit-date">(13:57 Jan 04)</span></td><td>181240014<br><span class="submit-date">(12:08 Jan 12)</span></td><td>181240016<br><span class="submit-date">(23:05 Jan 17)</span></td><td>181240019<br><span class="submit-date">(14:33 Jan 04)</span></td><td>181240020<br><span class="submit-date">(23:46 Dec 04)</span></td><td>181240030<br><span class="submit-date">(15:00 Dec 21)</span></td><td>181240035<br><span class="submit-date">(01:12 Dec 19)</span></td></tr><tr><td>181240045<br><span class="submit-date">(10:31 Jan 02)</span></td><td>181240047<br><span class="submit-date">(15:47 Jan 12)</span></td><td>181240050<br><span class="submit-date">(20:45 Dec 31)</span></td><td>181240055<br><span class="submit-date">(20:05 Jan 10)</span></td><td>181240063<br><span class="submit-date">(11:28 Jan 12)</span></td><td>181240064<br><span class="submit-date">(17:48 Dec 23)</span></td><td>181240068<br><span class="submit-date">(02:42 Dec 29)</span></td></tr><tr><td>181240078<br><span class="submit-date">(22:52 Dec 07)</span></td><td>181240082<br><span class="submit-date">(17:42 Jan 10)</span></td><td>181250012<br><span class="submit-date">(23:42 Nov 27)</span></td><td>181250097<br><span class="submit-date">(23:18 Jan 05)</span></td><td>181250125<br><span class="submit-date">(18:45 Jan 11)</span></td><td>181250177<br><span class="submit-date">(22:31 Dec 09)</span></td><td>181250195<br><span class="submit-date">(02:00 Dec 14)</span></td></tr><tr><td>181830196<br><span class="submit-date">(21:48 Jan 12)</span></td><td>181840013<br><span class="submit-date">(23:56 Jan 12)</span></td><td>181840064<br><span class="submit-date">(13:50 Dec 08)</span></td><td>181840135<br><span class="submit-date">(23:04 Jan 01)</span></td><td>181840204<br><span class="submit-date">(13:41 Nov 28)</span></td><td>181840264<br><span class="submit-date">(18:39 Jan 11)</span></td><td>181840273<br><span class="submit-date">(11:27 Jan 11)</span></td></tr><tr><td>181840326<br><span class="submit-date">(01:48 Dec 21)</span></td><td>181850236<br><span class="submit-date">(20:05 Jan 12)</span></td><td>181860020<br><span class="submit-date">(23:03 Dec 15)</span></td><td>181860035<br><span class="submit-date">(15:11 Dec 20)</span></td><td>181860066<br><span class="submit-date">(23:20 Jan 12)</span></td><td>181860104<br><span class="submit-date">(20:19 Dec 21)</span></td><td>181860124<br><span class="submit-date">(10:19 Dec 07)</span></td></tr><tr><td>181860134<br><span class="submit-date">(00:07 Dec 10)</span></td><td>181860137<br><span class="submit-date">(20:26 Dec 28)</span></td><td>181860152<br><span class="submit-date">(21:39 Dec 30)</span></td><td>181860158<br><span class="submit-date">(21:19 Dec 22)</span></td><td>181870015<br><span class="submit-date">(21:17 Dec 24)</span></td><td></td><td></td></tr></table>
+
+<h2 id="_4">实验描述</h2>
+<h3 id="_5">背景</h3>
+<p>在上古时期就有很蠢萌的OJ，虽然做了白名单过滤(看到system就拒绝)，但可以做这种事：</p>
+<pre class="codehilite"><code class="language-c">#define oj_killer sys##tem
+
+oj_killer(&quot;del C:\\Windows\\ntldr&quot;);
+oj_killer(&quot;shutdown -h 0&quot;);
+...</code></pre>
+
+
+<p>被搞过几次以后OJ管理员学乖了，开始过滤预编译(<code>gcc -E</code>)以后的代码。这一招就不灵了。但其实即便如此，白名单根本不能保证OJ的安全。在ICS课上你已经学过了<strong>动态链接</strong>，并且知道system函数是libc动态链接库的一部分，于是你坏坏地发现了一个机会</p>
+<blockquote>
+<p>在假设已知OJ glibc版本的前提下，glib的代码都是固定的。如果我们能知道某一个函数的地址，例如<code>rand</code>吧，这是个人畜无害的函数。但因为我们知道了 <code>rand</code>和<code>system</code>在glibc里，刚好相差<math>\Delta</math>字节，并且运行时知道了<code>rand</code>被加载的地址(<math>p</math>)，那<math>p+\Delta</math>地址就是<code>system</code>的入口，我们拿个函数指针调用就行了啊！</p>
+</blockquote>
+<div class="fenced fenced-green">
+<h4 id="ojlibc">如何获得OJ的libc版本？</h4>
+<p>经过愉快的STFW，发现glibc有自报家门的本领。试试以下代码：</p>
+<pre class="codehilite"><code class="language-c">printf(&quot;gblic %u.%u\n&quot;, __GLIBC__, __GLIBC_MINOR__);</code></pre>
+
+
+<p>为啥要这么做呢？让代码能知道编译器的情况是个很有用的特性：代码可以立即知道是不是glibc，是什么版本，从而让大型程序能适应各种编译器/库函数之间的细微不同(例如某个版本的某个库有bug，则使用自己的实现)。</p>
+<p>当然了，在OJ上运行程序，这个printf的结果是不会让你看到的，只会返回一个Wrong Answer给你。你需要从OJ里偷出一些有用的信息来，怎么办呢……嗯……</p>
+<pre class="codehilite"><code class="language-c">if (__GLIBC__ == 2) {
+  while (1);
+} else {
+}</code></pre>
+
+
+<p>这样，如果你的程序TLE，你就知道__GLIBC__是2了——你成功从服务器的返回值上偷取了一个<em>bit</em>的信息！能偷出1bit，就可以用二分查找的方式，在<math>O(\log n)</math>的次数里偷出一个数字<math>n</math>来——因此你可以用这个办法偷出诸如测试数据的组数之类的信息。</p>
+<p>当然还有更好的办法。你可能想起来了：执行结果只能返回TLE/WA之类的信息，但<strong>编译错误</strong>可以返回很多很多的messages。看看以下代码(把字面常量转换成字符串的预编译指令，大家在PA里已经见识过了)：</p>
+<pre class="codehilite"><code class="language-c">#include &lt;assert.h&gt;
+
+#define str(s) #s
+#define msg(s) #s &quot; is &quot; str(s)
+
+static_assert(0, msg(__GLIBC__) &quot;, &quot; msg(__GLIBC_MINOR__));
+
+int main() {
+  return 0;
+}</code></pre>
+
+
+<p>这个程序在<code>static_assert</code>触发以后，会打印神奇的信息，例如：</p>
+<pre class="codehilite"><code>a.c:6:1: error: static assertion failed: &quot;__GLIBC__ is 2, __GLIBC_MINOR__ is 27&quot;
+ static_assert(0, msg(__GLIBC__) &quot;, &quot; msg(__GLIBC_MINOR__));</code></pre>
+
+
+<center><p><img alt="" src="../static/wiki/ics/2018/slides/img/compile-error.jpg" /> </p></center><p>所以<code>oj_killer</code>其实有很多其他的实现方法，比如</p>
+<pre class="codehilite"><code>#include &lt;/dev/zero&gt;</code></pre>
+
+
+<p>请谨慎在本机尝试，也不要在OJ上干这样的事情。这个例子是告诉大家：system比大家想得要复杂，做一个好的system需要时刻保持学习的心态，愉快地STFW, RTFM。</p>
+</div>
+<h3 id="_6">实验内容</h3>
+<p>在本次实验中你需要实现一个函数：</p>
+<pre class="codehilite"><code class="language-c">void *oj_killer();</code></pre>
+
+
+<p>它返回<code>system</code>的实际代码入口地址。你只需要能在你本地成功运行以下代码即可：</p>
+<pre class="codehilite"><code class="language-c">void *oj_killer() { ... }
+
+int main() {
+  int (*f)(const char *) = oj_killer();
+  f(&quot;echo Hello World&quot;);
+  return 0;
+}</code></pre>
+
+
+<h3 id="_7">实验要求</h3>
+<p><code>oj_killer</code>可以调用一次白名单中的库函数(就允许你调用一次<code>rand</code>吧，当然你也可以使用<code>rand</code>得到一个地址)，除此之外不得调用任何库函数、系统调用、内嵌汇编，只使用分支、循环、运算功能，且你的代码(一份代码)能适应32/64位系统，即：</p>
+<ul>
+<li><code>gcc -m64 oj_killer.c &amp;&amp; ./a.out</code>，输出Hello World</li>
+<li><code>gcc -m32 oj_killer.c &amp;&amp; ./a.out</code>，输出Hello World</li>
+</ul>
+<p>因为Linux Kernel/libc版本不同行为不同，你的代码只需在本机能够正确运行即可。在实验报告中分析你的代码(为什么它能正确实现oj_killer)。如果你使用了其他代码(例如得到system和某个已知函数之间的偏移量)，也请在实验报告中附上并分析。</p>
+<h3 id="_8">实验帮助</h3>
+<h4 id="libc">解析libc</h4>
+<p>为了完成这个实验，你首先需要知道glibc库中<code>rand</code>和<code>system</code>两个函数之间地址的差距。做到这件事的方法并不唯一，但比较简单的办法是找到libc所对应的文件，然后解析它。</p>
+<p>你可以随意写一个c程序并编译，然后看看它是怎么连接libc的。</p>
+<pre class="codehilite"><code>$ file a.out
+a.out: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=2542c1e806d31ad5e95c4c2a498cc038f858b95d, not stripped</code></pre>
+
+
+<p>file命令(此处请RTFM)帮我们确认了a.out文件的确是动态链接的，而且是System V ABI。但这里却没有提到链接了哪个版本的动态链接库。这时候你需要另一个工具：</p>
+<pre class="codehilite"><code>$ (请自行STFW什么工具) a.out
+    linux-vdso.so.1 (0x00007ffee7daa000)
+    libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007ffb23ec1000)
+    /lib64/ld-linux-x86-64.so.2 (0x00007ffb244b4000)</code></pre>
+
+
+<p>Good，帮我们定位到了libc的文件。再看看这是什么？</p>
+<pre class="codehilite"><code>$ file /lib/x86_64-linux-gnu/libc.so.6
+/lib/x86_64-linux-gnu/libc.so.6: symbolic link to libc-2.27.so</code></pre>
+
+
+<p>这是个符号链接，似乎不是文件的真身(此处需要RTFM)。怎么找到真的文件呢？一种是你可以替换一下文件名，另一种你可以让file命令follow symlinks：</p>
+<pre class="codehilite"><code>$ file -L /lib/x86_64-linux-gnu/libc.so.6
+/lib/x86_64-linux-gnu/libc.so.6: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=b417c0ba7cc5cf06d1d1bed6652cedb9253c60d0, for GNU/Linux 3.2.0, stripped</code></pre>
+
+
+<p>万里长征终于走完了第一步，看起来对了：file告诉我们，这是一个ELF 64-bit LSB shared object, dynamically linked——动态链接库跑不了了。这是个二进制文件，那么用什么工具(提示：你用过的)查看它的内容呢？</p>
+<p>然后你会发现这个文件对你并没有什么卵用，好吧，其实一会儿是会用到的。</p>
+<h4 id="oj_killer">实现<code>oj_killer()</code></h4>
+<p>你也许已经学过动态链接的相关知识了。但实际系统中的行为到底是什么呢？除了观察a.out的二进制代码以外，运行它似乎就是最好的选择。这里就要派上gdb了，你需要两个命令：</p>
+<ul>
+<li><code>si</code>: 在PA里都用过了，单步执行一条指令。</li>
+<li><code>disassemble</code>: 反汇编PC指针附近的代码。</li>
+</ul>
+<p>嘿，有这两调命令，就能愉快地观看程序执行了！让我们打个断点试试(用<code>-ggdb</code>选项编译)</p>
+<pre class="codehilite"><code>Breakpoint 1, main () at a.c:4
+4     rand();
+(gdb) disassemble
+Dump of assembler code for function main:
+   0x000055555555463a &lt;+0&gt;:  sub    $0x8,%rsp
+=&gt; 0x000055555555463e &lt;+4&gt;:  callq  0x555555554510 &lt;rand@plt&gt;
+   0x0000555555554643 &lt;+9&gt;:  mov    $0x0,%eax
+   0x0000555555554648 &lt;+14&gt;: add    $0x8,%rsp
+   0x000055555555464c &lt;+18&gt;: retq   </code></pre>
+
+
+<p>好棒！你会一条一条指令看到是怎样进入libc代码的。鉴于你已经在做PA的过程中，对x86指令了若指掌，我想这点小问题应该难不倒你。</p>
+<div class="fenced fenced-green">
+<h4 id="_9">如何找到某个函数的地址？</h4>
+<p>任何汇编指令，但凡是跳转，总有个跳转的目标地址。这个目标地址要么是写在指令里，要么是存储在某个寄存器/内存里。对于指令来说，我们只需要把这个指令中操作数的地址找出来，然后当成是一个<code>uintptr_t</code>去读就好了；寄存器/内存想必你也有办法啦。</p>
+<p>搞定这个，Lab也就基本解决了。</p>
+</div>
+<h4 id="3264bit">兼容32/64bit</h4>
+<p>接下来你会发现，32/64位的代码差距非常之大——在这里你会体会到x86-64其实是一个非常纯正的RISC架构，而x86并不是。指令集的一些细微更改和扩展使二进制代码能写得更简短。随之带来的麻烦是，你需要编写一份代码，同时兼容32/64bit。</p>
+<p>当然这个问题实现起来也不难，你只要在运行时检查某些在32/64位平台下不同的数值就可以了，即可以实现成预编译指令(<code>#if</code>)，也可以用普通的条件判断：</p>
+<ul>
+<li><code>__x86_64__</code>宏是否定义</li>
+<li><code>sizeof(void *)</code>的大小，和4/8的比较</li>
+<li><code>INTPTR_MAX</code>的大小，和<code>INT32_MAX</code>/<code>INT64_MAX</code>的比较</li>
+</ul>
+<p>需要知道的就这些，Happy Hacking!</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

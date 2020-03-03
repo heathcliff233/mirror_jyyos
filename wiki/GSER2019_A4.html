@@ -1,0 +1,200 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>[A4] 同行评议</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="a4">[A4] 同行评议</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">获取你评审的论文</h4>
+<p>根据你论文截止日期前提交最后版本 (pdf) 的 SHA1 校验和的前 16 个字符：</p>
+<pre class="codehilite"><code class="language-text">$ sha1sum your-file-name.pdf | head -c 16; echo
+d1f42d3535e05249</code></pre>
+
+
+<p>从课程网站的以下 URL 获取你的 peer review package：</p>
+<ul>
+<li><code>/static/wiki/gser/2019/peer-review/[sha1sum].zip</code> (将 <code>[sha1sum]</code> 替换为你论文的 SHA1 校验和)。</li>
+<li>peer review package 中包含你需要填写的评审表格 (文本文件)，请将该文件填写后提交。你的评审意见将被自动分拣，因此请不要破坏已有的信息、分隔符等。</li>
+</ul>
+<p>从课程网站的以下 URL 获取你的 peer review 结果：</p>
+<ul>
+<li><code>/static/wiki/gser/2019/peer-review/[sha1sum].html</code> (将 <code>[sha1sum]</code> 替换为你论文的 SHA1 校验和)。</li>
+</ul>
+</div>
+<div class="subbox fenced fenced-blue">
+<h4>提交评审意见 (仅提交 review-form.txt。截止日期：2019 年 12 月 25 日 23:59:59)</h4>
+<form method="POST" action="../store.html" enctype = "multipart/form-data">
+<p>
+学号：<input class="gser-input" type="text" name="stuid">
+<input type="file" name="submission">
+</p>
+<input type="hidden" name="task" value="A4">
+<p>
+<input type="submit" value="提交 (可多次提交，以最后一次提交为准)">
+</p>
+</form>
+</div>
+
+<h2 id="review-comments">撰写 Review Comments</h2>
+<div class="fenced fenced-blue">
+<h4 id="comments">用英文书写合理的 comments</h4>
+<p>请尽可能详尽地提出你对这份工作的意见和建议，一般在 300-500 词。同时，也请尊重投稿者的工作。即便你认为这份 research proposal 有较大缺陷 (例如缺少 novelty 或 significance)，也请礼貌地提出建议，不要对作者进行人身攻击。</p>
+</div>
+<p>首先，你需要根据 research proposal 的 novelty 和 significance 给 research proposal 综合评分，评价标准参照 top-tier conference，你根据你对这份工作的价值是否足够 top-conference 进行评价。评分分为四种：</p>
+<ul>
+<li>(strong) accept (+2)</li>
+<li>weak accept (+1)</li>
+<li>weak reject (-1)</li>
+<li>(strong) reject (-2)</li>
+</ul>
+<p>在软件工程会议评审中，通常必须所有审稿人达成一致接收 (至少 weak accept)，论文才会被接收。因此有一个人反对都会导致论文被拒 (在约 20% 录用率的前提下，技术/贡献上的轻微问题都可能导致论文被拒)。评价的五个主要标准：</p>
+<ul>
+<li>soundness，论文的研究问题/方法/结论是否有不成立的威胁或漏洞</li>
+<li>significance，论文对 research community 的重要性</li>
+<li>novelty，论文的研究问题/方法是否新颖</li>
+<li>verifiability，论文的论证过程、实验是否可靠、可验证</li>
+<li>presentation，论文是否清楚地表达了观点、研究问题、研究方法和结论</li>
+</ul>
+<p>除去评分，comments 包含三部分，主要阐述对上述五个标准的解释，以及一些额外给作者的 comments (例如改进的意见、可能的未来方向等)：</p>
+<ol>
+<li>全文概述 (paper summary)，用 100 词左右的篇幅概括你对全文贡献和亮点的理解。鉴于你可以同意或否认论文里的 claims (例如，你认为某些点不是贡献，或者你可能为作者发掘了他没有意识到的研究贡献)，你的概述可以不与论文的摘要等保持一致。</li>
+<li>优点和缺点 (strengths and weakness)，用非常简要的观点概论文的优点和缺点，例如贡献充足/不足、方法设计合理/不合理、实验论据充分/不充分等。</li>
+<li>详细意见/建议 (detailed comments for author)，针对论文中具体的技术细节、写作等进行评论，主要目的是帮助作者指出论文中存在的问题，以供未来改进。</li>
+</ol>
+<p>下面是两篇已被接收论文收到的审稿意见，一个是 positive，另一个是 negative，供大家参考。大家可以参照这个形式编写，但描述的论点不局限于此。随着你论文投稿的增加，你会收到更多的 review comments。</p>
+<h3 id="automatic-self-validation-for-code-coverage-profilers-ase19">Automatic self-validation for code coverage profilers (ASE19)</h3>
+<p>Comments below are scored with “accept (+2)”.</p>
+<blockquote>
+<p>Authors present Cod, a metamorphic testing approach towards validation of coverage profilers. Cod uses the metamorphic relation that, given a program and coverage profile statistic, removing an "uncovered" statement from the original program should not affect the coverage profile of the modified program. When applied to gcov and llvm-cov, this simple MR revealed multiple faults, some of which have been reported to the developers and acknowledged as faults.</p>
+<p><strong>Strengths</strong></p>
+<ul>
+<li>an important and relevant problem</li>
+<li>clearly effective technique, well described</li>
+<li>found real faults</li>
+</ul>
+<p><strong>Weakness</strong></p>
+<ul>
+<li>specific to C, perhaps, but not a major flaw in any way</li>
+</ul>
+<h4 id="comments-for-authors">Comments for Authors</h4>
+<p>I enjoyed reading this paper. The focus is very clear, and the problem is an important one. The proposed method has been described clearly and evaluated against widely used real world software tools, and eventually found real faults acknowledged by the developers. I think this is a clear step forward when compared to the differential testing approach that is the state-of-the-art.</p>
+<p>There are a few, relatively minor issues that can be addressed to improve the paper even further.</p>
+<p>I think it would be better for the reader if authors can be a bit more specific about the limitations of differential testing in the introduction. The current description under Section II.B is good, but it would be better to understand what the problem is before the "approach" subsection in the introduction.</p>
+<p>EMI is used without being introduced properly with a citation. I think the footnote 2 should be moved to Section I, the paragraph after "weak inconsistency".</p>
+<p>I find it a bit strange that coverage based grey-box fuzzing takes up one third of the related work, as coverage is much more prevalent than that. Grey-box fuzzers will do their own instrumentation (as authors acknowledge with the case of AFL) and therefore are somewhat irrelevant to the coverage profilers. I think a discussion of techniques that rely on accurate coverage information would be more appropriate, such as many of regression testing techniques, or Spectrum Based Fault Localisation techniques. I would also comment that DeepXplore is really irrelevant here, as neuron coverage is not a structural coverage at all: apart from the terminology, "coverage", I don't see how it is related.</p>
+<p>I honestly do not have much to add here... some may argue that these faults will not affect coverage measurement in any major way, to which I'd say that coverage profilers are such a fundamental tooling that it cannot hurt to get them right. Others may argue that this is relatively specific to C due to the complicated optimisation, to which I'd say that does not hurt the generalisability of the technique itself.</p>
+</blockquote>
+<h3 id="automating-object-transformations-for-dynamic-software-updating-via-online-execution-synthesis-ecoop18">Automating object transformations for dynamic software updating via online execution synthesis (ECOOP18)</h3>
+<p>Comments below are scored with “weak reject (-1)”.</p>
+<blockquote>
+<p>This paper proposes a technique for in-vivo update of software. The authors propose a technique to synthesise a backward execution that would restore the program state at the end of the snippet's execution to that at the beginning. This is done by observing only the end state and working out a sequence of operations that invert the forward execution. The sequence of inverse operations is then used to rebuild the current state once again from the old state by synthesising a forward execution using operators from a new version of the code.</p>
+<p><strong>Points For</strong></p>
+<ul>
+<li>It is a promising and elegant line of work that does away with tracing operations on objects. One only needs to inspect the current state and the source code to synthesise object histories.</li>
+<li>The formalisation of value node collection in Section 4 is nice but it can be improved (see comments in the next section)</li>
+<li>The authors compare their work with TOS which seems to be the state of the art in dynamic software update</li>
+</ul>
+<p><strong>Points Against</strong></p>
+<ul>
+<li>AOTES, though elegant, is subject to invertibility of operators and limitations of static analysis. This severely restricts its generalisability.</li>
+<li>The choice of updated classes for evaluation is not well documented. This could be due to difficulties in finding good use cases for this work.</li>
+<li>The authors do not discuss or address limitations of their technique. In a system under execution, dynamic software update must provide guarantees of safety and progress. Any spurious update is catastrophic.</li>
+</ul>
+<h4 id="comments-for-authors_1">Comments for Authors</h4>
+<p>I think the work has promise but it is currently applied to the wrong aspect of the problem. It would be much useful to apply AOTES as a vetting engine to identify what changes can be pushed through at runtime rather than propose AOTES as a tool to automate object transformations which is a harder problem. AOTES would be a powerful and useful tool with formal guarantees of correctness than it is now.</p>
+<p>As noted, Section is well written, but can be improved. Even though I am comfortable with the formalism, I had trouble understanding as terms are overloaded. Values and value nodes need to be adequately disambiguated. I suggest you drop the adjective 'value' from 'value nodes'. Using 'value' to denote operations is inherently confusing. There is also insufficient separation between method-level configurations and intra-method configurations. I suggest using two different terms for them. Terms like pre-heap, post-heap and expression stack should be briefly discussed for the non-expert reader. The definition of a symbolic heap is ambiguous as described.</p>
+<p>You spend significant effort explaining how a value graph is constructed but do not use it to help you explain Algorithm 1. This is a missed opportunity. I believe traversal of the graph is a core element in Algorithm 1 but you do not make this explicit either in the algorithm itself or the accompanying text.</p>
+<p>There are sentences in the evaluation which are ambiguous and not backed by an explanation. For example, I did not understand what the authors mean when they say: "we also exclude rare cases in which the current state does not contain sufficient information to determine the new state." Clarifying exactly which sorts of program state AOTES can handle and which not will strengthen the work.</p>
+<p>The evaluation is unconvincing. It rests on a small, heavily curated corpus, seemingly selected to amenable to AOTES. What are the prospects for the general utility of AOTES?</p>
+</blockquote>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

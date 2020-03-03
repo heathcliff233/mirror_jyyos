@@ -1,0 +1,155 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>操作系统(2018)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="2018">操作系统(2018)</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">课程通知</h4>
+<p>操作系统一直以来都是我们接触最多但也觉得最神秘的软件之一。《操作系统》课程带领大家理解操作系统(以及计算机系统)是如何设计、实现并随着时间演化的。为了防止把这门课上成文科，整个课程将会围绕代码展开，因此也少不了编程实验。课程<a href="OS2018_GUIDE.html">生存指南</a>。</p>
+<p>这门课所有的内容都是全新的，肯定有没有做对的地方。如果你对课程的设计有任何意见/建议，以及讲义没有完善之处，欢迎和jyy联系，或在Office Hour面谈。</p>
+</div>
+<ul>
+<li>上课时间：每周一10:00–12:00、周四14:00–16:00；上课地点：仙I-103</li>
+<li>成绩：期末考试(40%), 期中测验(10%), 系统实验 [L] (25%), 编程实验 [M] (25%)</li>
+<li>Office Hours: 蒋炎岩 (计算机楼809, 每周一14:00-16:00、每周四18:30-20:30)</li>
+<li>助教：陈冬杰 <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#105;&#100;&#119;&#105;&#110;&#116;&#101;&#114;&#49;&#57;&#57;&#51;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#109;&#105;&#100;&#119;&#105;&#110;&#116;&#101;&#114;&#49;&#57;&#57;&#51;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a>、曹阳 <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#99;&#121;&#99;&#112;&#112;&#48;&#48;&#48;&#50;&#64;&#49;&#54;&#51;&#46;&#99;&#111;&#109;">&#99;&#121;&#99;&#112;&#112;&#48;&#48;&#48;&#50;&#64;&#49;&#54;&#51;&#46;&#99;&#111;&#109;</a></li>
+<li>课程讲义将覆盖课程的主要内容。以下为参考书：<ul>
+<li>Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau. <em><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">Operating Systems: Three Easy Piecies</a></em>. Arpaci-Dusseau Books, 2015.</li>
+<li>Andrew S. Tanenbaum and Herbert Bos. <em>Modern Operating Systems</em> (4th Edition). Pearson, 2014.</li>
+</ul>
+</li>
+</ul>
+<h2 id="_2">课程概述</h2>
+<p>操作系统的故事从C语言程序说起。ANSI C程序，如果不允许调用任何库函数，它只能把内存里的数值算来算去(如果内存无限，就相当于一个<a href="https://en.wikipedia.org/wiki/Turing_machine">Turing Machine</a>)，连打印<code>Hello World</code>到屏幕都做不到。</p>
+<p>操作系统正是连接纯粹的“计算”(把内存里的数值算来算去)与物理世界里的“计算机”(处理器、存储器、总线、I/O设备……)之间的桥梁。它让计算机系统能有序地运行功能各异的应用程序，并且程序之间能高效协作、共享资源。操作系统是什么？为什么是这个样子？它是如何实现的？我们按照“Three easy pieces”的主线讲解操作系统的构造：</p>
+<ul>
+<li>(<em>Virualization</em>) 虚拟化：如何为每个程序提供独立、可靠的运行环境？<ul>
+<li>V1: 进程的一生</li>
+<li>V2: 进程的地址空间</li>
+</ul>
+</li>
+<li>(<em>Concurrency</em>) 并发：如何管理多个“同时”执行的程序？<ul>
+<li>C1: 共享内存模型下的并发编程</li>
+<li>C2: 线程互斥与通信</li>
+</ul>
+</li>
+<li>(<em>Persistence</em>) 持久化：如何可靠地管理程序的数据？<ul>
+<li>P1: 一切皆文件</li>
+<li>P2: 文件系统即数据结构</li>
+</ul>
+</li>
+</ul>
+<p>带着这三个问题，请你回顾一下运行在操作系统上的<strong>程序</strong>：不仅仅是Hello World，编译器、编辑器、浏览器、任务管理器、Java/Python/JavaScript虚拟机、各类游戏、360全家桶卫士、吃鸡外挂……所有这些都是操作系统需要支持的。操作系统究竟要设计成怎样，才能<strong>可靠</strong>地支持如此丰富的应用呢？操作系统又是如何实现的呢？</p>
+<p>在讲解这三个主题的同时，穿插了操作系统有关的专题 (Topics)，帮助大家更深入细致地理解“怎么用操作系统”和“操作系统是如何实现的”。课程的后半部分将完全以专题的形式展开，讲解现代操作系统中的虚拟化、并发和持久化。课程中会贯穿一系列的Mini Programing Labs，每个Lab大约是100-200行的编程量，学习“如何使用操作系统API完成系统编程”；随着课程的深入，OS Labs会加入到课程中，实现一个真正的操作系统。</p>
+<p>当然了，操作系统也就是个C程序(偶尔调用一些机器指令)，仅此而已，没啥好怕的。只要学好C，就肯定能掌握本课程的内容啦！</p>
+<h2 id="_3">课程讲义</h2>
+<ol>
+<li><a href="OS2018_Intro.html">操作系统概述</a> (<a href="../static/wiki/os/2018/slides/lec1.pdf">slides</a>) | <a href="OS2018_OSAPP.html">应用眼中的操作系统</a> (<a href="../static/wiki/os/2018/slides/lec2.pdf">slides</a>) | <a href="OS2018_M1.html">[M1] pstree</a></li>
+<li>虚拟化：<a href="OS2018_Proc.html">进程抽象</a> (<a href="../static/wiki/os/2018/slides/lec3.pdf">slides</a>) | <a href="OS2018_PM.html">进程管理与Shell</a> (<a href="../static/wiki/os/2018/slides/lec4.pdf">slides</a>) | <a href="OS2018_M2.html">[M2] perf</a></li>
+<li>虚拟化：<a href="OS2018_MM.html">虚存抽象</a> (<a href="../static/wiki/os/2018/slides/lec5.pdf">slides</a>) | <a href="OS2018_LinkerLoader.html">链接与加载</a> (<a href="../static/wiki/os/2018/slides/lec6.pdf">slides</a>) | <a href="OS2018_M3.html">[M3] crepl</a></li>
+<li><a href="OS2018_Resource.html">专题：操作系统中的资源管理和调度</a> (<a href="../static/wiki/os/2018/slides/lec7.pdf">slides</a>) | <a href="OS2018_L0.html">[L0] amgame</a> (<a href="../static/wiki/os/2018/slides/lab0.pdf">slides</a>)</li>
+<li>习题选讲：操作系统中的程序设计 (<a href="../static/wiki/os/2018/slides/lec8.pdf">slides</a>)</li>
+<li>并发：<a href="OS2018_Concur.html">进程与线程</a> (<a href="../static/wiki/os/2018/slides/lec9.pdf">slides</a>) | <a href="OS2018_Mutex.html">互斥</a> (<a href="../static/wiki/os/2018/slides/lec10.pdf">slides</a>) | <a href="OS2018_M4.html">[M4] malloc/free</a></li>
+<li>并发：<a href="OS2018_CV.html">同步、条件变量</a> (<a href="../static/wiki/os/2018/slides/lec11.pdf">slides</a>) | <a href="OS2018_Sem.html">信号量 &amp; POSIX线程编程</a> (<a href="../static/wiki/os/2018/slides/lec12.pdf">slides</a>) | <a href="OS2018_L1.html">[L1] kthread</a></li>
+<li>虚拟化与并发复习 (<a href="../static/wiki/os/2018/slides/lec13.pdf">slides</a>) | 期中测验 | <a href="OS2018_ConBug.html">并发bug</a> (<a href="../static/wiki/os/2018/slides/lec14.pdf">slides</a>)</li>
+<li><a href="OS2018_Dev.html">设备管理</a> (<a href="../static/wiki/os/2018/slides/lec15.pdf">slides</a>) | <a href="OS2018_M5.html">[M5] 内存修改器</a></li>
+<li><a href="OS2018_FS.html">持久化：数据的故事</a> (<a href="../static/wiki/os/2018/slides/lec16.pdf">slides</a>) | <a href="OS2018_FSImpl.html">文件系统实现</a> (<a href="../static/wiki/os/2018/slides/lec17.pdf">slides</a>)</li>
+<li><a href="OS2018_CrashConsistency.html">持久化：崩溃一致性</a> (<a href="../static/wiki/os/2018/slides/lec18.pdf">slides</a>) | <a href="OS2018_DataReliability.html">持久数据的可靠性</a> (<a href="../static/wiki/os/2018/slides/lec19.pdf">slides</a>) | <a href="OS2018_M6.html">[M6] libkvdb</a></li>
+<li>复习：操作系统概观 (<a href="../static/wiki/os/2018/slides/lec20.pdf">slides</a>) | <a href="OS2018_Testing.html">系统软件的质量保障</a> (<a href="../static/wiki/os/2018/slides/lec21.pdf">slides</a>) | <a href="OS2018_L2.html">[L2] virtualfs</a></li>
+<li><a href="OS2018_VM.html">系统虚拟化：虚拟机和容器</a> (<a href="../static/wiki/os/2018/slides/lec22.pdf">slides</a>) | Guest Lecture by <a href="http://cs.nju.edu.cn/xyfeng/">Xinyu Feng</a></li>
+<li><a href="OS2018_Socket.html">网络与套接字</a> (<a href="../static/wiki/os/2018/slides/lec23.pdf">slides</a>) | <a href="OS2018_DistroSys.html">分布式系统</a> (<a href="../static/wiki/os/2018/slides/lec24.pdf">slides</a>) | <a href="OS2018_M7.html">[M7] httpd</a></li>
+<li>操作系统安全 (<a href="../static/wiki/os/2018/slides/lec25.pdf">slides</a>) | Java虚拟机 (<a href="../static/wiki/os/2018/slides/lec26.pdf">slides</a>); Guest Lecture by <a href="http://cs.nju.edu.cn/gurong/">Rong Gu</a></li>
+<li>操作系统复习 (<a href="../static/wiki/os/2018/slides/lec27.pdf">slides</a>)</li>
+</ol>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

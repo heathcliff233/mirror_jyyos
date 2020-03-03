@@ -1,0 +1,312 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>L3: 虚拟文件系统</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="l3">L3: 虚拟文件系统</h1>
+<div class="fenced fenced-red">
+<h4 id="2019616235959">截止日期：2019年6月16日23:59:59</h4>
+<p>你的所有操作系统实验将在你之前的代码上完成，你只需要维护一份内容不断增加的实验报告(pdf格式)，其中每次实验的内容不建议超过2页A4纸。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的bug等。</p>
+</div>
+<div class="fenced fenced-blue">
+<h4 id="_1">虚拟文件系统</h4>
+<p>在上一个实验中，我们有了一个操作系统的雏形——为每个线程实现了CPU的虚拟化。在上一个实验中，每个线程都可以自由访问I/O，直接向设备驱动程序发起调用即可：</p>
+<pre class="codehilite"><code class="language-c">device_t *tty = dev_lookup(&quot;ramdisk&quot;);
+tty-&gt;ops-&gt;read(tty, offset, buf, length);</code></pre>
+
+
+<p>在这个实验中，我们实现设备的虚拟化，使线程能够通过文件系统API和文件描述符访问这套统一的接口访问设备和操作系统中的对象。</p>
+</div>
+<h3 id="_2">收到的作业</h3>
+<p><table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></p>
+<h2 id="_3">背景</h2>
+<p>在这个实验中，我们在多处理器分时多线程的基础上实现<strong>线程安全</strong>的虚拟文件系统(virtual file system, VFS) API，并且在VFS这一抽象层上实现若干不同的文件系统：</p>
+<ul>
+<li>在存储设备(例如ramdisk)上支持完整文件和目录操作的文件系统</li>
+<li>虚拟的procfs，提供一系列只读的、反映操作系统内部状态的文件</li>
+<li>虚拟的devfs，将操作系统中的设备抽象为可以访问的文件，并为这些文件提供读写操作</li>
+</ul>
+<p>实现完成后，系统中的多个线程就能通过文件系统API读写文件——至此我们离现代操作系统就只有一步之遥(下一个实验)：为每个线程附属一个独立的地址空间(通过虚拟存储实现)，线程就变成了我们熟知的进程，操作系统就完整了。</p>
+<div class="fenced fenced-yellow">
+<h4 id="lab2">什么？Lab2？</h4>
+<p>我的Lab2好像运行不起来耶，那些API似乎还没调对，我只是交了个不怎么对的版本(和一本正经胡说八道的实验报告)给助教骗分了。</p>
+<p>恭喜你，好好调试吧！有同学还调出了ICS PA时代累积下的klib bug呢。</p>
+</div>
+<h2 id="_4">实验描述</h2>
+<p>在本次实验中，实现vfs模块API，并且实现磁盘文件系统、procfs和devfs。它们能通过mount API挂载到文件系统中。以下将对实现的三部分进行描述。</p>
+<div class="fenced fenced-blue">
+<h4 id="_5">开放实验</h4>
+<p>本次实验是开放的实验，不再提供框架代码，大家可以根据自己的能力和兴趣选择具体实现的部分。举例来说，vfs模块中包含若干文件系统的操作，但如果你选择用类似FAT的方式实现你的文件系统，则可以不必支持link系统调用。</p>
+</div>
+<h3 id="vfs">vfs模块</h3>
+<p>所有对文件系统的操作都是通过调用vfs模块中的API完成的：</p>
+<pre class="codehilite"><code class="language-c">MODULE {
+  void (*init)();
+  int (*access)(const char *path, int mode);
+  int (*mount)(const char *path, filesystem_t *fs);
+  int (*unmount)(const char *path);
+  int (*mkdir)(const char *path);
+  int (*rmdir)(const char *path);
+  int (*link)(const char *oldpath, const char *newpath);
+  int (*unlink)(const char *path);
+  int (*open)(const char *path, int flags);
+  ssize_t (*read)(int fd, void *buf, size_t nbyte);
+  ssize_t (*write)(int fd, void *buf, size_t nbyte);
+  off_t (*lseek)(int fd, off_t offset, int whence);
+  int (*close)(int fd);
+} MOD_NAME(vfs);</code></pre>
+
+
+<p>除了mount之外，其他命令的行为建议实现成与Linux一致，但你可以做出简化，例如不允许blocking操作的interrupt、只返回一种类型的错误等。注意<code>open</code>返回的文件描述符是针对线程有效的，每个线程有自己独立的文件描述符表。关于文件描述符的行为，请参考教科书第39章。</p>
+<h3 id="_6">文件系统</h3>
+<p>一个文件系统(用一个<code>filesystem_t</code>结构体表示)维护了树状的目录和文件结构，其中结构体里比较重要的成员有：</p>
+<pre class="codehilite"><code class="language-c">struct filesystem {
+  ...
+  fsops_t *ops;
+  dev_t *dev;
+};</code></pre>
+
+
+<p>每个文件系统都是基于一个I/O设备的(procfs和devfs没有对应的设备，因此dev为<code>NULL</code>)，<code>fsops_t</code>是具体的一些文件系统API的实现，一个合理的fsops定义：</p>
+<pre class="codehilite"><code class="language-c">typedef struct fsops {
+  void (*init)(struct filesystem *fs, const char *name, dev_t *dev);
+  inode_t *(*lookup)(struct filesystem *fs, const char *path, int flags);
+  int (*close)(inode_t *inode);
+} fsops_t;</code></pre>
+
+
+<p>之前提到，文件系统是一个树状的数据结构。下图中，圆形节点表示存储数据的文件、方形节点表示目录(用目录文件存储)。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/l3-fs.png" width="500px" /></center></p>
+<p>无论是普通文件还是目录文件，它们都对应了一个inode。注意到文件名并没有标记在节点上而是标记在边上，是因为文件系统文件名是存储在目录文件的目录项中的——在允许链接的文件系统中，一个文件可以有多个名字。</p>
+<p>上图中，我们展示了一个系统中挂载了两个文件系统(<code>filesystem_t</code>)的例子：</p>
+<ul>
+<li>一个文件系统实现挂载在<code>/</code>，对应的设备是<code>/dev/ramdisk0</code> (ramdisk0设备)</li>
+<li>另一个文件系实现挂载在<code>/mnt</code>，对应的设备是<code>/dev/ramdisk1</code> (ramdisk1设备)</li>
+</ul>
+<h3 id="inode">inode</h3>
+<p>文件系统<code>fileops_t</code>中最重要的函数是<code>lookup</code>，它就给定相对于该文件系统根的路径名，返回路径查找后的inode。因此，为了解析一个全局的文件名，例如<code>/mnt/a/test.txt</code>，你就必须在系统中保存所有的mount points，路径解析如下：</p>
+<ul>
+<li>首先，查找系统中的mount point table，找到<code>/mnt</code>对应的文件系统对象<code>fs</code>；</li>
+<li>调用<code>fs-&gt;ops-&gt;lookup(fs, "/a/test.txt", flags)</code>获取inode。</li>
+</ul>
+<p>对于一个具体的文件，无论它是普通文件还是目录文件，对文件的操作都是通过对它所对应inode的操作完成的：</p>
+<pre class="codehilite"><code class="language-c">typedef struct inodeops {
+  int (*open)(file_t *file, int flags);
+  int (*close)(file_t *file);
+  ssize_t (*read)(file_t *file, char *buf, size_t size);
+  ssize_t (*write)(file_t *file, const char *buf, size_t size);
+  off_t (*lseek)(file_t *file, off_t offset, int whence);
+  int (*mkdir)(const char *name);
+  int (*rmdir)(const char *name);
+  int (*link)(const char *name, inode_t *inode);
+  int (*unlink)(const char *name);
+  // 你可以自己设计readdir的功能
+} inodeops_t;
+
+struct inode {
+  ...
+  int refcnt;
+  void *ptr;       // private data
+  filesystem_t *fs;
+  inodeops_t *ops; // 在inode被创建时，由文件系统的实现赋值
+                   // inode ops也是文件系统的一部分
+  ...
+};</code></pre>
+
+
+<h3 id="_7">系统中打开的文件</h3>
+<p>最后，线程/进程的文件操作是通过文件描述符完成的，每个文件描述符背后都有一个“打开文件”的数据结构<code>file_t</code>：</p>
+<pre class="codehilite"><code class="language-c">typedef struct file {
+  int refcnt; // 引用计数
+  inode_t *inode;
+  uint64_t offset;
+  ...
+} file_t;</code></pre>
+
+
+<p>这样，我们可以在进程/线程的数据结构中维护一系列“打开文件”的指针，这就是文件描述符！</p>
+<pre class="codehilite"><code class="language-c">struct task {
+  ...
+  file_t *fildes[NOFILE];
+  ...
+};</code></pre>
+
+
+<p>其中<code>fildes[i] == NULL</code>表示编号为<code>i</code>的文件描述符可用，你应该在教科书上看到过一样的代码！在这里，让我们整理一下<code>open("/mnt/a/test.txt", flags)</code>发生的事情：</p>
+<ul>
+<li>首先，你的代码会解析<code>path</code>，找到它所在的文件系统<code>fs</code> (类型是<code>filesystem_t *</code>)，调用<code>inode = fs-&gt;ops-&gt;lookup("/a/test.txt", flags)</code>得到文件所对应的inode；</li>
+<li>在线程的<code>fildes</code>中找到第一个为<code>NULL</code>的位置，使用<code>file = pmm-&gt;alloc()</code>分配一个新的<code>file_t</code>；</li>
+<li>调用<code>inode-&gt;ops-&gt;open(file, flags)</code>打开文件。</li>
+</ul>
+<p>此后，如果我们访问文件描述符，例如<code>read(fd, buf, size)</code>，我们会：</p>
+<ul>
+<li>通过<code>file = current-&gt;fildes[fd]</code>找到对应的打开文件的数据结构；</li>
+<li>通过<code>file-&gt;inode-&gt;ops-&gt;read(file, buf, size)</code>进行读取。</li>
+</ul>
+<h3 id="_8">这么麻烦，有什么好处？</h3>
+<p>VFS的最大好处是可以兼容各种不同的文件系统实现。系统启动后，你的文件系统相关的代码将在操作系统中创建三个虚拟文件系统的实例：</p>
+<ul>
+<li>procfs，挂载在<code>/proc</code>。procfs中包含每个线程的统计信息，<code>cpuinfo</code>和<code>meminfo</code>，格式自定。</li>
+<li>devfs，挂载在<code>/dev</code>。devfs中包含<code>random</code>, <code>zero</code>, <code>null</code>设备，你也可以增加任意你想支持的设备。</li>
+<li>blkfs，挂载在<code>/</code>，维护一个树状的文件系统结构(可以参考教科书Filesystem Implementation)。</li>
+</ul>
+<p>有了vfs，兼容多个文件系统就变得非常简单了。以devfs为例，devfs里的文件是静态创建的，只需要实现<code>lookup</code>，就能实现<code>/dev/ramdisk0</code>等的解析。在每一个devfs inode中，inode的私有数据(<code>ptr</code>域)都保存了指向设备(<code>dev_t</code>)的指针。因此，inode的读/写就非常容易了：</p>
+<pre class="codehilite"><code class="language-c">void devfs_read(file_t *file, char *buf, size_t size) {
+  dev_t dev = file-&gt;inode-&gt;ptr;
+  ...
+  ssize_t nread = dev-&gt;ops-&gt;read(dev, file-&gt;offset, buf, size);
+  file-&gt;offset += size;
+  ...
+}</code></pre>
+
+
+<p>聪明的你一定知道procfs应该如何实现了。实际上，这个实验中的VFS与Linux内核中的机制非常相似，以后你阅读Linux内核代码的时候，一定会感到几分亲切。用一张图回顾一下，是如何从文件描述符“路由”到对应的文件系统实现的。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/l3-vfs.png" width="600px" /></center></p>
+<div class="fenced fenced-red">
+<h4 id="_9">一些约定</h4>
+<p>其中，除<code>vfs-&gt;init()</code>是由操作系统启动代码调用外，其他代码均可以由任何线程并发调用。你需要为每个内核线程维护一定数量的文件描述符(例如16个)，每个线程执行<code>open</code>操作都会按顺序返回编号最小的空闲文件描述符。线程被初始创建时不拥有任何文件描述符。</p>
+</div>
+<h3 id="shell">实现单线程shell</h3>
+<p>最后，还记得Lab2中的演示程序么？一小段代码可以实现命令行的“echo”功能：</p>
+<pre class="codehilite"><code class="language-c">void echo_task(void *name) {
+  device_t *tty = dev_lookup(name);
+  while (1) {
+    char line[128], text[128];
+    sprintf(text, &quot;(%s) $ &quot;, name); tty_write(tty, text);
+    int nread = tty-&gt;ops-&gt;read(tty, 0, line, sizeof(line));
+    line[nread - 1] = '\0';
+    sprintf(text, &quot;Echo: %s.\n&quot;, line); tty_write(tty, text);
+  }
+}</code></pre>
+
+
+<p>这其实是一个最简单shell的雏形，你可以把它丰富成如下的一个非常简陋的shell，但瞬间就让你的操作系统有了“能用”的感觉！</p>
+<pre class="codehilite"><code class="language-c">void shell_thread(int tty_id) {
+  char buf[128];
+  ...
+  sprintf(buf, &quot;/dev/tty%d&quot;, tty_id);
+  int stdin = vfs-&gt;open(buf, O_RDONLY);
+  int stdout = vfs-&gt;open(buf, O_WRONLY);
+  while (1) {
+    if (got_a_line()) {
+       ...
+    } else {
+      ssize_t nread = fs-&gt;read(stdin, buf, sizeof(buf));
+      ...
+    }
+    // supported commands:
+    //   ls
+    //   cd /proc
+    //   cat filename
+    //   mkdir /bin
+    //   rm /bin/abc
+    //   ...
+  }
+}</code></pre>
+
+
+<p>基本上，你只需要解析输入的命令，然后翻译成文件系统的API即可。</p>
+<div class="fenced fenced-red">
+<h4 id="_10">评分标准</h4>
+<p>本次实验是开放性的实验，因此你在实验报告中应当提供一些shell的使用指南，例如支持的命令、已知的bug等。评分时，助教会运行你的操作系统，在多个终端之间切换，在每个终端里都执行一些命令。你必须实现的部分有：</p>
+<ul>
+<li>一个有文件和目录结构的文件系统，它作用于ramdisk上，并且初始时有一定的数据(initrd)。</li>
+<li>proc目录下有<code>/proc/[pid]</code>的统计信息(例如被调度的次数、时间等)；<code>/proc/cpuinfo</code>和<code>/proc/meminfo</code>。</li>
+<li><code>/dev/tty1-4</code>, <code>/dev/ramdisk0</code>, <code>/dev/ramdisk1</code>。</li>
+</ul>
+</div>
+<div class="fenced fenced-green">
+<h4 id="_11">我们离一个完整的操作系统有多近？</h4>
+<p>现在我们已经有了可以打开、关闭、读写文件的线程，线程又可以创建和管理其他线程。很自然，文件描述符就是线程的一种资源。同理，我们可以给线程增加任意的资源，比如一个独立的地址空间，并且运行一个用户态的程序。哈！这样就有了进程了。进程在进行系统调用时，同样由<code>os-&gt;interrupt</code>捕获进行处理，你也许已经想好fork, execve, exit的实现了……</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

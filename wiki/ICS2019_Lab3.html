@@ -1,0 +1,268 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Lab3：性能分析</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="lab3">Lab3：性能分析</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">小实验说明</h4>
+<p>小实验 (Labs) 是 ICS 这门课程里的一些综合编程题，旨在结合课堂知识解决一些实际中的问题。因为问题来自实际，所以有时候未必能立即在课本上找到相关知识的答案，而是需要“活学活用”。因此，大家需要利用互联网上的知识解决这些问题，但<strong>不要</strong>试图直接搜索这些问题的答案，即便有也不要点进去 (也请自觉不要公开发布答案)。</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="_2">实验说明</h4>
+<p>请先阅读<a href="ICS2019_Code.html">《计算机系统基础》Labs 须知</a>。</p>
+<p>获取代码：在 <code>ics-workbench</code> 中执行</p>
+<pre class="codehilite"><code class="language-bash">git pull origin lab3</code></pre>
+
+
+<p>提交方法：在 <code>perf</code> 目录下设置好 <code>STUID</code>, <code>STUNAME</code> 环境变量后，执行 <code>make submit</code> 提交。</p>
+</div>
+<h2 id="_3">收到的提交</h2>
+<table class="submissions"><tr><td>161240007<br><span class="submit-date">(21:04 Jan 20)</span></td><td>161240039<br><span class="submit-date">(22:27 Jan 12)</span></td><td>161240045<br><span class="submit-date">(18:57 Dec 23)</span></td><td>171180589<br><span class="submit-date">(11:29 Dec 23)</span></td><td>171180593<br><span class="submit-date">(20:32 Jan 01)</span></td><td>171860609<br><span class="submit-date">(21:22 Jan 11)</span></td><td>181180200<br><span class="submit-date">(08:23 Jan 12)</span></td></tr><tr><td>181220001<br><span class="submit-date">(20:09 Jan 12)</span></td><td>181220002<br><span class="submit-date">(22:24 Jan 04)</span></td><td>181220003<br><span class="submit-date">(10:43 Dec 28)</span></td><td>181220004<br><span class="submit-date">(14:46 Dec 21)</span></td><td>181220005<br><span class="submit-date">(01:44 Jan 12)</span></td><td>181220010<br><span class="submit-date">(19:18 Dec 26)</span></td><td>181220012<br><span class="submit-date">(21:25 Jan 11)</span></td></tr><tr><td>181220013<br><span class="submit-date">(02:56 Jan 12)</span></td><td>181220014<br><span class="submit-date">(10:33 Jan 12)</span></td><td>181220016<br><span class="submit-date">(18:30 Dec 27)</span></td><td>181220018<br><span class="submit-date">(12:19 Jan 11)</span></td><td>181220019<br><span class="submit-date">(22:24 Jan 12)</span></td><td>181220022<br><span class="submit-date">(15:34 Dec 22)</span></td><td>181220026<br><span class="submit-date">(00:55 Jan 09)</span></td></tr><tr><td>181220028<br><span class="submit-date">(04:43 Jan 04)</span></td><td>181220029<br><span class="submit-date">(06:31 Jan 12)</span></td><td>181220030<br><span class="submit-date">(17:38 Dec 22)</span></td><td>181220031<br><span class="submit-date">(19:28 Dec 26)</span></td><td>181220032<br><span class="submit-date">(08:56 Jan 12)</span></td><td>181220034<br><span class="submit-date">(21:03 Jan 12)</span></td><td>181220035<br><span class="submit-date">(20:55 Jan 08)</span></td></tr><tr><td>181220036<br><span class="submit-date">(19:03 Jan 01)</span></td><td>181220038<br><span class="submit-date">(20:54 Jan 01)</span></td><td>181220039<br><span class="submit-date">(11:55 Jan 01)</span></td><td>181220040<br><span class="submit-date">(20:07 Jan 12)</span></td><td>181220041<br><span class="submit-date">(11:39 Jan 04)</span></td><td>181220043<br><span class="submit-date">(10:39 Jan 06)</span></td><td>181220045<br><span class="submit-date">(19:27 Jan 02)</span></td></tr><tr><td>181220046<br><span class="submit-date">(01:34 Jan 12)</span></td><td>181220047<br><span class="submit-date">(02:27 Jan 12)</span></td><td>181220048<br><span class="submit-date">(19:26 Dec 14)</span></td><td>181220049<br><span class="submit-date">(13:21 Dec 31)</span></td><td>181220051<br><span class="submit-date">(22:42 Jan 12)</span></td><td>181220052<br><span class="submit-date">(17:14 Dec 22)</span></td><td>181220055<br><span class="submit-date">(16:59 Jan 12)</span></td></tr><tr><td>181220056<br><span class="submit-date">(15:56 Dec 31)</span></td><td>181220057<br><span class="submit-date">(19:45 Jan 12)</span></td><td>181220060<br><span class="submit-date">(15:27 Dec 22)</span></td><td>181220061<br><span class="submit-date">(20:31 Dec 19)</span></td><td>181220062<br><span class="submit-date">(21:38 Jan 12)</span></td><td>181220063<br><span class="submit-date">(23:26 Nov 30)</span></td><td>181220064<br><span class="submit-date">(08:38 Dec 22)</span></td></tr><tr><td>181220067<br><span class="submit-date">(13:33 Dec 21)</span></td><td>181220071<br><span class="submit-date">(20:29 Jan 10)</span></td><td>181220072<br><span class="submit-date">(17:01 Dec 26)</span></td><td>181220074<br><span class="submit-date">(11:38 Jan 12)</span></td><td>181220075<br><span class="submit-date">(03:46 Dec 24)</span></td><td>181220076<br><span class="submit-date">(21:43 Dec 26)</span></td><td>181220077<br><span class="submit-date">(20:28 Jan 12)</span></td></tr><tr><td>181220078<br><span class="submit-date">(01:21 Dec 27)</span></td><td>181220079<br><span class="submit-date">(22:36 Jan 12)</span></td><td>181220080<br><span class="submit-date">(23:48 Dec 25)</span></td><td>181220081<br><span class="submit-date">(18:35 Jan 21)</span></td><td>181240004<br><span class="submit-date">(18:39 Jan 01)</span></td><td>181240008<br><span class="submit-date">(23:13 Jan 12)</span></td><td>181240010<br><span class="submit-date">(17:04 Jan 08)</span></td></tr><tr><td>181240014<br><span class="submit-date">(23:46 Jan 12)</span></td><td>181240016<br><span class="submit-date">(23:05 Jan 17)</span></td><td>181240019<br><span class="submit-date">(12:15 Jan 04)</span></td><td>181240020<br><span class="submit-date">(19:50 Dec 05)</span></td><td>181240030<br><span class="submit-date">(16:12 Dec 29)</span></td><td>181240035<br><span class="submit-date">(02:01 Dec 24)</span></td><td>181240045<br><span class="submit-date">(23:20 Jan 11)</span></td></tr><tr><td>181240047<br><span class="submit-date">(22:06 Jan 12)</span></td><td>181240050<br><span class="submit-date">(19:12 Dec 31)</span></td><td>181240055<br><span class="submit-date">(11:53 Jan 17)</span></td><td>181240063<br><span class="submit-date">(13:13 Jan 12)</span></td><td>181240064<br><span class="submit-date">(23:37 Dec 23)</span></td><td>181240068<br><span class="submit-date">(16:15 Jan 02)</span></td><td>181240078<br><span class="submit-date">(19:02 Dec 17)</span></td></tr><tr><td>181240082<br><span class="submit-date">(23:13 Jan 12)</span></td><td>181250012<br><span class="submit-date">(22:59 Dec 08)</span></td><td>181250097<br><span class="submit-date">(23:55 Jan 12)</span></td><td>181250177<br><span class="submit-date">(20:47 Dec 10)</span></td><td>181250195<br><span class="submit-date">(22:10 Dec 30)</span></td><td>181830196<br><span class="submit-date">(21:48 Jan 12)</span></td><td>181840013<br><span class="submit-date">(23:54 Jan 12)</span></td></tr><tr><td>181840064<br><span class="submit-date">(14:11 Dec 29)</span></td><td>181840135<br><span class="submit-date">(19:03 Jan 12)</span></td><td>181840204<br><span class="submit-date">(16:11 Dec 19)</span></td><td>181840264<br><span class="submit-date">(10:29 Jan 11)</span></td><td>181840273<br><span class="submit-date">(14:50 Jan 12)</span></td><td>181840326<br><span class="submit-date">(01:10 Dec 22)</span></td><td>181850236<br><span class="submit-date">(21:50 Jan 12)</span></td></tr><tr><td>181860020<br><span class="submit-date">(09:55 Jan 11)</span></td><td>181860035<br><span class="submit-date">(10:00 Dec 21)</span></td><td>181860066<br><span class="submit-date">(16:31 Jan 15)</span></td><td>181860104<br><span class="submit-date">(17:46 Dec 22)</span></td><td>181860124<br><span class="submit-date">(14:04 Jan 04)</span></td><td>181860134<br><span class="submit-date">(00:08 Dec 10)</span></td><td>181860137<br><span class="submit-date">(17:33 Jan 03)</span></td></tr><tr><td>181860152<br><span class="submit-date">(01:33 Jan 11)</span></td><td>181860158<br><span class="submit-date">(19:54 Jan 03)</span></td><td>181870015<br><span class="submit-date">(20:42 Dec 25)</span></td><td></td><td></td><td></td><td></td></tr></table>
+
+<h2 id="_4">实验描述</h2>
+<div class="fenced fenced-blue">
+<h4 id="_5">背景</h4>
+<p>在上一个实验中，我们使用内嵌汇编实现了 <code>memcpy</code>。实际中的 <code>memcpy</code> 到底应该怎么实现才能最大程度地发挥现代处理器的性能呢？在这个实验中，你需要实现性能的监控程序。</p>
+</div>
+<p>你需要实现命令行工具 perf，它能够反复运行<strong>一小段代码</strong>，并且度量它的精确运行时间。在框架代码中，已经有一些函数的实现：</p>
+<pre class="codehilite"><code class="language-c">void dummy() {
+}
+
+void print_hello() {
+  printf(&quot;hello\n&quot;);
+}
+
+void print_error() {
+  printf(&quot;invalid subject!\n&quot;);
+  exit(1);
+}
+
+void simple_loop() {
+  for (volatile int i = 0; i &lt; 1000000; i++) ;
+}</code></pre>
+
+
+<p>你可以添加自己需要度量运行时间的函数实现，并且把函数名称添加到 <code>perf.h</code> 中。</p>
+<div class="fenced fenced-blue">
+<h4 id="_6">实验要求：命令行工具</h4>
+<ol>
+<li>解析命令行参数，使得运行 <code>perf fn</code> 能运行统计 <code>fn</code> 函数的运行时间，例如 <code>perf dummy</code> 统计 <code>dummy</code> 函数的运行时间。</li>
+<li>可以用 <code>-r</code> 命令行选项指定运行次数，例如 <code>perf -r 10000 simple_loop</code> 会将 <code>simple_loop</code> 运行 10,000 次。默认只运行一次。</li>
+<li>把收集到的运行时间信息以用户友好的形式表示出来——这可以是一个生成的图片 (png, svg 等)，也可以直接输出到终端上。</li>
+</ol>
+</div>
+<p>我们已经提供了框架代码，主要由三个函数组成：</p>
+<pre class="codehilite"><code class="language-c">static void run(void (*func)(), int rounds); // 运行 @func 函数 rounds 次
+static uint64_t gettime(); // 获取程序运行的时间戳
+static void (*lookup(const char *fn))(); // 根据函数名查找对应的入口地址</code></pre>
+
+
+<p><code>run</code> 函数相对容易理解，它把 <code>rounds</code> 次运行 <code>func</code> 的运行时间存储到 <code>elapsed</code> 数组中。你需要填入 TODO 的部分生成统计数据，例如数据的分布情况、是否近似为正态分布等。</p>
+<pre class="codehilite"><code class="language-c">static void run(void (*func)(), int rounds) {
+  uint64_t *elapsed = malloc(sizeof(uint64_t) * rounds);
+  if (!elapsed) { // 注意错误处理
+    perror(&quot;elapsed&quot;);
+    return;
+  }
+
+  for (int round = 0; round &lt; rounds; round++) {
+    uint64_t st = gettime();
+    func();
+    uint64_t ed = gettime();
+    elapsed[round] = ed - st;
+  }
+
+  // TODO: display runtime statistics
+
+  free(elapsed); // OJ 做多了的坏习惯：申请的内存从不释放
+}</code></pre>
+
+
+<div class="fenced fenced-blue">
+<h4 id="_7">实验要求：获取精确时间</h4>
+<p><code>gettime</code> 函数获取当前的运行时间。这是你需要实现的一个挑战——在框架代码里，我们获得了基于秒为单位的时间，因此是非常不精确的。建议你查阅资料，获取更精确的时间 (单位不限于秒/毫秒，还可以是处理器周期等)。</p>
+<p>通过阅读代码，你应该意识到时间统计可能存在一定的误差：例如在 <code>func</code> 执行时，如果正在运行的进程被中断，甚至导致其他进程被调度，那么当前运行的时间就有可能有较大的偏差。尽可能减少这些误差对最终统计信息的影响。</p>
+</div>
+<p><code>lookup</code> 用于查找函数名对应的入口地址。函数列表定义在 <code>trap.h</code> 中。如果你阅读这个函数感到困难，有两点建议：</p>
+<ol>
+<li>查阅互联网上的资料，理解 C 语言的类型系统。这可以帮助你理解 <code>lookup</code> 函数到底接受什么参数、返回什么；</li>
+<li>使用 <code>gcc -E</code> 查看预处理后的文件。</li>
+</ol>
+<pre class="codehilite"><code class="language-c">static void (*lookup(const char *fn))() {
+  #define PAIR(fn) { #fn, fn },
+  struct pair {
+    const char *name;
+    void *ptr; // bad practice! 思考题：为什么？
+  };
+  struct pair lut[] = {
+    PROGRAMS(PAIR)
+  };
+
+  for (int i = 0; i &lt; LENGTH(lut); i++) {
+    struct pair *p = &amp;lut[i];
+    if (strcmp(fn, p-&gt;name) == 0) return p-&gt;ptr;
+  }
+  return print_error;
+}</code></pre>
+
+
+<p>在此基础上，我们希望你评估你 Lab1 中三个 multimod 实现的性能差异。</p>
+<div class="fenced fenced-blue">
+<h4 id="multimod">实验要求：调查 <code>multimod</code> 实现的性能差异</h4>
+<p>首先，你需要把 <code>multimod</code> 的三个实现包含到这个项目中。复制粘贴 <code>.c</code> 文件是一个办法；你也可以使用 <code>#include</code> 包含这些文件。此外，你需要对这些函数进行包装，使得它们的类型符合 <code>void (*)()</code>。<code>multimod</code> (计算 <code>a * b % m</code>) 的性能可能跟以下因素有关：</p>
+<ul>
+<li><code>a</code>, <code>b</code>, <code>m</code> 的大小 </li>
+<li><code>a</code>, <code>b</code> 中二进制 1 的数量</li>
+<li>其他未知因素</li>
+</ul>
+<p>因此，你需要调查在不同设置下 <code>multimod</code> 的性能，并撰写 pdf 格式的实验报告，保存在 <code>perf/</code> 目录下一并提交。</p>
+</div>
+<h3 id="memcpy">例子：<code>memcpy</code> 的性能</h3>
+<p>在上一个实验中，我们实现了汇编版本的 <code>memcpy</code>。但到底汇编实现有没有帮助我们提升性能？我们也对 <code>memcpy</code> 进行了一定的性能评估。在评估程序的性能前，首先应当明确实验的范围和设置：</p>
+<ol>
+<li>我们暂时先关注在顺序复制较大内存时的性能，看怎样的实现能最好地利用好内存和 cache 的带宽，因此我们选取复制 1 MiB 以上的数据的性能；</li>
+<li>我们对比三个实现，其中 <code>memcpy_simple</code> 是 naive 实现；<code>memcpy_asm</code> 是使用 <code>movs</code> 指令的实现； <code>memcpy_unroll</code> 是一个非常诡异的实现 (手工循环展开)；</li>
+<li>内嵌汇编对编译优化并不敏感；而 <code>memcpy_simple</code> 和 <code>memcpy_unroll</code> 则对优化非常敏感，因此我们对比 <code>-O0</code> 到 <code>-O3</code> 优化级别下的性能；</li>
+<li>不同的处理器微架构、缓存、内存等都对性能有很大影响，因此我们在多个平台上进行实验；</li>
+<li>实验运行至少 100 次取观测到的最小值。</li>
+</ol>
+<p>参考实现的代码如下：</p>
+<pre class="codehilite"><code class="language-c">// 教科书上的实现
+void *memcpy_simple(void *dst, const void *src, size_t size) {
+  void *ret = dst;
+  while (size--) {
+    (*(char *)dst++) = (*(char *)src++);
+  }
+  return ret;
+}
+
+
+// Lab2内容，使用movs指令实现
+void *memcpy_asm(void *dst, const void *src, size_t size) {
+  // hidden
+}
+
+// 奇怪的循环展开，会编译出非常长的指令序列
+void *memcpy_unroll(void *dst, const void *src, size_t size) {
+  void *ret = dst;
+  assert(size % 64 == 0); // 假设已对齐到 64 bytes，简化代码
+
+  for (; size; size -= 64) {
+    const uint64_t *s = src;
+    uint64_t *d = dst;
+    d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3];
+    d[4] = s[4]; d[5] = s[5]; d[6] = s[6]; d[7] = s[7];
+    dst = (char *)dst + 64;
+    src = (char *)src + 64;
+  }
+
+  return ret;
+}</code></pre>
+
+
+<p>下图展示了各个 <code>memcpy</code> 实现的复制吞吐量 (纵轴，单位 GiB/s)；横轴是复制的字节数 (单位 MiB)：</p>
+<p><img alt="" src="../static/wiki/ics/2019/img/memcpy-a10-5800k.svg" width="320px" /><img alt="" src="../static/wiki/ics/2019/img/memcpy-pentium-4415y.svg" width="320px" /></p>
+<p><img alt="" src="../static/wiki/ics/2019/img/memcpy-epyc-7401.svg" width="320px" /><img alt="" src="../static/wiki/ics/2019/img/memcpy-i5-7500.svg" width="320px" /></p>
+<p>在不同配置的计算机 (主流 Intel/AMD) 上，性能测试的结果已经显示出很大的不同。如果考虑移动/嵌入式系统，则可能有更大差距。</p>
+<p>无论如何，有一点是非常明了的：glibc 中自带的 <code>memcpy</code> 速度非常之快，在复制大量内存时遥遥领先于其他实现，并且比 <code>movs</code> 汇编指令更快——它使用了 AVX 指令集进行加速。其他一些 (可能有些惊人) 的发现包括：</p>
+<ul>
+<li>gcc 对简单循环在 <code>-O3</code> 优化级别下进行了展开，并使用 AVX 指令集加速，从而得到了仅次于 glibc 的性能；</li>
+<li>AMD EPYC 处理器对 <code>movs</code> 指令硬件实现上的优化远不及 Intel i5；</li>
+<li>手工循环展开虽然显著增加了指令 (尤其在 <code>-O0</code> 不优化时)，但提高指令级的并行度使它的性能显著好于优化的简单循环……</li>
+</ul>
+<div class="fenced fenced-green">
+<h4 id="_8">思考题：实验数据说明了什么？</h4>
+<p>实验数据还有哪些有趣的结论？注意你需要谨慎地从数据中得出结论。例如，上述代码被运行过很多遍取平均，因此仅代表缓存仍然处于较为活跃状态时的实验结果。如果你是性能调优的狂热者，请移步<a href="https://software.intel.com/en-us/download/intel-64-and-ia-32-architectures-optimization-reference-manual">Intel® 64 and IA-32 Architectures Optimization Reference</a>。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

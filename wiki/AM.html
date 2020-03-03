@@ -1,0 +1,198 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>AbstractMachine：抽象计算机</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="abstractmachine">AbstractMachine：抽象计算机</h1>
+<p><img alt="" class="float-right" src="../static/wiki/ics/2018/slides/img/projectn.jpg" width="250px"></img></p>
+<h2 id="_1">简介与文档入口</h2>
+<p>AbstractMachine 是裸机上的 C 语言运行环境，提供 5 组 (15 个) 主要 API，足够实现教学性质的 non-trivial 系统软件 (如操作系统)：</p>
+<ul>
+<li>(TRM) <code>putc</code>/<code>halt</code> - 打印字符/终止硬件执行</li>
+<li>(IOE) <code>io_read/io_write</code> - I/O 设备管理</li>
+<li>(CTE) <code>intr_read</code>/<code>intr_write</code>/<code>yield</code>/<code>kcontext</code> - 中断和上下文管理</li>
+<li>(VME) <code>protect</code>/<code>unprotect</code>/<code>map</code>/<code>ucontext</code> - 虚拟地址空间和用户态上下文管理</li>
+<li>(MPE) <code>cpu</code>/<code>ncpu</code>/<code>atomic_xchg</code> - 多处理器管理</li>
+</ul>
+<hr></hr>
+<p>AbstractMachine 文档：</p>
+<ul>
+<li>简介：<a href="AM_Programs.html">如何为 “裸机” (bare-metal) 写 C 程序？</a></li>
+<li><a href="AM_Spec.html">AbstractMachine 设计与规约</a>、<a href="AM_Devices.html">AbstractMachine 设备文档</a></li>
+<li><a href="AM_Code.html">x86/x86-64 AbstractMachine 代码导读</a></li>
+</ul>
+<h2 id="_2">设计理念</h2>
+<p>我们在 C 程序中调用 AbstractMachine API 就能实现操作系统，从而不需要知道底层硬件的中断、虚拟存储等是如何在指令级实现的——这是计算机系统设计与实现中的一种抽象；一个类似的例子是我们在应用程序里调用 libc 库就能完成绝大部分任务，而不需要知道底层的操作系统 API。这样的设计方法在复杂计算机系统的构造中十分常见：底层系统提供<strong>机制</strong> (mechanism)，上层系统利用这些机制实现<strong>策略</strong> (policy)。典型的机制/策略分离的抽象层有指令集体系结构、系统调用、库函数等；AbstractMachine 属于一种硬件抽象层 (hardware abstraction layer, HAL)。</p>
+<p>AbstractMachine 的设计目标是能在其上容易地实现各类系统软件 (直接需求是实现操作系统)。一个好的机制不仅应当足够简单、健壮，还应该能高效地支持各种策略的实现。然而世界并不是绝对完美的：支持全面的抽象层不可避免会相对庞大；而精简的抽象层则可能无法实现某些策略，或是性能较低。AbstractMachine (指令集体系结构和操作系统之间的抽象层) 作为大家第一个接触的底层系统，我们所做的取舍是使它尽可能 “容易被理解”，不惜在某些时候过度简化或损失性能。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="abstractmachine">AbstractMachine 是个怎样的抽象层？</h4>
+<p>在 OS Labs 中，我们从 “操作系统是一个 C 程序” 开始，假设硬件和软件之间存在某种约定，硬件提供了足够的机制 (mechanisms) 设置好一个没有标准库 C 程序的运行环境，其中有栈区、静态数据、堆区；代码从 main 函数开始执行。</p>
+<p>大家一定会非常困惑：C 程序是怎么在没有操作系统的计算机上运行起来的呢？？这里做一个简单的回答：硬件和软件之间有一些达成默契的约定：有些存储器 (ROM) 能直接以内存映射的方式被处理器访问；因此 CPU Reset 之后，只要将 PC 指针设置成某个固定的位置即可。ROM 中的代码 (firmware，厂商编写) 会加载存储设备上的程序。</p>
+<p>但此时，处理器仍然处于接近于初始化的 “原始” 状态。操作系统代码会完成大量的初始化工作，例如 GDT, APIC, IDT, TSS, 初始页表……因此很多同学阅读网上教程的时候，复杂的概念层出不穷，弄了半天才打印个 Hello World。</p>
+<blockquote>
+<p>普遍问题：在花了很多时间把这些概念搞清楚以后，还没开始施展拳脚写真正的操作系统，书就结束了。当然更多的人是直接倒在了前面：无论讲解得多么好，都不可能在短时间内让你彻底理清 x86 手册。x86 就是 x86；要是容易的话，大家做 NEMU 实验就不会那么痛苦了。</p>
+</blockquote>
+<p>为什么大家会遇到这样的困难呢？虽然操作系统教科书上一直强调 “<strong>机制与策略分离</strong>”，但在 “写个操作系统” 方面，机制和策略却没有很好地被分开。主流的教程倾向于对着 x86 讲操作系统；好处是资料详实，缺点是体系结构太过复杂，尤其是 x86-64 (操作系统说白了就一 C 程序，我干嘛要去整 GDT, IDT, APIC, TSS?)。简单的体系结构 (MIPS, RISC-V) 容易理解，但资料和工具链也相应的不如 x86。</p>
+<p>实际上，<strong>x86 的确提供了足够的机制用来实现操作系统，但这不代表它提供了初学者实现操作系统的最佳机制</strong>。指令集是硬件设计者兼顾上层软件需求和物理硬件实现难度时做出各种权衡得来的，我们并不必要理解这些，做一个硬件的抽象层，能够帮助 C 代码访问硬件提供的用于实现操作系统的机制，就有了 AbstractMachine。</p>
+</div></div></div>
+
+<h2 id="_3">安装与配置</h2>
+<p><code>os-workbench</code> 中已经包含了 AbstractMachine 代码。如果你使用 Debian/Ubuntu 系统，你可能会遇到一些命令执行失败的情况，通常需要以下软件包 (也可能需要其他软件包，请 STFW)：</p>
+<ul>
+<li><code>gcc-multilib</code> (交叉编译用)</li>
+<li><code>libsdl2-dev</code> (图形库)</li>
+<li><code>qemu-system</code> (全系统模拟器)</li>
+</ul>
+<p>如果你希望建立自己的 AbstractMachine 项目 (例如之后的 Hello World 例子) 或编译运行 AbstractMachine 代码中自带的例子 (microbench, fceux, litenes, ...)，需要先配置好 <code>AM_HOME</code> 环境变量 (请 STFW 什么是环境变量。可以用 <code>env</code> 命令查看当前的环境变量)，把它设置为 <code>os-workbench/abstract-machine</code> 目录的<strong>绝对路径</strong>：</p>
+<pre class="codehilite"><code class="language-bash">export AM_HOME=/.../os-workbench/abstract-machine</code></pre>
+
+
+<p>你可以把这一行写在 <code>.bashrc</code>/<code>.zshrc</code> 中，使得不必每次打开终端都重新配置。如果你第一次使用 Linux，这会是一个比较痛苦的过程——你需要学习 Shell 有关的基础知识。请先阅读<a href="OS_Guide.html">生存指南</a>。</p>
+<h2 id="hello-abstractmachine">Hello, AbstractMachine</h2>
+<p>完成必要软件的安装和正确的 <code>AM_HOME</code> 配置后，我们就可以在 AbstractMachine 上编程了。在文件系统的任意目录中创建一个 <code>.c</code> 文件和 <code>Makefile</code> (参考 <code>man 3 stdarg</code>)：</p>
+<pre class="codehilite"><code class="language-c">// hello.c
+#include &lt;am.h&gt;
+#include &lt;stdarg.h&gt;
+
+void print(const char *s, ...) {
+  va_list ap;
+  va_start(ap, s);
+  while (s) {
+    for (; *s; s ++) _putc(*s);
+    s = va_arg(ap, const char *);
+  }
+  va_end(ap);
+}
+
+int main(const char *args) {
+  print("\"", args, "\"", " from " __ISA__ " program!\n", NULL);
+  return 0;
+}</code></pre>
+
+
+<pre class="codehilite"><code class="language-Makefile"># Makefile
+NAME := hello
+SRCS := hello.c
+include $(AM_HOME)/Makefile.app # 复制粘贴 AbstractMachine 下的 Makefile</code></pre>
+
+
+<p>编译、链接、运行都是 AbstractMachine 中的代码帮忙搞定。用 <code>ARCH</code> 环境变量指定编译的目标体系结构：</p>
+<pre class="codehilite"><code>make ARCH=x86_64-qemu</code></pre>
+
+
+<p>会自动完成编译，得到 <code>build/</code> 目录下的若干文件：</p>
+<pre class="codehilite"><code class="language-text">build
+├── hello-x86_64-qemu    // 可运行、包含 bootloader 等的磁盘镜像
+├── hello-x86_64-qemu.o  // hello 项目的二进制文件
+└── x86_64-qemu
+    ├── hello.d          // hello.c 依赖的头文件 (gcc -MMD 生成)
+    └── hello.o          // 编译 hello.c 得到的目标文件</code></pre>
+
+
+<p>不妨用 <code>objdump -d</code> 命令查看 <code>hello-x86_64-qemu.o</code> 反汇编后的代码，是直接运行在裸机上的 C 程序代码，程序的入口是 <code>_start</code>。Makefile 也自带了运行功能，传入 <code>mainargs</code> 环境变量，即可将参数传递给 <code>main</code> 函数：</p>
+<pre class="codehilite"><code class="language-text">$ make run ARCH=x86_64-qemu mainargs="Hello World"
+...
+"Hello World" from x86_64 program!
+CPU #0 Halt (00).</code></pre>
+
+
+<p>你可以尝试其他的 <code>ARCH</code> 环境变量：<code>x86-qemu</code>, <code>native</code>，在不同平台下运行。你也可以 export 默认的 <code>ARCH=x86_64-qemu</code>，避免每次键入。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="__isa__">思考题：<code>__ISA__</code></h4>
+<p>这个宏不是 C 标准里定义的，那么是谁定义的？当我们设置不同的 <code>ARCH</code>，打印的 <code>__ISA__</code> 也各不相同。这一定是 Makefile 做的。怎么知道呢？UNIX 世界早就给我们提供了足够的工具来搞定这些日常琐事：</p>
+<pre class="codehilite"><code>find . -type f | xargs grep -ne __ISA__</code></pre>
+
+
+<p>(请 RTFM 理解这个命令的含义)。我们能定位到 <code>Makefile.compile</code> 中的一行代码，将 <code>__ISA__</code> 的定义使用 gcc 的 <code>-D</code> 选项加入了 <code>CFLAGS</code>。</p>
+</div></div></div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

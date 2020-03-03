@@ -1,0 +1,283 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Lab2：程序的机器表示</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="lab2">Lab2：程序的机器表示</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">小实验说明</h4>
+<p>小实验 (Labs) 是 ICS 这门课程里的一些综合编程题，旨在结合课堂知识解决一些实际中的问题。因为问题来自实际，所以有时候未必能立即在课本上找到相关知识的答案，而是需要“活学活用”。因此，大家需要利用互联网上的知识解决这些问题，但<strong>不要</strong>试图直接搜索这些问题的答案，即便有也不要点进去 (也请自觉不要公开发布答案)。</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="_2">实验说明</h4>
+<p>请先阅读<a href="ICS2019_Code.html">《计算机系统基础》Labs 须知</a>。</p>
+<p>获取代码：在 <code>ics-workbench</code> 中执行</p>
+<pre class="codehilite"><code class="language-bash">git pull origin lab2</code></pre>
+
+
+<p>提交方法：在 <code>asm</code> 目录下设置好 <code>STUID</code>, <code>STUNAME</code> 环境变量后，执行 <code>make submit</code> 提交。如果有一些心得体会，可以提交实验报告简单标明；也可以不提交实验报告。</p>
+</div>
+<h2 id="_3">收到的提交</h2>
+<table class="submissions"><tr><td>161240007<br><span class="submit-date">(21:09 Jan 20)</span></td><td>161240045<br><span class="submit-date">(20:16 Dec 28)</span></td><td>171180589<br><span class="submit-date">(22:25 Dec 25)</span></td><td>171180593<br><span class="submit-date">(15:18 Dec 30)</span></td><td>171820548<br><span class="submit-date">(14:23 Jan 01)</span></td><td>171860609<br><span class="submit-date">(20:13 Jan 11)</span></td><td>181180200<br><span class="submit-date">(04:43 Jan 12)</span></td></tr><tr><td>181220001<br><span class="submit-date">(20:34 Jan 12)</span></td><td>181220002<br><span class="submit-date">(17:58 Dec 24)</span></td><td>181220003<br><span class="submit-date">(01:57 Jan 12)</span></td><td>181220004<br><span class="submit-date">(16:37 Dec 20)</span></td><td>181220005<br><span class="submit-date">(23:08 Dec 25)</span></td><td>181220010<br><span class="submit-date">(19:18 Dec 26)</span></td><td>181220011<br><span class="submit-date">(20:37 Dec 26)</span></td></tr><tr><td>181220012<br><span class="submit-date">(17:12 Jan 10)</span></td><td>181220013<br><span class="submit-date">(08:42 Jan 12)</span></td><td>181220014<br><span class="submit-date">(15:10 Dec 31)</span></td><td>181220016<br><span class="submit-date">(21:54 Dec 22)</span></td><td>181220018<br><span class="submit-date">(15:34 Jan 08)</span></td><td>181220019<br><span class="submit-date">(00:40 Dec 31)</span></td><td>181220022<br><span class="submit-date">(21:48 Dec 19)</span></td></tr><tr><td>181220026<br><span class="submit-date">(14:05 Jan 02)</span></td><td>181220028<br><span class="submit-date">(23:54 Dec 30)</span></td><td>181220029<br><span class="submit-date">(21:29 Dec 24)</span></td><td>181220030<br><span class="submit-date">(00:03 Dec 20)</span></td><td>181220031<br><span class="submit-date">(15:24 Dec 25)</span></td><td>181220032<br><span class="submit-date">(23:04 Jan 11)</span></td><td>181220033<br><span class="submit-date">(15:47 Jan 12)</span></td></tr><tr><td>181220034<br><span class="submit-date">(00:40 Dec 27)</span></td><td>181220035<br><span class="submit-date">(23:09 Jan 05)</span></td><td>181220036<br><span class="submit-date">(14:22 Dec 29)</span></td><td>181220038<br><span class="submit-date">(22:17 Dec 21)</span></td><td>181220039<br><span class="submit-date">(20:48 Jan 08)</span></td><td>181220040<br><span class="submit-date">(15:49 Jan 12)</span></td><td>181220041<br><span class="submit-date">(19:48 Jan 01)</span></td></tr><tr><td>181220043<br><span class="submit-date">(13:53 Jan 04)</span></td><td>181220044<br><span class="submit-date">(22:40 Jan 12)</span></td><td>181220045<br><span class="submit-date">(23:35 Dec 26)</span></td><td>181220046<br><span class="submit-date">(16:09 Dec 25)</span></td><td>181220047<br><span class="submit-date">(20:50 Jan 11)</span></td><td>181220048<br><span class="submit-date">(17:57 Dec 30)</span></td><td>181220049<br><span class="submit-date">(19:07 Dec 17)</span></td></tr><tr><td>181220051<br><span class="submit-date">(21:37 Jan 12)</span></td><td>181220052<br><span class="submit-date">(00:05 Dec 20)</span></td><td>181220054<br><span class="submit-date">(22:35 Jan 12)</span></td><td>181220055<br><span class="submit-date">(16:16 Dec 26)</span></td><td>181220056<br><span class="submit-date">(20:59 Dec 30)</span></td><td>181220057<br><span class="submit-date">(20:53 Jan 09)</span></td><td>181220058<br><span class="submit-date">(22:23 Jan 12)</span></td></tr><tr><td>181220060<br><span class="submit-date">(00:01 Dec 20)</span></td><td>181220061<br><span class="submit-date">(22:44 Dec 21)</span></td><td>181220062<br><span class="submit-date">(22:53 Jan 21)</span></td><td>181220063<br><span class="submit-date">(17:04 Oct 29)</span></td><td>181220064<br><span class="submit-date">(15:52 Dec 21)</span></td><td>181220065<br><span class="submit-date">(16:56 Jan 12)</span></td><td>181220067<br><span class="submit-date">(23:24 Dec 20)</span></td></tr><tr><td>181220068<br><span class="submit-date">(19:57 Jan 17)</span></td><td>181220071<br><span class="submit-date">(00:21 Dec 28)</span></td><td>181220072<br><span class="submit-date">(19:11 Dec 23)</span></td><td>181220073<br><span class="submit-date">(23:43 Jan 12)</span></td><td>181220074<br><span class="submit-date">(10:30 Dec 28)</span></td><td>181220075<br><span class="submit-date">(13:18 Dec 23)</span></td><td>181220076<br><span class="submit-date">(23:54 Jan 11)</span></td></tr><tr><td>181220077<br><span class="submit-date">(15:15 Jan 11)</span></td><td>181220078<br><span class="submit-date">(01:23 Dec 27)</span></td><td>181220079<br><span class="submit-date">(23:40 Jan 12)</span></td><td>181220080<br><span class="submit-date">(21:16 Dec 22)</span></td><td>181220081<br><span class="submit-date">(23:58 Jan 12)</span></td><td>181240004<br><span class="submit-date">(15:44 Dec 29)</span></td><td>181240008<br><span class="submit-date">(18:45 Jan 12)</span></td></tr><tr><td>181240010<br><span class="submit-date">(13:57 Jan 04)</span></td><td>181240014<br><span class="submit-date">(12:08 Jan 12)</span></td><td>181240016<br><span class="submit-date">(23:05 Jan 17)</span></td><td>181240019<br><span class="submit-date">(14:33 Jan 04)</span></td><td>181240020<br><span class="submit-date">(23:46 Dec 04)</span></td><td>181240030<br><span class="submit-date">(15:00 Dec 21)</span></td><td>181240035<br><span class="submit-date">(01:12 Dec 19)</span></td></tr><tr><td>181240045<br><span class="submit-date">(10:31 Jan 02)</span></td><td>181240047<br><span class="submit-date">(15:47 Jan 12)</span></td><td>181240050<br><span class="submit-date">(20:45 Dec 31)</span></td><td>181240055<br><span class="submit-date">(20:05 Jan 10)</span></td><td>181240063<br><span class="submit-date">(11:28 Jan 12)</span></td><td>181240064<br><span class="submit-date">(17:48 Dec 23)</span></td><td>181240068<br><span class="submit-date">(02:42 Dec 29)</span></td></tr><tr><td>181240078<br><span class="submit-date">(22:52 Dec 07)</span></td><td>181240082<br><span class="submit-date">(17:42 Jan 10)</span></td><td>181250012<br><span class="submit-date">(23:42 Nov 27)</span></td><td>181250097<br><span class="submit-date">(23:18 Jan 05)</span></td><td>181250125<br><span class="submit-date">(18:45 Jan 11)</span></td><td>181250177<br><span class="submit-date">(22:31 Dec 09)</span></td><td>181250195<br><span class="submit-date">(02:00 Dec 14)</span></td></tr><tr><td>181830196<br><span class="submit-date">(21:48 Jan 12)</span></td><td>181840013<br><span class="submit-date">(23:56 Jan 12)</span></td><td>181840064<br><span class="submit-date">(13:50 Dec 08)</span></td><td>181840135<br><span class="submit-date">(23:04 Jan 01)</span></td><td>181840204<br><span class="submit-date">(13:41 Nov 28)</span></td><td>181840264<br><span class="submit-date">(18:39 Jan 11)</span></td><td>181840273<br><span class="submit-date">(11:27 Jan 11)</span></td></tr><tr><td>181840326<br><span class="submit-date">(01:48 Dec 21)</span></td><td>181850236<br><span class="submit-date">(20:05 Jan 12)</span></td><td>181860020<br><span class="submit-date">(23:03 Dec 15)</span></td><td>181860035<br><span class="submit-date">(15:11 Dec 20)</span></td><td>181860066<br><span class="submit-date">(23:20 Jan 12)</span></td><td>181860104<br><span class="submit-date">(20:19 Dec 21)</span></td><td>181860124<br><span class="submit-date">(10:19 Dec 07)</span></td></tr><tr><td>181860134<br><span class="submit-date">(00:07 Dec 10)</span></td><td>181860137<br><span class="submit-date">(20:26 Dec 28)</span></td><td>181860152<br><span class="submit-date">(21:39 Dec 30)</span></td><td>181860158<br><span class="submit-date">(21:19 Dec 22)</span></td><td>181870015<br><span class="submit-date">(21:17 Dec 24)</span></td><td></td><td></td></tr></table>
+
+<h2 id="_4">实验描述</h2>
+<div class="fenced fenced-blue">
+<h4 id="_5">背景</h4>
+<p>C 语言作为一种 “高级的低级语言”，其中一个很大的特性就是能无缝地和汇编语言交互，即在程序中嵌入 (inline) 汇编。嵌入的汇编代码甚至可以参与到编译器优化中 (嵌入的指令不能被改变，但嵌入的汇编可能被移动、删除等)。在这个实验中，我们体验如何直接在 C 语言里合理地与编译器交互，直接操纵机器。</p>
+</div>
+<p>本实验借助 x86-64 内联汇编实现以下函数 (框架已在 <code>asm-impl.c</code>) 中：</p>
+<pre class="codehilite"><code class="language-c">// 返回有符号 64 位整数 a + b 的数值
+int64_t asm_add(int64_t a, int64_t b);
+
+// 返回无符号 64 位整数 x 二进制表示中 1 的数量
+int asm_popcnt(uint64_t x);
+
+// C 标准库中的 memcpy，用于复制两段不相交的内存
+void *asm_memcpy(void *dest, const void *src, size_t n);
+
+// C 标准库中的 setjmp/longjmp，用于控制流长跳转
+int asm_setjmp(asm_jmp_buf env);
+void asm_longjmp(asm_jmp_buf env, int val);</code></pre>
+
+
+<div class="fenced fenced-red">
+<h4 id="_6">我们如何测试你的代码？</h4>
+<p>框架代码中已经包含了一定数量的测试。但我们有更多的测试用例，会单独编译你的 <code>asm-impl.c</code> 并和测试代码链接。你只需修改待实现函数的函数体即可。</p>
+</div>
+<h3 id="_7">待实现函数说明</h3>
+<p>前面三个函数的行为非常明确，你只需用汇编实现以下函数的行为即可，通过阅读例子和文档，熟悉内嵌汇编的写法：</p>
+<pre class="codehilite"><code class="language-c">int64_t asm_add(int64_t a, int64_t b) {
+  return a + b;
+}
+int asm_popcnt(uint64_t x) {
+  int s = 0;
+  for (int i = 0; i &lt; 64; i++) {
+    if ((x &gt;&gt; i) &amp; 1) s++;
+  }
+  return s;
+}
+void *asm_memcpy(void *dest, const void *src, size_t n) {
+  return memcpy(dest, src, n);
+}</code></pre>
+
+
+<p>大家可能对 <code>setjmp</code>/<code>longjmp</code> 比较陌生，属于不太常用的 C 标准库函数。和一对函数用于实现控制流的长跳转。它们的声明包含在 <code>setjmp.h</code>，手册 (<code>man setjmp</code>) 的内容与我们需要实现的 <code>asm_setjmp</code>/<code>asm_longjmp</code> 行为一致：</p>
+<pre class="codehilite"><code class="language-c">int setjmp(jmp_buf env);
+void longjmp(jmp_buf env, int val);</code></pre>
+
+
+<blockquote>
+<p><code>setjmp</code>/<code>longjmp</code> functions are used for performing "nonlocal gotos": transferring execution from one          function to a predetermined location in another function.  The <code>setjmp()</code> function dynamically  establishes  the          target to which control will later be transferred, and <code>longjmp()</code> performs the transfer of execution.</p>
+<p>The  <code>setjmp()</code>  function saves various information about the calling environment (typically, the stack pointer,          the instruction pointer, possibly the values of other registers and the signal mask) in  the  buffer  env  for          later use by <code>longjmp()</code>.  In this case, <code>setjmp()</code> returns 0.</p>
+<p>The  <code>longjmp()</code> function uses the information saved in <code>env</code> to transfer control back to the point where <code>setjmp()</code>          was called and to restore ("rewind") the stack to its state at the time of the <code>setjmp()</code>  call.   In  addition,          and  depending  on  the  implementation (see NOTES), the values of some other registers and the process signal          mask may be restored to their state at the time of the <code>setjmp()</code> call.</p>
+<p>Following a successful <code>longjmp()</code>, execution continues as if <code>setjmp()</code> had returned for  a  second  time.   This          "fake"  return can be distinguished from a true <code>setjmp()</code> call because the "fake" return returns the value provided in <code>val</code>.  If the programmer mistakenly passes the value <code>0</code> in <code>val</code>, the "fake" return will  instead  return <code>1</code>.                  </p>
+</blockquote>
+<p>简单来说，<code>setjmp</code> 会在调用时对当前程序的运行状态做一个<strong>轻量级快照</strong> (保存在 <code>env</code> 参数中)，并返回 <code>0</code>。只要 <code>setjmp</code> 时调用的函数不返回，程序在运行过程中可以随时调用 <code>longjmp</code> 跳转到 <code>setjmp</code> 快照时的程序状态，无论中间间隔了多少函数调用，并且给 <code>setjmp</code> 一个特定的返回值。我们可以通过下面的小例子理解 <code>setjmp</code>/<code>longjmp</code> 的行为：</p>
+<pre class="codehilite"><code class="language-c">#include &lt;setjmp.h&gt;
+#include &lt;stdio.h&gt;
+
+jmp_buf env;
+
+int f(int n) {
+  if (n &gt;= 8) longjmp(env, n); // 某个条件达成时，恢复快照
+  printf(&quot;Call f(%d)\n&quot;, n);
+  f(n + 1);
+}
+
+int main() {
+  int r = setjmp(env); // 快照
+  if (r == 0) {
+    f(1);
+  } else { // longjmp goes here
+    printf(&quot;Recursion reaches %d\n&quot;, r);
+  }
+}</code></pre>
+
+
+<p>利用 <code>setjmp</code>/<code>longjmp</code>，大家可以在编写递归搜索 (DFS) 时，在找到一个合法解以后立即退出递归。<code>setjmp</code>/<code>longjmp</code> 也是计算机系统研究中一个有用的 hacking 技巧——它能以非常小的代价实现进程状态的快照。请大家 STFW 理解 <code>jmp_buf</code> 的定义和这两个函数的用法。在本实验中，用内嵌汇编实现 <code>asm_setjmp</code> 快照、 <code>asm_longjmp</code> 长跳转，但无需考虑信号 (信号机制将在后续课程中介绍)。</p>
+<div class="fenced fenced-blue">
+<h4 id="_8">常见的困惑：这玩意有啥用？</h4>
+<p>当大家 STFW 时，可能会发现理解 <code>setjmp</code>/<code>longjmp</code> 时遇到一定的困难，并且不知道我们到底为什么要用这样的作业折磨大家。此时一定是想放弃的——抱一下大腿、去网上找一个答案就完事了。然而你可以选择再坚持一下，当你完成的时候，你会对程序的机器级表示有全新、深刻的理解。</p>
+</div>
+<h2 id="inline-assembly">内嵌汇编 (inline assembly)</h2>
+<h3 id="_9">先看一个例子</h3>
+<p>在解释内嵌汇编的语法等之前，我们先看一个实现 “加一” 的例子：</p>
+<pre class="codehilite"><code class="language-c">int inc(int x) {
+  asm (&quot;incl %[t];&quot;
+       : [t] &quot;+r&quot;(x)
+      );
+  return x;
+}</code></pre>
+
+
+<p>其中，内嵌汇编是一条 <code>incl</code> 指令，它用 “<code>[t]</code>” 指定了一个名为 “t” 的操作数 (operand)，它能够被分配到任意寄存器，并且同时作为输入和输出 (<code>"+r"</code>)，在内嵌汇编被调用前，编译器会确保 <code>%[t]</code> 寄存器的值是 <code>x</code> 的数值。它会被编译成如下汇编代码 (使用 <code>-Os</code> 优化大小)：</p>
+<pre class="codehilite"><code class="language-c">0000000000000000 &lt;inc&gt;:
+   0:   89 f8                   mov    %edi,%eax
+   2:   ff c0                   inc    %eax
+   4:   c3                      retq</code></pre>
+
+
+<p>在上述代码中，<code>[t]</code> 被分配为了 <code>eax</code> 寄存器。</p>
+<h3 id="_10">内嵌汇编</h3>
+<p>在本实验中，我们只需要用到如下的内嵌汇编语法 (内嵌汇编可以跳转到程序的其他部分，不过我们暂时用不到)</p>
+<pre class="codehilite"><code class="language-c">asm ( // 1. 汇编代码 (字符串)
+    : // 2. 汇编代码的输出操作数
+    : // 3. 汇编代码的输入操作数
+    : // 4. 汇编代码可能改写的寄存器 (clobber)
+    );</code></pre>
+
+
+<p>其中：</p>
+<ol>
+<li>
+<p>汇编代码就是一个普通的 C 字符串。汇编代码会原样传递给汇编器 (assembler)。汇编代码用换行或 “;” 隔开，因此如果要书写多行的汇编，可以借助 C 语言预编译字符串拼接：</p>
+<pre class="codehilite"><code>asm (&quot;movl $1, %eax\n&quot;
+     &quot;movl $1, %ebx;&quot;
+     ... );
+...</code></pre>
+
+
+</li>
+<li>
+<p>输出操作数，相当于 “告诉” 编译器内联汇编的结果放在了哪里，并且希望把它们复制给 C 语言世界里的什么变量。之前的 <code>"+r"(x)</code> 的含义就是告诉 gcc 可以任意选择寄存器，但输出给 <code>x</code> 变量；</p>
+</li>
+<li>输入操作数，用于把 C 语言世界中的变量值传递进内嵌汇编，例如 <code>"a"(x)</code> 表示把 <code>x</code> 的值复制给 <code>rax</code> 寄存器。</li>
+<li>汇编代码中可能修改的寄存器。编译器在将 C 代码编译成汇编代码时，会为局部变量和临时结果分配寄存器或堆栈上的内存。因此，内嵌汇编必须不遗漏地声明它们可能会修改的寄存器，否则可能会产生毁灭性的后果。</li>
+</ol>
+<div class="fenced fenced-red">
+<h4 id="_11">理解内嵌汇编</h4>
+<p>编译器<strong>完全不知道</strong>汇编代码的含义，而是把那段汇编代码看成一个黑盒子 (black box)——你甚至可以使用 <code>.byte</code> 直接用二进制方式书写指令序列。汇编代码直到 assembly 阶段，才会被汇编器解析。</p>
+<p>因此，你必须非常谨慎地 “告诉” 编译器汇编代码的行为——黑盒子的输入、输出是什么，以及黑盒子可能影响的寄存器 (clobber)。带着这个基本概念，阅读文档时应该不再感到困难了。</p>
+</div>
+<p>由于内嵌汇编是一个行为明确的 “黑盒子”，因此编译器能对内嵌汇编进行相当程度的优化，例如如果我们将刚才的代码稍作修改：</p>
+<pre class="codehilite"><code class="language-c">int inc(int y, int x) {
+  for (int i = 0; i &lt; y; i++) {
+    asm (&quot;incl %[x];&quot;
+         : [x] &quot;+r&quot;(x)
+        );
+  }
+  return x;
+}</code></pre>
+
+
+<pre class="codehilite"><code class="language-assembly">0000000000000000 &lt;inc&gt;:
+   0:   89 f0                   mov    %esi,%eax
+   2:   31 d2                   xor    %edx,%edx
+   4:   39 fa                   cmp    %edi,%edx
+   6:   7d 06                   jge    e &lt;inc+0xe&gt;
+   8:   ff c0                   inc    %eax
+   a:   ff c2                   inc    %edx
+   c:   eb f6                   jmp    4 &lt;inc+0x4&gt;
+   e:   c3                      retq</code></pre>
+
+
+<p>可以看到，gcc 依然正确地把 <code>x</code> 分配给了 <code>eax</code> 寄存器，并将循环变量分配给了 <code>edx</code> 寄存器。</p>
+<h3 id="_12">文档</h3>
+<p>在这个实验中，你需要 RTFM。我们提供了一些编写内嵌汇编时常用的文档。在做这个实验的过程中，你会发现官方文档还是最好用的：</p>
+<ul>
+<li>GCC 官方文档：<a href="https://gcc.gnu.org/onlinedocs/gcc/Using-Assembly-Language-with-C.html">How to Use Inline Assembly Language in C Code</a>，权威、全面。</li>
+<li><a href="https://ibiblio.org/gferg/ldp/GCC-Inline-Assembly-HOWTO.html">GCC-Inline-Assembly-HOWTO</a>，更容易上手，有相当多的例子供大家学习和参考，但部分内容过时 (少量代码无法在当前 gcc 编译通过)。</li>
+</ul>
+<h3 id="_13">提示</h3>
+<p>最后，你们可能会在实现 <code>setjmp</code>/<code>longjmp</code> (以及其他函数) 时遇到一定的困难，出现错误的计算、segmentation fault 等。</p>
+<div class="fenced fenced-blue">
+<h4 id="_14">怎么办？</h4>
+<p>不要忘记：在你感到不爽的时候，一定有工具可以帮你。如果想排查自己的汇编哪里错了，最好的办法就是跑一跑，调试它——你的汇编不会很长，如果能动态在运行时检查程序的执行流和寄存器的值，那真是再好不过了。好消息是 gdb 就能帮我们搞定！以下就是一个调试汇编的例子：</p>
+<center><p><img alt="" src="../static/wiki/ics/2019/img/gdb-asm.jpg" width="500px" /></p></center><p>怎么样，非常方便吧？涉及到两个小 trick：</p>
+<ol>
+<li>使用了 gdb 的脚本，不必每次都重复键入大量的命令 (<code>file asm-64</code>, <code>b asm_setjmp</code> 等等)；</li>
+<li>使用了 asm layout (想同时观看寄存器的数值可以使用 regs layout)，很方便地看到汇编代码。</li>
+</ol>
+<p>通过这个例子，你理解到 STFW 是非常重要的——好的工具能极大提高你的效率。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

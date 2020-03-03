@@ -1,0 +1,127 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>操作系统概述</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">操作系统概述</h1>
+<p>操作系统：统一管理和调度计算机硬件中的各类资源、为各类应用程序和系统软件提供服务。类似的定义可以在一万本参考书上看到，这里就不多说了。</p>
+<h2 id="_2">操作系统的历史</h2>
+<p>一份很好的材料是Operating Systems: Three Easy Pieces参考书的<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/intro.pdf">2.6节：Some History</a>，讲述了操作系统发展的故事。</p>
+<h2 id="_3">应用程序眼中的操作系统</h2>
+<p>应用程序是多种多样的：Hello World、算法题解、ICS上实现的x86模拟器、Shell、编译器、IDE……这些都是操作系统上运行的应用程序。不仅如此，操作系统还要支持各类不那么显然的应用程序的运行：</p>
+<ul>
+<li>任务管理器：监控系统运行的状态、运行的程序，并能对程序执行诸如杀死一类的操作。</li>
+<li>杀毒软件、调试器、游戏修改器/外挂：它们拦截、监控系统中运行的程序，并有时对程序行为作出干预。</li>
+</ul>
+<p>因此，操作系统一方面需要提供程序的<strong>执行的环境和相应的资源</strong>(每个程序都需要拥有自己的代码、数据、堆栈，并且在CPU上实际运行这些指令)，还要提供<strong>和操作系统世界中其他对象交互的方法和约定</strong>。让每个程序都直接访问硬件无疑会让整个系统非常难以管理，所以为了让大家都能有序地访问系统里的资源，从最早的操作系统开始(操作系统相当于一系列的库函数，调用库函数的程序能够相互协作)，这样的秩序就已经建立。</p>
+<p>不同的操作系统完全可以有不同的方法和约定。首先要规定的是操作系统里有什么对象(东西)、它们可以用来干什么。比如文件可以看成是一个字符数组，可以从中读出一部分，或者向其中写入一部分。每个文件有它的名字、被组织成目录树的结构，等等。Windows的文件系统就和UNIX/Linux设计有所差别。</p>
+<p>然后还要规定对象怎么访问。在C++里，我们直接调用对象的成员函数，比如<code>car.go()</code>，被翻译成函数调用指令直接在处理器上执行，对象用地址表示。操作系统里的对象同样需要一种表示方法。Windows很自然地使用句柄(Handle)引用操作系统中的各种对象(你可以在任务管理器里看到每个进程拥有的句柄数)，一个句柄就好像一个“指向操作系统内部”的指针，例如代表了“某个文件”、“某个设备”。在Google的Fuchsia OS内核<a href="https://fuchsia.googlesource.com/zircon/">Zircon微内核</a>里也使用句柄引用其中的对象。Linux/UNIX没有使用这个思路，而是“一切皆文件(everything is a file)”，通过文件描述符来访问系统中的各种对象。</p>
+<p>总的来说，<strong>每个设计都有它的取舍</strong>，目的都是<strong>更好地服务应用程序实现各类功能</strong>。例如，Windows应用程序使用<a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms682629">EnumProcesses</a> API获取进程列表，而Linux应用程序则通过扫描<code>/proc</code>目录下的信息实现。</p>
+<h2 id="_4">应用程序与操作系统的交互</h2>
+<p><code>printf("Hello, World\n");</code>这段代码究竟是怎样运行在计算机系统上的？</p>
+<p>一个程序，纵然拥有独立管理的内存(代码、数据、堆栈……)，但它也只能执行“计算”的任务——无论处理器计算多久，不过是把内存里的数据取出来、算一算、放回去，甚至连终止的行为都是不明确的——从<code>main</code>函数<code>return</code>的行为似乎都没有定义。实际上，编译后的程序的入口地址是<code>_start</code>，会调用<code>__libc_start_main@plt</code>，它会在<code>main</code>返回后做一系列的善后工作(试试<code>man 3 atexit</code>)。这就是为什么不推荐你在程序里使用<code>__</code>开头的标识符了——它们可能覆盖库函数中的标识符，造成混乱。</p>
+<p>所以，库函数一定和操作系统<strong>达成了某种约定</strong>，能够<strong>告诉操作系统自己想完成的工作，然后交给操作系统执行</strong>：这就是<strong>系统调用</strong>。这些约定的设计和实现就构成了操作系统。这门课主要讲解对现今操作系统影响最大的一组设计和实现——UNIX。在理解UNIX以后，你将不难理解其他类型的设计和实现，以及它们在各个方面做出的权衡：</p>
+<ul>
+<li>系统调用直接反应进程想做的操作，直接通过中断(或系统调用)指令陷入操作系统内核执行，执行完毕后返回。这是Linux/UNIX的设计和实现方式。</li>
+<li>系统调用可以只是给一个系统里的另一个进程发送一条消息，等待他把功能执行完后返回。这样的系统只需要进程相关的系统调用——微内核的设计就是如此。macOS, Windows, Fuchsia OS就是这样。</li>
+<li>应用不直接运行在操作系统上。例如Android App运行在Java虚拟机(Android Runtime)上，调用Java实现的Framework API完成各类操作。App会用到很多操作系统提供的功能，但都在JVM的封装之上。</li>
+</ul>
+<p>总之，操作系统会以他认为合适的方式给应用程序提供一个世界运行的概念体系和API接口。</p>
+<p>最后让我们回到<code>printf</code>。<code>printf</code>是库函数的一部分。库函数封装了一些应用程序常用的功能，并且在必要时完成与操作系统的交互。Windows API就是一系列的库函数，而Linux应用程序构建的基础是C标准库和系统调用。<code>printf</code>的绝大部分都不需要操作系统——试想一下，你完全不必借助操作系统就能实现<code>sprintf</code>把格式字符串和参数转换成字符串。但有一点是不能的，试想以下两个大家常用的场景：</p>
+<ul>
+<li><code>./a.out &gt; a.txt</code>能把<code>printf</code>的结果重定向到文件。</li>
+<li><code>./a.out | grep Hello</code>能把<code>printf</code>的结果重定向到另一个程序的输入。</li>
+</ul>
+<p>也就是说，我们在<code>printf</code>的时候，并没有指定输出到哪里，它可能是文件、可能是另一个进程的输入。这就是操作系统、库函数和应用程序之间的约定——它总是输出到<code>stdout</code>，也就是编号为“1”的那个<a href="https://en.wikipedia.org/wiki/File_descriptor">文件描述符</a>。</p>
+<p>这些各式各样的约定(进程、线程、地址空间、文件……)应该怎样设计、如何实现？这就是本课程回答的问题。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

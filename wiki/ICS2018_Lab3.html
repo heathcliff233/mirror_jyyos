@@ -1,0 +1,488 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Lab3: 链接与加载 (2)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="lab3-2">Lab3: 链接与加载 (2)</h1>
+<div class="fenced fenced-red">
+<h4 id="2018122-235959">⚠️ 截止日期: 2018年12月2日 23:59:59</h4>
+</div>
+<h2 id="_1">提交</h2>
+<div class="fenced fenced-red">
+<h4 id="_2">提交方法</h4>
+<p>将所有待提交的文件保存到同一目录中(包括以学号命名的pdf实验报告)，设置好<code>STUID</code>和<code>STUNAME</code>环境变量后，在命令行中(当前工作目录为提交文件所在目录)，执行</p>
+<pre class="codehilite"><code>bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</code></pre>
+
+
+<p>(复制上述命令，没有连字符)，输入<code>Lab3</code>提交(注意大小写)。</p>
+</div>
+<h3 id="_3">收到的提交</h3>
+<table class="submissions"><tr><td>161240007<br><span class="submit-date">(21:04 Jan 20)</span></td><td>161240039<br><span class="submit-date">(22:27 Jan 12)</span></td><td>161240045<br><span class="submit-date">(18:57 Dec 23)</span></td><td>171180589<br><span class="submit-date">(11:29 Dec 23)</span></td><td>171180593<br><span class="submit-date">(20:32 Jan 01)</span></td><td>171860609<br><span class="submit-date">(21:22 Jan 11)</span></td><td>181180200<br><span class="submit-date">(08:23 Jan 12)</span></td></tr><tr><td>181220001<br><span class="submit-date">(20:09 Jan 12)</span></td><td>181220002<br><span class="submit-date">(22:24 Jan 04)</span></td><td>181220003<br><span class="submit-date">(10:43 Dec 28)</span></td><td>181220004<br><span class="submit-date">(14:46 Dec 21)</span></td><td>181220005<br><span class="submit-date">(01:44 Jan 12)</span></td><td>181220010<br><span class="submit-date">(19:18 Dec 26)</span></td><td>181220012<br><span class="submit-date">(21:25 Jan 11)</span></td></tr><tr><td>181220013<br><span class="submit-date">(02:56 Jan 12)</span></td><td>181220014<br><span class="submit-date">(10:33 Jan 12)</span></td><td>181220016<br><span class="submit-date">(18:30 Dec 27)</span></td><td>181220018<br><span class="submit-date">(12:19 Jan 11)</span></td><td>181220019<br><span class="submit-date">(22:24 Jan 12)</span></td><td>181220022<br><span class="submit-date">(15:34 Dec 22)</span></td><td>181220026<br><span class="submit-date">(00:55 Jan 09)</span></td></tr><tr><td>181220028<br><span class="submit-date">(04:43 Jan 04)</span></td><td>181220029<br><span class="submit-date">(06:31 Jan 12)</span></td><td>181220030<br><span class="submit-date">(17:38 Dec 22)</span></td><td>181220031<br><span class="submit-date">(19:28 Dec 26)</span></td><td>181220032<br><span class="submit-date">(08:56 Jan 12)</span></td><td>181220034<br><span class="submit-date">(21:03 Jan 12)</span></td><td>181220035<br><span class="submit-date">(20:55 Jan 08)</span></td></tr><tr><td>181220036<br><span class="submit-date">(19:03 Jan 01)</span></td><td>181220038<br><span class="submit-date">(20:54 Jan 01)</span></td><td>181220039<br><span class="submit-date">(11:55 Jan 01)</span></td><td>181220040<br><span class="submit-date">(20:07 Jan 12)</span></td><td>181220041<br><span class="submit-date">(11:39 Jan 04)</span></td><td>181220043<br><span class="submit-date">(10:39 Jan 06)</span></td><td>181220045<br><span class="submit-date">(19:27 Jan 02)</span></td></tr><tr><td>181220046<br><span class="submit-date">(01:34 Jan 12)</span></td><td>181220047<br><span class="submit-date">(02:27 Jan 12)</span></td><td>181220048<br><span class="submit-date">(19:26 Dec 14)</span></td><td>181220049<br><span class="submit-date">(13:21 Dec 31)</span></td><td>181220051<br><span class="submit-date">(22:42 Jan 12)</span></td><td>181220052<br><span class="submit-date">(17:14 Dec 22)</span></td><td>181220055<br><span class="submit-date">(16:59 Jan 12)</span></td></tr><tr><td>181220056<br><span class="submit-date">(15:56 Dec 31)</span></td><td>181220057<br><span class="submit-date">(19:45 Jan 12)</span></td><td>181220060<br><span class="submit-date">(15:27 Dec 22)</span></td><td>181220061<br><span class="submit-date">(20:31 Dec 19)</span></td><td>181220062<br><span class="submit-date">(21:38 Jan 12)</span></td><td>181220063<br><span class="submit-date">(23:26 Nov 30)</span></td><td>181220064<br><span class="submit-date">(08:38 Dec 22)</span></td></tr><tr><td>181220067<br><span class="submit-date">(13:33 Dec 21)</span></td><td>181220071<br><span class="submit-date">(20:29 Jan 10)</span></td><td>181220072<br><span class="submit-date">(17:01 Dec 26)</span></td><td>181220074<br><span class="submit-date">(11:38 Jan 12)</span></td><td>181220075<br><span class="submit-date">(03:46 Dec 24)</span></td><td>181220076<br><span class="submit-date">(21:43 Dec 26)</span></td><td>181220077<br><span class="submit-date">(20:28 Jan 12)</span></td></tr><tr><td>181220078<br><span class="submit-date">(01:21 Dec 27)</span></td><td>181220079<br><span class="submit-date">(22:36 Jan 12)</span></td><td>181220080<br><span class="submit-date">(23:48 Dec 25)</span></td><td>181220081<br><span class="submit-date">(18:35 Jan 21)</span></td><td>181240004<br><span class="submit-date">(18:39 Jan 01)</span></td><td>181240008<br><span class="submit-date">(23:13 Jan 12)</span></td><td>181240010<br><span class="submit-date">(17:04 Jan 08)</span></td></tr><tr><td>181240014<br><span class="submit-date">(23:46 Jan 12)</span></td><td>181240016<br><span class="submit-date">(23:05 Jan 17)</span></td><td>181240019<br><span class="submit-date">(12:15 Jan 04)</span></td><td>181240020<br><span class="submit-date">(19:50 Dec 05)</span></td><td>181240030<br><span class="submit-date">(16:12 Dec 29)</span></td><td>181240035<br><span class="submit-date">(02:01 Dec 24)</span></td><td>181240045<br><span class="submit-date">(23:20 Jan 11)</span></td></tr><tr><td>181240047<br><span class="submit-date">(22:06 Jan 12)</span></td><td>181240050<br><span class="submit-date">(19:12 Dec 31)</span></td><td>181240055<br><span class="submit-date">(11:53 Jan 17)</span></td><td>181240063<br><span class="submit-date">(13:13 Jan 12)</span></td><td>181240064<br><span class="submit-date">(23:37 Dec 23)</span></td><td>181240068<br><span class="submit-date">(16:15 Jan 02)</span></td><td>181240078<br><span class="submit-date">(19:02 Dec 17)</span></td></tr><tr><td>181240082<br><span class="submit-date">(23:13 Jan 12)</span></td><td>181250012<br><span class="submit-date">(22:59 Dec 08)</span></td><td>181250097<br><span class="submit-date">(23:55 Jan 12)</span></td><td>181250177<br><span class="submit-date">(20:47 Dec 10)</span></td><td>181250195<br><span class="submit-date">(22:10 Dec 30)</span></td><td>181830196<br><span class="submit-date">(21:48 Jan 12)</span></td><td>181840013<br><span class="submit-date">(23:54 Jan 12)</span></td></tr><tr><td>181840064<br><span class="submit-date">(14:11 Dec 29)</span></td><td>181840135<br><span class="submit-date">(19:03 Jan 12)</span></td><td>181840204<br><span class="submit-date">(16:11 Dec 19)</span></td><td>181840264<br><span class="submit-date">(10:29 Jan 11)</span></td><td>181840273<br><span class="submit-date">(14:50 Jan 12)</span></td><td>181840326<br><span class="submit-date">(01:10 Dec 22)</span></td><td>181850236<br><span class="submit-date">(21:50 Jan 12)</span></td></tr><tr><td>181860020<br><span class="submit-date">(09:55 Jan 11)</span></td><td>181860035<br><span class="submit-date">(10:00 Dec 21)</span></td><td>181860066<br><span class="submit-date">(16:31 Jan 15)</span></td><td>181860104<br><span class="submit-date">(17:46 Dec 22)</span></td><td>181860124<br><span class="submit-date">(14:04 Jan 04)</span></td><td>181860134<br><span class="submit-date">(00:08 Dec 10)</span></td><td>181860137<br><span class="submit-date">(17:33 Jan 03)</span></td></tr><tr><td>181860152<br><span class="submit-date">(01:33 Jan 11)</span></td><td>181860158<br><span class="submit-date">(19:54 Jan 03)</span></td><td>181870015<br><span class="submit-date">(20:42 Dec 25)</span></td><td></td><td></td><td></td><td></td></tr></table>
+
+<div class="fenced fenced-blue">
+<h4 id="_4">故事背景</h4>
+<p>(这个实验是yzh从旧版PA里摘出来的，所以你们反正是逃不了的。)</p>
+<p>在oj-killer中，大家已经理解了libc中的函数是如何被调用的。不过关于链接和加载的完整过程，想必还是觉得很神秘的。“可执行文件” (exe或是a.out)也不过就是一个普通的文件。上课的时候已经给大家展示过a.out的二进制表示(在vim中执行<code>:%!xxd</code>，<code>:!</code>是个很神奇的命令哦！)。那么这个程序到底是如何执行的呢？这个实验中实现一个简单的ELF程序加载器。</p>
+</div>
+<h2 id="_5">实验描述</h2>
+<p>这个编程实验需要实现一个用来加载静态链接ELF可执行程序的loader,
+并对程序运行的情况做一些简单的监控, 来巩固ELF格式的相关知识. 我们已经准备好了一些<a href="../static/wiki/ics/ics2018-lab3.zip">框架代码</a>.</p>
+<p>在代码目录下执行</p>
+<pre class="codehilite"><code>make</code></pre>
+
+
+<p>来编译<code>main.c</code>, 生成loader的可执行文件<code>a.out</code>. 其运行方式如下</p>
+<pre class="codehilite"><code>./a.out prog</code></pre>
+
+
+<p>其中<code>prog</code>是一个静态链接的, <code>main</code>函数不带参数的ELF可执行文件.</p>
+<p>我们先来解释一下为什么要做一个静态链接的loader.
+动态链接的loader需要涉及更多的细节, 包括GOT地址和重定位项的填写, 动态链接库的考量等等.
+为了设计一个简单的小型实验, 我们只实现静态链接的loader, 并且对一些实现细节进行了处理和约束.
+这个loader并不能加载所有的静态链接程序, 但作为一个巩固ELF相关知识的教学实验, 已经足够了.</p>
+<h3 id="_6">可执行文件的组织</h3>
+<p>我们知道程序中包括代码和数据, 它们都是存储在可执行文件中.
+加载的过程就是把可执行文件中的代码和数据放置在正确的内存位置,
+然后跳转到程序入口, 程序就开始执行了.
+更具体的, 我们需要解决以下问题:</p>
+<ul>
+<li>代码和数据在可执行文件的哪个位置?</li>
+<li>代码和数据有多少?</li>
+<li>"正确的内存位置"在哪里?</li>
+<li>程序入口在哪里?</li>
+</ul>
+<p>为了回答这些问题, 我们首先需要了解可执行文件是如何组织的.</p>
+<p>代码和(静态)数据是程序的必备要素, 可执行文件中自然需要包含这两者.
+但仅仅包含它们还是不够的, 我们还需要一些额外的信息来告诉我们"代码和数据分别有多少",
+否则我们连它们两者的分界线在哪里都不知道.
+这些额外的信息描述了可执行文件的组织形式, 不同组织形式形成了不同格式的可执行文件,
+例如Windows主流的可执行文件是<a href="http://en.wikipedia.org/wiki/Portable_Executable">PE(Protable Executable)</a>格式,
+而GNU/Linux主要使用<a href="http://en.wikipedia.org/wiki/Executable_and_Linkable_Format">ELF(Executable and Linkable Format)</a>格式.
+因此一般情况下, 你不能在Windows下把一个可执行文件拷贝到GNU/Linux下执行, 反之亦然.
+ELF是GNU/Linux可执行文件的标准格式, 这是因为GNU/Linux遵循System V ABI(<a href="http://stackoverflow.com/questions/2171177/what-is-application-binary-interface-abi">Application Binary Interface</a>). </p>
+<div class="fenced fenced-green">
+<h4 id="_7">思考题: 堆和栈在哪里?</h4>
+<p>我们提到了代码和数据都在可执行文件里面, 但却没有提到堆(heap)和栈(stack).
+为什么堆和栈的内容没有放入可执行文件里面?
+那程序运行时刻用到的堆和栈又是怎么来的?</p>
+</div>
+<div class="fenced fenced-green">
+<h4 id="_8">思考题: 如何识别不同格式的可执行文件?</h4>
+<p>如果你在GNU/Linux下执行一个从Windows拷过来的可执行文件, 将会报告"格式错误".
+思考一下, GNU/Linux是如何知道"格式错误"的?</p>
+</div>
+<h4 id="_9"></h4>
+<h3 id="_10">寻找正确的程序入口</h3>
+<p>理论课上介绍过, ELF文件头中有一个<code>e_entry</code>成员, 记录了程序的入口地址.
+这个地址是操作系统将控制权转移给程序的入口,
+根据ABI手册, 在转移控制权之前, 操作系统还需要对程序的通用寄存器和栈进行一些初始化操作,
+这样才能保证程序拿到控制权之后可以正确运行.</p>
+<p>但这个过程有点复杂, 而且在这个实验中我们实现的是"通过一个用户程序加载另一个用户程序",
+一些需要操作系统才能进行的操作, 我们也不好进行.
+因此我们对这个过程进行了简化: 我们寻找一个可以绕开上述细节的程序入口.</p>
+<p>这个入口就是<code>main</code>函数.
+但是每一个程序的<code>main</code>函数位置都不一样, 给定一个ELF文件, 我们要如何找到<code>main</code>函数的位置呢?
+答案就在符号表(symbol table)里面.</p>
+<p>符号表是可执行文件的一个section, 它记录了程序编译时刻的一些信息, 其中就包括变量和函数的信息.
+我们首先需要了解符号表中都记录了哪些信息.</p>
+<p>我们以一个很简单的用户程序add为例, 使用<code>readelf</code>命令查看ELF可执行文件的信息:</p>
+<pre class="codehilite"><code>readelf -a add</code></pre>
+
+
+<p>你会看到<code>readelf</code>命令输出了很多信息, 这些信息对了解ELF的结构有很好的帮助,
+我们建议你在课后仔细琢磨.
+目前我们只需要关心符号表的信息就可以了, 在输出中找到符号表的信息:</p>
+<pre class="codehilite"><code>Symbol table '.symtab' contains 10 entries:
+   Num:    Value  Size Type    Bind   Vis      Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 00100000     0 SECTION LOCAL  DEFAULT    1 
+     2: 0010009c     0 SECTION LOCAL  DEFAULT    2 
+     3: 00100100     0 SECTION LOCAL  DEFAULT    3 
+     4: 00000000     0 SECTION LOCAL  DEFAULT    4 
+     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS add.c
+     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 add
+     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 main
+     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 ans
+     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 test_data</code></pre>
+
+
+<p>其中每一行代表一个表项, 每一列列出了表项的一些属性, 现在我们只需要关心<code>Type</code>属性为<code>FUNC</code>的表项就可以了.
+仔细观察<code>Name</code>属性之后, 你会发现这些表项正好对应了C代码中定义的函数名,
+而相应的<code>Value</code>属性正好是它们的地址.</p>
+<p>太好了, 我们可以通过符号表建立函数名和其地址之间的映射关系!
+别着急, <code>readelf</code>输出的信息是已经经过解析的,
+实际上符号表中<code>Name</code>属性存放的是字符串在字符串表(string table)中的偏移量.
+为了查看字符串表, 我们先查看<code>readelf</code>输出中Section Headers的信息:</p>
+<pre class="codehilite"><code>Section Headers:
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .text             PROGBITS        00100000 001000 00009a 00  AX  0   0  4
+  [ 2] .eh_frame         PROGBITS        0010009c 00109c 000058 00   A  0   0  4
+  [ 3] .data             PROGBITS        00100100 001100 000120 00  WA  0   0 32
+  [ 4] .comment          PROGBITS        00000000 001220 00001c 01  MS  0   0  1
+  [ 5] .shstrtab         STRTAB          00000000 00123c 00003a 00      0   0  1
+  [ 6] .symtab           SYMTAB          00000000 0013b8 0000a0 10      7   6  4
+  [ 7] .strtab           STRTAB          00000000 001458 00001e 00      0   0  1</code></pre>
+
+
+<p>从Section Headers的信息可以看到, 字符串表在ELF文件偏移为<code>0x1458</code>的位置开始存放.
+在shell中可以通过以下命令直接输出ELF文件的十六进制形式:</p>
+<pre class="codehilite"><code>hd add</code></pre>
+
+
+<p>在输出结果中找到上述偏移量, 我们可以看到, 字符串表只不过是把标识符的字符串拼接起来而已.
+现在我们就可以厘清符号表和字符串表之间的关系了:</p>
+<pre class="codehilite"><code>Section Headers:
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 7] .strtab           STRTAB          00000000 001458 00001e 00      0   0  1
+                                                  |                                 
+                                   +--------------+     +-----------------------+   
+                                   V                    V                       |   
+00001450  20 00 00 00 11 00 03 00  00 61 64 64 2e 63 00 61  | ........add.c.a|  |
+00001460  64 64 00 6d 61 69 6e 00  61 6e 73 00 74 65 73 74  |dd.main.ans.test|  |
+00001470  5f 64 61 74 61 00        ^           ^            |_data.|            |
+                                   |           |                                |   
+                                   |           +-------------+                  |   
+                                   |                         |                  |   
+                                   +---------------------+   |                  |   
+Symbol table '.symtab' contains 10 entries:              |   |                  |
+   Num:    Value  Size Type    Bind   Vis      Ndx Name  |   |                  |
+     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS 1     |   |                  |
+     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 7  ---+---+------------------+
+     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 11    |   |
+     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 16 ---+   |
+     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 20 -------+</code></pre>
+
+
+<p>一种解决方法已经呼之欲出了: 要查找一个函数的地址,
+就通过这个函数名在符号表中找到一项符合要求的表项(表项的<code>Type</code>属性是<code>FUNC</code>,
+并且将<code>Name</code>属性的值作为字符串表中的偏移, 所找到的字符串和函数名一致),
+该表项的<code>Value</code>属性的值就是函数的地址.</p>
+<p>为了方便说明上述内容, 这个add程序的ELF文件中包含的信息很少.
+由于库函数的原因, 如果我们去查看一个在GNU Linux上运行的,
+哪怕很小的程序, 都会包含大量的库函数的信息.
+在代码目录下执行</p>
+<pre class="codehilite"><code>make prog/hello</code></pre>
+
+
+<p>就会在<code>prog</code>目录下生成<code>hello</code>可执行文件, 你可以通过上述方法查看其ELF信息.</p>
+<div class="fenced fenced-green">
+<h4 id="_11">思考题: 消失的符号</h4>
+<p>我们在<code>prog/hello.c</code>中定义了宏<code>N</code>, 同时也在<code>add()</code>函数中定义了局部变量<code>c</code>和形参<code>a</code>, <code>b</code>,
+但你会发现在符号表中找不到和它们对应的表项, 为什么会这样?
+思考一下, 什么才算是一个符号(symbol)?</p>
+</div>
+<div class="fenced fenced-green">
+<h4 id="hello-world">思考题: 寻找"Hello World!"</h4>
+<p>通过上文介绍的方法找到<code>hello</code>程序的字符串表,
+你发现"Hello World!"字符串在字符串表中的什么位置? 为什么会这样?</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="todo">TODO: 寻找正确的入口地址</h4>
+<p>根据上文提到的方法, 实现<code>get_entry()</code>函数,
+在输入的ELF文件中找到<code>main</code>函数的地址.
+可以通过运行</p>
+<pre class="codehilite"><code>./a.out prog/hello</code></pre>
+
+
+<p>来人工检查找到的地址是否与<code>readelf</code>中的结果一致.</p>
+<p>框架代码提供的<code>load_elf_table()</code>函数已经为你从可执行文件中抽取出符号表和字符串表了,
+其中<code>strtab</code>是字符串表, <code>symtab</code>是符号表, <code>nr_symtab_entry</code>是符号表的表项数目,
+更多的信息请阅读代码.</p>
+<p>头文件<code>&lt;elf.h&gt;</code>已经为我们定义了与ELF可执行文件相关的数据结构, 为了使用符号表, 请查阅</p>
+<pre class="codehilite"><code>man 5 elf</code></pre>
+
+
+</div>
+<div class="fenced fenced-green">
+<h4 id="_12">思考题: 冗余的符号表</h4>
+<p>在GNU/Linux下编写一个Hello World程序, 然后使用<code>strip</code>命令丢弃可执行文件中的符号表:</p>
+<pre class="codehilite"><code>gcc -o hello hello.c
+strip -s hello</code></pre>
+
+
+<p>用<code>readelf</code>查看hello的信息, 你会发现符号表被丢弃了, 此时的hello程序能成功运行吗?</p>
+<p>目标文件中也有符号表, 我们同样可以丢弃它:</p>
+<pre class="codehilite"><code>gcc -c hello.c
+strip -s hello.o</code></pre>
+
+
+<p>用<code>readelf</code>查看hello.o的信息, 你会发现符号表被丢弃了. 尝试对hello.o进行链接:</p>
+<pre class="codehilite"><code>gcc -o hello hello.o</code></pre>
+
+
+<p>你发现了什么问题? 尝试对比上述两种情况, 并分析其中的原因.</p>
+</div>
+<h3 id="_13">加载程序</h3>
+<p>如果你直接跳转到上述<code>main</code>函数的地址, 你应该会看到<code>catch SIGSEGV</code>的信息.
+这是因为我们还没有把程序加载到内存中, 直接跳转过去就会产生段错误,
+这个段错误被框架代码中设置的信号处理函数<code>segv_handler()</code>捕捉到, 并输出了相应信息.
+下面我们来讨论如何加载程序.</p>
+<p>ELF文件提供了两个视角来组织一个可执行文件, 一个是面向链接过程的section视角,
+这个视角提供了用于链接与重定位的信息(例如符号表);
+另一个是面向执行的segment视角, 这个视角提供了用于加载可执行文件的信息.
+通过<code>readelf</code>命令, 我们还可以看到section和segment之间的映射关系:
+一个segment可能由0个或多个section组成, 但一个section可能不被包含于任何segment中.</p>
+<p>我们现在关心的是如何加载程序, 因此我们重点关注segment的视角.
+ELF中采用program header table来管理segment, program header table的一个表项描述了一个segment的所有属性,
+包括类型, 虚拟地址, 标志, 对齐方式, 以及文件内偏移量和segment大小.
+根据这些信息, 我们就可以知道需要加载可执行文件的哪些字节了,
+同时我们也可以看到, 加载一个可执行文件并不是加载它所包含的所有内容,
+只要加载那些与运行时刻相关的内容就可以了, 例如调试信息和符号表就不必加载.
+我们可以通过判断segment的<code>Type</code>属性是否为<code>PT_LOAD</code>来判断一个segment是否需要加载.</p>
+<div class="fenced fenced-green">
+<h4 id="_14">思考题：冗余的属性?</h4>
+<p>使用<code>readelf</code>查看一个ELF文件的信息, 你会看到一个segment包含两个大小的属性,
+分别是<code>FileSiz</code>和<code>MemSiz</code>, 这是为什么?
+再仔细观察一下, 你会发现<code>FileSiz</code>通常不会大于相应的<code>MemSiz</code>, 这又是为什么?</p>
+</div>
+<p>我们通过下面的图来说明如何根据segment的属性来加载它:</p>
+<pre class="codehilite"><code>      +-------+---------------+-----------------------+
+      |       |...............|                       |
+      |       |...............|                       |  ELF file
+      |       |...............|                       |
+      +-------+---------------+-----------------------+
+      0       ^               |              
+              |&lt;------+------&gt;|       
+              |       |       |             
+              |       |                            
+              |       +----------------------------+       
+              |                                    |       
+   Type       |   Offset    VirtAddr    PhysAddr   |FileSiz  MemSiz   Flg  Align
+   LOAD       +-- 0x001000  0x00100000  0x00100000 +0x1d600  0x27240  RWE  0x1000
+                               |                       |       |     
+                               |   +-------------------+       |     
+                               |   |                           |     
+                               |   |     |           |         |       
+                               |   |     |           |         |      
+                               |   |     +-----------+ ---     |     
+                               |   |     |00000000000|  ^      |   
+                               |   | --- |00000000000|  |      |    
+                               |   |  ^  |...........|  |      |  
+                               |   |  |  |...........|  +------+
+                               |   +--+  |...........|  |      
+                               |      |  |...........|  |     
+                               |      v  |...........|  v    
+                               +-------&gt; +-----------+ ---  
+                                         |           |     
+                                         |           |    
+                                            Memory  </code></pre>
+
+
+<p>你需要找出每一个需要加载的segment的<code>Offset</code>, <code>VirtAddr</code>, <code>FileSiz</code>和<code>MemSiz</code>这些参数.
+其中相对文件偏移<code>Offset</code>指出相应segment的内容从ELF文件的第<code>Offset</code>字节开始, 在文件中的大小为<code>FileSiz</code>,
+它需要被分配到以<code>VirtAddr</code>为首地址的虚拟内存位置, 在内存中它占用大小为<code>MemSiz</code>.
+也就是说, 这个segment使用的内存就是<code>[VirtAddr, VirtAddr + MemSiz)</code>这一连续区间,
+然后将segment的内容从ELF文件中读入到这一内存区间,
+并将<code>[VirtAddr + FileSiz, VirtAddr + MemSiz)</code>对应的物理区间清零.</p>
+<div class="fenced fenced-green">
+<h4 id="_15">思考题: 为什么要清零?</h4>
+<p>为什么需要将 <code>[VirtAddr + FileSiz, VirtAddr + MemSiz)</code> 对应的物理区间清零?</p>
+</div>
+<p>关于程序从何而来, 可以参考一篇文章: <a href="http://www.tenouk.com/ModuleW.html">COMPILER, ASSEMBLER, LINKER AND LOADER: A BRIEF STORY</a>.
+如果你希望查阅更多与ELF文件相关的信息, 请参考</p>
+<pre class="codehilite"><code>man 5 elf</code></pre>
+
+
+<div class="fenced fenced-red">
+<h4 id="todo_1">TODO: 加载程序</h4>
+<p>根据上文的内容, 实现框架代码中的<code>loader()</code>函数,
+来将名为<code>filename</code>的ELF文件中的内容加载到正确的内存位置.
+实现正确后, 就可以成功加载并执行<code>prog/hello</code>了, 你将会看到"Hello World"的信息.</p>
+</div>
+<p>需要说明的是, 我们实验中的这个loader加载程序和转移控制权的方式, 和操作系统工作的方式是不一样的.
+真实的操作系统可以通过<code>mmap()</code>将ELF文件中的内容直接以页为单位映射到内存中,
+但理解这个过程需要一些虚拟地址空间相关的知识, 如果你对此感兴趣, 可以阅读ABI手册中相关的内容,
+而实验中我们还是采用读文件的方式来实现;
+另外, 真实的操作系统是通过特权级切换的方式将控制权交给被加载程序,
+为了绕开这些细节, 实验中的loader通过函数调用跳转到被加载程序的<code>main</code>函数,
+从被加载程序的<code>main</code>函数返回时, 也就返回到了loader中.
+尽管这种方式并不合理, 但也算是达成实验目标的取舍吧.</p>
+<h3 id="_16">打印栈帧链</h3>
+<p>下面我们来做一些有意思的事情: 我们让程序发生段错误的时候, 打印出当前的栈帧链. 我们已经在课堂上介绍过, backtrace是调试段错误极为有用的工具.</p>
+<p>我们知道函数调用会在堆栈上形成栈帧, 记录和这次函数调用有关的信息.
+若干次连续的函数调用将会在堆栈上形成一条栈帧链, 为调试提供了很多有用的信息:
+<code>EIP</code>可以让你知道程序现在的位置, 栈帧链则可以告诉你, 程序是怎么运行到现在的位置的.
+GDB中的<code>bt</code>命令可以打印出栈帧链的信息, 如果你从来没有使用过<code>bt</code>命令, 请先在GDB中尝试.</p>
+<p>在堆栈中形成的栈帧链结构如下:</p>
+<pre class="codehilite"><code>      |   |   ......   | 4G
+    stack +------------+ 
+    frame |  prev_ebp  |
+      |   +------------+ &lt;--+
+      |   | local_var  |    |
+      v   |  temp_var  |    |
+    ----- +------------+    |
+      ^   | arguments  |    |
+      |   +------------+    |
+      |   |  ret_addr  |    |
+    stack +------------+    |
+    frame |  prev_ebp  | ---+
+      |   +------------+ &lt;--+
+      |   | local_var  |    |
+      v   |  temp_var  |    |
+    ----- +------------+    |
+      ^   | arguments  |    |
+      |   +------------+    |
+      |   |  ret_addr  |    |
+    stack +------------+    |
+    frame |  prev_ebp  | ---+
+      |   +------------+ &lt;--+
+      |   | local_var  |    |
+      v   |  temp_var  |    |
+    ----- +------------+    |
+      ^   | arguments  |    |
+      |   +------------+    |
+      |   |  ret_addr  |    |
+    stack +------------+    |
+    frame |  prev_ebp  | ---+
+      |   +------------+ &lt;-- EBP
+      |   |   ......   | 0</code></pre>
+
+
+<p>可以看到, <code>EBP</code>在栈帧链的组织中起到了非常重要的作用, 通过<code>EBP</code>, 我们就可以找到每一个栈帧的信息了.
+聪明的你也许一眼就看出来, 这不就是程序设计课中学过的链表吗?
+我们可以定义一个结构体来进一步厘清其中的奥妙:</p>
+<pre class="codehilite"><code class="language-c">typedef struct _PartOfStackFrame {
+  struct _PartOfStackFrame *prev_ebp;
+  uint32_t ret_addr;
+  uint32_t args[4];
+} PartOfStackFrame;</code></pre>
+
+
+<p>其中<code>prev_ebp</code>就类似于<code>next</code>指针, <code>args</code>成员数组表示函数的实参,
+实际上实参的个数不一定是4个, 但我们仍然可以将它们强制打印出来, 说不定可以从中发现一些有用的调试信息.
+链表的表头存储在<code>EBP</code>寄存器中, 所以我们可以从<code>EBP</code>寄存器开始,
+像遍历链表那样逐一扫描并打印栈帧链中的信息.
+链表通过<code>NULL</code>指示链表的结束, 在栈帧链中也是类似的,
+当我们发现栈帧中<code>EBP</code>的信息为<code>0</code>时, 就表示已经达到最开始运行的函数了.</p>
+<p>由于缺乏形参和局部变量的具体信息, 我们只需要打印地址, 函数名, 以及前4个参数就可以了.
+打印格式可以参考GDB中<code>bt</code>命令的输出.
+如何确定某个地址落在哪一个函数中呢? 这就需要符号表的帮助了:</p>
+<pre class="codehilite"><code>Symbol table '.symtab' contains 10 entries:
+   Num:    Value  Size Type    Bind   Vis      Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 00100000     0 SECTION LOCAL  DEFAULT    1 
+     2: 0010009c     0 SECTION LOCAL  DEFAULT    2 
+     3: 00100100     0 SECTION LOCAL  DEFAULT    3 
+     4: 00000000     0 SECTION LOCAL  DEFAULT    4 
+     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS add.c
+     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 add
+     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 main
+     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 ans
+     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 test_data</code></pre>
+
+
+<p>对于<code>Type</code>属性为<code>FUNC</code>的表项, <code>Value</code>属性指示了函数的起始地址,
+<code>Size</code>属性指示了函数的大小, 通过这两个属性就可以确定函数的范围了.
+由于函数的范围是互不相交的, 因此我们可以通过扫描符号表中<code>Type</code>属性为<code>FUNC</code>的每一个表项,
+唯一确定一个地址在所的函数.
+为了得到函数名, 你只需要根据表项中的<code>Name</code>属性在字符串表中找到相应的字符串就可以了.</p>
+<p>由于我们的loader是通过函数调用来转移控制权的,
+所以有的栈帧并不属于被加载的程序, 因而无法在其符号表中找到相应的函数名.
+像GDB一样, 这时我们返回一个<code>???</code>的函数名就可以了.</p>
+<div class="fenced fenced-red">
+<h4 id="todo_2">TODO: 打印栈帧链</h4>
+<p>根据上文的内容, 实现框架代码中的<code>bt()</code>函数, 通过参数<code>ebp</code>和<code>eip</code>来打印程序当前的栈帧链.
+<code>bt()</code>函数会在<code>segv_handler()</code>中被调用, 来打印段错误时的栈帧链.
+实现正确后, 先通过</p>
+<pre class="codehilite"><code>make prog/segmentfault</code></pre>
+
+
+<p>来编译<code>segmentfault</code>程序.
+这个程序有一个递归函数, 会在递归过程中会随机触发段错误.
+然后就可以加载并执行<code>prog/segmentfault</code>了,
+如果你的实现正确, 将会看到触发段错误时每一次递归调用的位置和参数.</p>
+</div>
+<h3 id="_17">评分</h3>
+<p>仔细阅读红色框内的实验内容. 你需要实现正确的<code>loader</code>加载程序, 并能打印正确的栈帧链. 我们会用另外的程序 (未必发生segmentation falut) 来测试你的加载器和 backtrace, 并根据正确性评分, 因此请尽可能保证程序的正确. 在实验报告中描述你的实现.</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

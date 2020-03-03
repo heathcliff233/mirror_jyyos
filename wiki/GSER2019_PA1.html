@@ -1,0 +1,146 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>[PA1] 代码相似度度量</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="pa1">[PA1] 代码相似度度量</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">背景：比较代码相似度</h4>
+<p>上大学的时候，大家多多少少都会抄一些代码。根据我们的<a href="https://zhuanlan.zhihu.com/p/40568346">研究</a>，在某 985 大学的某个编程作业中，有多达 82% 的学生涉嫌抄袭，其中 53% 是相似度极大的直接拷贝。</p>
+<p>如果你是老师，你会怎么办呢？作为一个软件工程研究者，我们当然要用软件工程的办法解决啦！我们已经在课堂上学习了扫描源代码的技术和工具，例如词法分析、AST 等。所以就让我们愉快地做一次恶人吧！</p>
+</div>
+<h2 id="_2">实验描述</h2>
+<p>假设我们要对一些 Online Judge 上的编程作业进行相似度检测，尽可能地找出抄袭代码的嫌疑人。在本次实验中，我们假设 Online Judge 上的程序都是单个文件的 C++ 代码，能够通过 gcc 或 clang 在 <code>-std=c++11</code> 选项下编译。</p>
+<p>你可以用任何你熟悉的主流编程语言 (C/C++/Java/Python/JavaScript/Scala/Rust/Go/...) 实现一个 Linux 下运行的命令行工具 <code>codesim</code>，用于比较两个 C++ 语言程序的相似性。在命令行中运行 <code>codesim</code>，传入两个程序的文件名作为参数，输出一行一个浮点数百分比，代表代码的相似性。百分比不需要有确切的含义，只需尽可能使实际为抄袭的代码获得更高的相似度即可。</p>
+<pre class="codehilite"><code class="language-text">$ codesim --help
+usage: codesim [-v|--verbose] [-h|--help] code1 code2
+$ codesim DZ1933026-prob1.cc MG1933021-prob1.cpp
+99.3</code></pre>
+
+
+<div class="fenced fenced-red">
+<h4 id="_3">注意事项</h4>
+<p>我们希望你编写一个用户友好的命令行工具：</p>
+<ol>
+<li><strong>遵循命令行工具的基本规范</strong>。例如，你的命令行工具可能被其他脚本调用，因此请不要在标准输出中打印额外的信息 (如日志)。出错时，请将错误信息输出到标准错误输出 (stderr) 并返回错误 exit code。一个更好的 practice 是提供 <code>-v</code> 或 <code>--verbose</code> 选项，在 verbose 模式下打印更多的信息，这也可以帮助你调试。</li>
+<li><strong>不要在当前目录产生多余的临时文件</strong>。Linux 系统提供了 <code>mktemp</code> 系列函数，每个主流编程语言都有相应的 API。</li>
+</ol>
+</div>
+<p>我们希望大家设计/选择合适的算法，基于适当的工具实现 <code>codesim</code>。分析 C++ 的主流工具是 clang；或者可以使用编译器编译后，对二进制代码进行分析。现代编程语言异常复杂，简单的手工实现几乎是不现实的——因此要尽量避免重复制造轮子，在已有项目的基础上实现你的算法。</p>
+<div class="fenced fenced-green">
+<h4 id="_4">如何看待已有的工作？</h4>
+<p>代码相似度/抄袭检测并不是一个新问题。我们鼓励大家查阅一些已有的文献，例如 code clone detection 甚至是专门针对代码抄袭的检测 (例如非常著名的 <a href="https://theory.stanford.edu/%7Eaiken/moss/">MOSS</a>，链接中有相关的论文)。与此同时，我们也鼓励大家能消化吸收论文里的方法，提出自己的想法，而不是照着论文的方式进行原本的实现。</p>
+</div>
+<h2 id="_5">提交方法与评分准则</h2>
+<div class="subbox fenced fenced-blue">
+<h4>作业提交，截止日期：2019 年 11 月 17 日 23:59:59</h4>
+<form method="POST" action="../store.html" enctype = "multipart/form-data">
+<p>
+学号：<input class="gser-input" type="text" name="stuid">
+<input type="file" name="submission">
+</p>
+<input type="hidden" name="task" value="CODESIM">
+<p>
+<input type="submit" value="提交 (可多次提交，以最后一次提交为准)">
+</p>
+</form>
+</div>
+
+<p>将以下内容打成压缩包 (zip 或 tar) 上传：</p>
+<ul>
+<li>(必要) 工具的源代码和编译说明</li>
+<li>(必要) pdf 格式的实验报告，简述你实现代码相似度检的算法和关键的实现技巧。你只需要简要地描述算法即可，因此实验报告不宜超过 2 页 A4 篇幅</li>
+<li>(可选) 一个 x86-64 Linux 下可运行的二进制文件 codesim</li>
+</ul>
+<p>本实验是开放的实验，没有绝对客观的评判标准。我们会用你的工具在一组程序上进行相似度两两比较，并按照相似度进行排序，与一些我们已知的代码抄袭事实进行比对。检出抄袭的效果与算法构成评分的主要依据。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

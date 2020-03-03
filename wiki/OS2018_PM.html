@@ -1,0 +1,177 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>进程管理与Shell</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="shell">进程管理与Shell</h1>
+<h2 id="shell_1">用户与操作系统的接口：Shell</h2>
+<p><a href="https://en.wikipedia.org/wiki/Shell_%28computing%29">Shell</a>是用户和操作系统之间的接口——Windows的命令提示符、平时我们使用的bash/zsh、桌面系统都是Shell。Shell的功能很简单，它就是一个大循环，从循环里读取用户的输入(键入的脚本，或是鼠标/键盘事件)，然后根据输入作出相应的操作：Shell是操作系统的“外壳”，用户可见的部分，运行在操作系统的内核(kernel)上。</p>
+<p>UNIX Shell就是一个脚本语言解释器。我们在命令行中键入命令</p>
+<pre class="codehilite"><code class="language-bash">cd /tmp/
+ls</code></pre>
+
+
+<p>其实都是最简单的脚本。更复杂的脚本包括管道、重定向等等。Shell是一个文本替换语言——<code>$</code>可以看成是“求值”，将求值的结果替换。</p>
+<p>在Shell脚本中处于核心地位的是程序的执行。Shell能够启动(并控制)各种各样的程序，并赋予它们参数，并改变它们输入/输出的行为：</p>
+<ol>
+<li>可以使用<code>&amp;</code>后台执行一个程序，并用<code>$!</code>引用它的进程号。</li>
+<li>能用<code>jobs</code>, <code>fg</code>, <code>bg</code>管理后台运行的进程。</li>
+<li>使用<code>&gt;</code>实现重定向。</li>
+<li>使用<code>|</code>实现管道。</li>
+</ol>
+<p>配合UNIX设计中的“keep it simple, stupid”和“everything is a file”，用丰富的工具就能完成各种用户的操作。当然，Shell的成功还要感谢终端。</p>
+<div class="fenced fenced-red">
+<p>有同学希望上传上课时讲解的小代码。但那些代码是临时写的(第一次上课每周两次精力有限)，有很多不正确的编程规范。建议大家阅读其他更规范的代码。课程讲义的链接中有很多这样的代码，例如busybox (vi里就有escape code的使用)，下面的Shell代码范例里就有进程API的使用。</p>
+</div>
+<div class="fenced fenced-green">
+<h4 id="shell_2">Shell的代码</h4>
+<p>Busybox里的shell功能完备，所以代码也相当长。如果你想找一个短一点的，可以看一看<a href="https://github.com/mit-pdos/xv6-public/blob/master/sh.c">xv6里的Shell代码</a>。</p>
+</div>
+<h2 id="shellapi">实现Shell的操作系统API</h2>
+<p>实现进程管理中很重要的一环就是能在操作系统中创建新的进程。在UNIX世界中，这是由<code>fork()</code>系统调用完成的。</p>
+<p><code>fork()</code>系统调用在系统中创建一个与当前进程几乎完全相同的进程(同样的地址空间、同样的内存数据)，为了区别新旧进程，父进程(执行<code>fork</code>的进程)返回被创建进程(子进程)的进程号(pid)，而子进程返回0。</p>
+<p>这似乎不是创建进程最直接的方式——如果我们有一个<code>CreateProcess</code>函数，它能根据指定的<code>argv</code>来执行程序，不就完了吗？的确，这是一种可行的解决方案。不过<code>fork</code>也有一些比较明显的额外好处：</p>
+<ul>
+<li>借助现代处理器硬件的帮助，fork可以在非常低的代价下完成。</li>
+<li><code>fork</code>实现了程序中间结果的完美共享(同样借助现代处理器的支持，不会付出很多额外代价)。如果使用CreateProcess，就需要额外的协议和API来完成这样的共享。一个例子是Android虚拟机——并不是每个App启动都会从零开始启动一个虚拟机，每个ART虚拟机只是一个“父亲”虚拟机的<code>fork</code>。所以Android App启动卡，系统不背锅应用背锅。</li>
+<li><code>fork</code>默认父子进程共享文件描述符，这个默认行为在绝大部分时候都是我们想要的。如果你有额外的需求(如父子进程通过管道通信)，在<code>fork</code>之前准备好管道，然后在子进程中处理即可。</li>
+</ul>
+<p>仅仅能创建进程还不够，还要能执行各种程序，<code>execve(const char *path, char *argv[], char *envp[])</code>系统调用就完成了这个功能。总体来说，它在不改变当前进程拥有资源的前提下，“替换”当前进程为<code>path</code>，并且调用<code>main(argc, argv, envp)</code>执行。除了地址空间被完全重建，很多进程拥有的操作系统相关状态都不发生改变：</p>
+<ol>
+<li>进程号(pid)不变；</li>
+<li>文件描述符照用；</li>
+<li>进程当前目录不变；</li>
+<li>访问权限不变；</li>
+<li>附属终端不变；</li>
+<li>信号掩码不变；</li>
+<li>……</li>
+</ol>
+<p>总体来说，<code>fork</code>/<code>exec</code>的设计主要是为了UNIX Shell服务的——如果我们的程序也和Shell有所相似，例如会调用多个程序，并把输入串联起来，使用这组API就会觉得很舒适。我们将在<a href="OS2018_M2.html">Mini Programming Lab</a>中实际使用一下这些API(包括管道)。</p>
+<div class="fenced fenced-green">
+<h4 id="api">思考题：进程管理API</h4>
+<p>除了<code>fork</code>和<code>execve</code>，<code>_exit</code>, <code>wait</code>, <code>signal</code>, <code>kill</code>都是传统UNIX中的进程相关API。<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/cpu-api.pdf">参考书</a>提供了很不错的教程，也可以去互联网上查找相关的资料学习它们是如何使用的。在这里有一个简单的思考题：</p>
+<p>我们现在的计算机都有多个处理器，但平时我们编写的OJ程序都无法充分利用多处理器的资源。进程级的并行是最容易实现的并行模式——我们让多个进程分别计算，最后汇总结果。例如我们在一段范围<math>[x,y]</math>中查找满足某些条件的数(如素数)，就可以把区间分割，并行求解。</p>
+<p>你最近解决的算法问题里，是否有适合进程并行的问题？进程之间需要怎样的协作？</p>
+</div>
+<h2 id="_1">操作系统的规约</h2>
+<p>从进程本身的角度看，执行指令/系统调用只是改变了自身的状态：</p>
+<p><center><math>(M_{i},R_{i})\to(M_{i+1},R_{i+1})</math></center></p>
+<p>而“什么样的状态改变是合法的”就是指令集(语义等同于程序设计语言)和操作系统的规约。例如，在一次成功的<code>fork</code>之后，<math>(M,R)</math>会变成两个状态：父进程<math>(M_p,P_p)</math>和子进程<math>(M_c,P_c)</math>，并且它们仅有的不同是<code>fork</code>的返回值(对于x86来说，仅有EAX/RAX寄存器是<math>P_c</math>进程号或0的区别)，而内存和寄存器的数值完全相同。</p>
+<p>操作系统还有系统全局的状态<math>S</math>，例如多个并发执行的进程、多个打开的文件和设备、队列里的网络包等。每个进程并不是独占操作系统——因此执行系统调用时，也会有其他进程与之并发。因此看起来简单的系统调用行为，也就不再这么简单了。如果系统中只有一个进程，那么</p>
+<pre class="codehilite"><code class="language-c">write(fd, &quot;Hello&quot;, 5);</code></pre>
+
+
+<p>毫无疑问就是把数据写入文件中(然后再更新文件的偏移量，使得文件能持续写入)。但是如果有两个进程共享了这个文件描述符呢？尤其是当父子进程试图共享一个日志文件的时候：</p>
+<pre class="codehilite"><code class="language-c">// 父进程
+LOG(&quot;[  DAD] No, I AM YOUR FATHER.&quot;);
+// 子进程
+LOG(&quot;[CHILD] No... that's not true... THAT'S IMPOSSIBLE!!&quot;);</code></pre>
+
+
+<p>如果它们各自写入文件的同一个位置，最终文件的内容可能会是</p>
+<pre class="codehilite"><code class="language-text">[CHILD] No, I AM YOUR FATHER.... THAT'S IMPOSSIBLE!!</code></pre>
+
+
+<p>日志不就都被破坏了吗？甚至没有那么简单：两个进程如果同时写入同一个文件(用write1和write2表示)，那么会不会有既不是(write1; write2) 也不是(write2; write1)的中间结果？</p>
+<div class="fenced fenced-green">
+<h4 id="_2">原子性</h4>
+<p>如果我们设计了通信协议，例如，每个包都是128字节有固定的格式(例如16字节包头、112字节数据)，多个进程使用管道通信：</p>
+<ul>
+<li>如果<code>write</code>不支持原子性(一次性写入所有值)，那么从管道中就可能读到“破碎”的包，例如连续的两个包头。</li>
+<li>如果<code>write</code>支持原子性，如果往管道里写入大量(如1GB)的数据，可能会导致其他进程饥饿。</li>
+</ul>
+<p>应该如何解决这个问题？<code>man 2 pipe</code>里有答案。这种all-or-nothing的性质称作“原子性”，是因为“atom”的本意就是不可分割的粒子。不过今天的<a href="https://en.wikipedia.org/wiki/Standard_Model">标准模型</a>认为原子并不是不可分割的——Yang在其中做出了重大的贡献。</p>
+</div>
+<p>同样的，<code>fork</code>在复制文件描述符的时候，行为也没有那么简单。我们将会在介绍文件系统时解析如何设计操作系统，使得父子进程能完成文件偏移量的共享。</p>
+<p>随着信号机制、异步I/O、资源限制、线程、各类锁机制……一系列的操作系统元素被加入进来的时候，<code>fork</code>的规约也变得越来越复杂。这也是为什么系统在设计之初总是简洁干净，但随着系统的演化，就变得越来越臃肿的原因之一：软件必须进化，但进化却又要保持原有接口的一致。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

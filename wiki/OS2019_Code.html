@@ -1,0 +1,178 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>实验框架代码与提交方法</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">实验框架代码与提交方法</h1>
+<p>课程所有代码均托管在同一git repository中，并且进度全程追踪。 </p>
+<div class="fenced fenced-red">
+<h4 id="_2">实验环境</h4>
+<p>实验在须使用64位Linux平台，强烈推荐在真机上安装。Debian/Ubuntu是比较好的选择。</p>
+<h4 id="_3">截止日期</h4>
+<ul>
+<li>Hard deadline是期末考试前。Soft deadline前提交获得5%加分 (Soft deadline之后覆盖将不再获得加分)。</li>
+<li>提交需校园网、配置环境变量。请预留好足够时间。提交时间以最新提交在服务器上保存的时间戳为准。</li>
+<li>服务器时间已与北京时间同步，可能存在少量误差，但仍以服务器时间为准。</li>
+<li>如提交截止前服务器故障，提交时间将顺延。</li>
+</ul>
+</div>
+<p>获取实验框架，在终端中执行</p>
+<pre class="codehilite"><code>git clone https://github.com/NJU-ProjectN/os-workbench.git</code></pre>
+
+
+<p>将会克隆os-workbench到当前目录，之后的编程任务均在此完成。请<strong>妥善保管这个目录</strong>。如遇问题请联系老师或助教。</p>
+<h2 id="minilabs">MiniLabs</h2>
+<div class="fenced fenced-red">
+<h4 id="mini-lab">Mini Lab注意事项</h4>
+<ol>
+<li><strong>在Linux下完成</strong>。请尽量写出可移植的代码，兼容32/64位环境。</li>
+<li><strong>全程只有一个C源代码文件，控制在500行以内</strong>。参考实现一般在100-200行，指定功能实现正确就能得满分。Mini Programming Labs的扩展性极高，顺着写下去，1,000行，10,000行，100,000行都是有可能的，克制你的欲望，想发挥可以自己开个项目。</li>
+<li><strong>只允许使用指定的Makefile编译(使用<code>make</code>)、只允许编辑已有的一个<code>.c文件</code></strong>，以便我们追踪代码修改。一方面这是预防抄袭的手段，另一方面也是我们研究编程规律的数据。Git记录不全将被视为抄袭，如Git出现问题请及时和助教联系。</li>
+<li><strong>如果在多个地点完成作业，请将整个目录完整移动</strong>，以保持Git记录的完整。</li>
+<li><strong>不需要实验报告</strong>。助教将会编译运行代码并根据实现正确性评分。重要的话可以写在注释里。</li>
+</ol>
+</div>
+<p>在minilab对应的目录中<code>make</code>，将会得到xxxx-32和xxxx-64两个文件，分别是32位和64位平台上的二进制代码(或运行库)。以下是pstree框架代码的例子：</p>
+<pre class="codehilite"><code>jyy@pstree/$ ls
+Makefile  pstree.c
+jyy@pstree/$ make
+gcc -m64 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-64 
+gcc -m32 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-32 
+jyy@pstree/$ ls
+Makefile  pstree-32*  pstree-64*  pstree.c
+jyy@pstree/$ ./pstree-32 hello
+argv[0] = ./pstree-32
+argv[1] = hello
+jyy@pstree/$ ./pstree-64 world
+argv[0] = ./pstree-64
+argv[1] = world
+jyy@pstree/$ </code></pre>
+
+
+<p>当然一般你不会太顺利。你在docker下可能会遇到<code>hostnamectl</code>没法执行的问题……你可以试着解决这个问题，但我们不推荐使用docker——在未来你会遇到更多的问题。Docker并不是设计给开发用的，而是给大规模部署用的。</p>
+<p>再比如在64位环境下，如果没有安装编译器和相应的运行库，则第一次编译就会失败；如果安装了，<code>-m32</code>也会编译错误，例如：</p>
+<pre class="codehilite"><code>In file included from /usr/include/features.h:399:0,
+                 from /usr/include/stdio.h:27,
+                 from ./pstree.c:1:
+/usr/include/gnu/stubs.h:7:27: fatal error: gnu/stubs-32.h: No such file or directory
+ # include &lt;gnu/stubs-32.h&gt;
+                           ^
+compilation terminated.
+make: *** [pstree-32] Error 1</code></pre>
+
+
+<p>这时候你需要<a href="https://www.urbandictionary.com/define.php?term=stfw">STFW</a>。不过要看清楚网上的解决方案是否适合你的系统环境，以及是否说明了出问题的原因。<code>make</code>编译成功后，将会得到<code>pstree-32</code>和<code>pstree-64</code>两个文件，在命令行中执行可以打印所有命令行参数。</p>
+<div class="fenced fenced-green">
+<h4 id="-32-64">-32, -64?</h4>
+<p>同一份代码，makefile会使用两个选项来编译：</p>
+<pre class="codehilite"><code>gcc -m64 -O1 -std=gnu11 ...
+gcc -m32 -O1 -std=gnu11 ... </code></pre>
+
+
+<p>这<del>帮</del>(强)<del>助</del>(制)大家写出可移植的代码。<a href="https://wiki.sei.cmu.edu/confluence/display/c/SEI+CERT+C+Coding+Standard">CERT C编码规范</a>是非常棒的阅读材料，也作为书籍出版，大家可以收藏一本电子版。</p>
+</div>
+<h2 id="oslabs">OSLabs</h2>
+<p>你首先需要获取最新版本的AbstractMachine代码，并设置正确的<code>AM_HOME</code>环境变量。</p>
+<p>获取方法：TBD</p>
+<div class="fenced fenced-red">
+<h4 id="am">注意：不要使用《计算机系统基础》课中的AM代码</h4>
+<p>将会导致编译错误。请正确配置环境变量。</p>
+</div>
+<p><code>os-workbench</code>已经包含了Lab0 (amgame)的框架代码。<code>make</code>将默认在x86-qemu下编译。你也可以编译到其他体系结构并运行：</p>
+<pre class="codehilite"><code class="language-bash">make ARCH=x86-qemu run
+make ARCH=native run</code></pre>
+
+
+<h2 id="_4">提交</h2>
+<p>配置好<code>STUID</code>和<code>STUNAME</code>环境变量，在实验对应目录中执行<code>make submit</code>，将会自动提交到对应的实验。例如在<code>pstree/</code>目录中<code>make submit</code>将会提交到M1。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

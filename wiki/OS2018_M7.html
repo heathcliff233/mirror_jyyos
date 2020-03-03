@@ -1,0 +1,154 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>M7: 简易HTTP服务器 (httpd)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="m7-http-httpd">M7: 简易HTTP服务器 (httpd)</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">截止日期</h4>
+<p>7月1日(周日)晚23:59:59。</p>
+</div>
+<h3 id="_2">收到的作业</h3>
+<p><table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></p>
+<div class="fenced fenced-blue">
+<h4 id="_3">概述</h4>
+<p>似乎大家已经在暑假做过一个httpd了，这次我们做一个更简单的静态HTTP服务器，不过你会面临一些实现上的挑战：一方面，需要在程序结束(收到SIGINT信号)地时候回收资源，另一方面，希望让服务器的性能尽可能高。这两件事任何一件单独做都挺容易的，但要想放到一起就不那么容易了，比如当多线程、异步I/O遇到SIGINT...</p>
+</div>
+<h2 id="_4">背景</h2>
+<p>好吧，我也不需要多说背景了，HTTP你们都懂的。整个互联网都是建立在HTTP协议上的。除了大家平时“上网”是和HTTP协议打交道外，HTTP基本已经成为了互联网世界上的事实标准。例如我们的移动应用其实也使用HTTP协议和服务器通信。</p>
+<p>当大家都说同一种语言(例如<a href="http://www.ruanyifeng.com/blog/2014/05/restful_api.html">RESTful API</a>)的时候，世界就能更好地发展了，不是吗？</p>
+<h2 id="_5">实验描述</h2>
+<p>实现命令行工具<code>httpd</code>：</p>
+<p><center>httpd [<u>OPTION</u>]... <u>DIR</u></center></p>
+<p>启动一个http服务器，监听端口由<code>-p</code>或<code>--port</code>指定，响应HTTP GET请求。URL的<code>/</code>被映射到DIR目录：</p>
+<ul>
+<li>如果URL对应某个目录，例如<code>/</code>或<code>/dir_name</code>，或<code>/dir_name/</code>，返回目录下的<code>index.html</code>文件；</li>
+<li>支持<code>.</code>和<code>..</code>的相对路径解析，例如<code>/dir_name/..</code>等同于<code>/</code>；</li>
+<li>收到SIGINT信号 (终端中的Ctrl-C)后释放所有资源、安全退出。</li>
+</ul>
+<div class="fenced fenced-red">
+<h4 id="_6">信号处理：这是计分的！</h4>
+<p>如果进程被信号(例如大家常用的<code>kill -9</code>杀死失去响应的进程，或是在终端中Ctrl-C)终止，操作系统将会释放进程拥有的所有资源。但异常终止的套接字是不会立即被操作系统回收的(为什么？)，而在关闭时安全地回收资源是高质量软件所必须的。</p>
+<p>所以你需要编写正确的信号处理程序，实现graceful shutdown。如果你不知道这段话在说什么，就可能有点危险了：赶紧去阅读互联网上的资料。</p>
+</div>
+<p>此外，我们希望你的httpd性能尽可能地好。</p>
+<h3 id="_7">命令行选项</h3>
+<ul>
+<li><code>-p</code> <u>PORT</u>, <code>--port</code> <u>PORT</u>：指定http服务监听<u>PORT</u>的端口。如果没有<code>-p</code>选项则打印帮助信息。</li>
+<li><code>-h</code>, <code>--help</code>：打印帮助信息。</li>
+</ul>
+<h2 id="_8">实验指南</h2>
+<h3 id="_9">作业提交与评分</h3>
+<p>在命令行使用<code>git clone https://github.com/NJU-ProjectN/httpd.git</code>将代码下载。</p>
+<p>使用<code>make submit</code>提交。提交脚本会<code>cd ..</code>进入上级目录，然后把名为<code>httpd</code>的目录打包成<code>submission.tar.bz2</code>。这就是你提交的文件。请检查其中内容，以免因为种种原因(如没有权限写入)导致提交失败。</p>
+<h3 id="_10">运行你的代码</h3>
+<p>仓库里有一个示范目录(site)，实现完毕后可以直接运行</p>
+<pre class="codehilite"><code class="language-bash">./httpd --port 8000 ./site</code></pre>
+
+
+<p>如果你的实现正确，在浏览器地址栏中输入相应的地址(上述命令对应<code>http://localhost:8000/</code>)，就能浏览网页啦。能在浏览器成功浏览将得到正确性部分的分数。我们会用Chromium浏览器进行测试。</p>
+<h3 id="_11">性能优化</h3>
+<p>在你优化性能之前，需要考虑一下可能的应用场景：</p>
+<ul>
+<li>文件有大有小。有些静态文件(html文件等)通常比较小；图片则大小适中(几十、几百KB或者几MB)；但有时候却也会有很大的文件(比如一个镜像文件)。如何为这些文件优化传输？</li>
+<li>访问的负载。可能会在短时间内进入大量请求，但如果排队服务，一个客户端请求一个大文件会导致其他浏览网页的用户等待；但如果为每个服务创建进程或线程，也可能导致占用很多操作系统中的资源。</li>
+</ul>
+<blockquote>
+<p>Premature optimization is the root of all evil -- Donald E. Knuth</p>
+</blockquote>
+<div class="fenced fenced-blue">
+<h4 id="_12">我们怎么测试你的代码？</h4>
+<p>大部分同学实现完httpd，一定是在浏览器里试一试访问是否正常就好了，或者“按住F5多刷新几次”，或者多开几个窗口，也许会打印一些性能日志。</p>
+<p>但httpd这么重要的服务，一定有更好的办法测试性能的吧！说对了。这门课中我们反复提到，如果你觉得有件事需要做，那就一定有人做到了。我们将会用<a href="https://httpd.apache.org/docs/2.2/programs/ab.html">Apache ab</a>测试你响应网页的性能。性能显著优于朴素实现的同学将获得一定程度的加分。注意我们会在有多个处理器的计算机上运行你的http服务器。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

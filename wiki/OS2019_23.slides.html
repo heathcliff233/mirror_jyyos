@@ -1,0 +1,280 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>期末复习</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+
+class: center, middle
+
+# 期末复习
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+class: center, middle
+
+# All Labs: .red[Hard Hard Deadline]
+
+# .blue[7月31日] (10% Penalty)
+
+# L4选做，不加分
+
+(做L4不如来参加龙芯杯)
+
+---
+
+# 期末考试范围
+
+并发、虚拟化、持久化；不包含专题 (前12周内容)
+
+* 教科书：Operating Systems: Three Easy Pieces
+* 课程讲义/slides
+
+----
+
+福利时间开始
+
+* 请留意.red[红色部分]
+  * 但不代表红色部分就是全部 (逃
+
+---
+
+# Hello, OS World
+
+```c
+#include <stdio.h>
+
+int main() {
+  printf("Hello World\n");
+}
+```
+
+Hello World程序的编译、运行，到底发生了什么？
+
+* `gcc -o hello hello.c`
+* `./hello` → 故事从这里开始
+
+---
+
+# [0] 编译、链接
+
+[Q] `gcc -o hello hello.c`到底发生了什么？
+
+* 现学现用，不如strace查看一下！
+
+--
+
+count: false
+
+----
+
+[Q] `hello`是什么格式的文件？文件里有什么？
+
+* readelf
+
+---
+
+# [1] 终端与Shell
+
+[Q] 为什么我们的按键能显示在屏幕上？为什么按下回车键后，命令就会被执行？
+
+* .red[I/O设备模型]
+
+--
+
+count: false
+
+----
+
+[Q] `./hello`是如何被执行的？
+
+* fork-execve
+* execve保留绝大部分进程的状态 (例如文件描述符)
+  * 因此可以实现`./hello | cat`, `./hello > a.txt`
+
+---
+
+# [2] Hello，加载器
+
+[Q] .red[hello的第一条指令在哪里]？
+
+* 是不是ELF文件中的entry？
+
+--
+
+count: false
+
+----
+
+[Q] .red[hello的`main`函数执行之前，系统中都发生了什么]？
+
+* Let's gdb it:
+  * `starti`
+  * `info inferiors`  → pmap
+  * `b main; c` → pmap
+* 对照strace的结果
+
+---
+
+# [3] printf
+
+[Q] `printf()`的代码位于何处？如何确定它的地址？
+
+* objdump it
+
+--
+
+count: false
+
+----
+
+[Q] `printf()`是线程安全的吗？.red[如何实现线程安全的printf？]
+
+* 并发编程题，你知道我会考，但不知道我会考什么
+
+--
+
+count: false
+
+----
+
+[Q] printf字符串末尾有没有换行？
+
+* `setbuf()`; 还记得那个fork的神坑么？
+  * 让你真正知道什么叫“复制地址空间”
+
+--
+
+count: false
+
+----
+
+[Q] printf背后的系统调用是什么？
+
+* `man 2 write`
+
+---
+
+# [4] write
+
+[Q] write写到哪里？
+
+* 文件描述符对应的文件，例如一个设备(`/dev/ttyx`)，或是文件系统中的一个文件
+
+--
+
+count: false
+
+----
+
+[Q] .red[文件系统是如何实现的？]
+
+* 两种相似但又不同的实现：.red[FAT], .red[ext2]
+
+--
+
+count: false
+
+----
+
+[Q] .red[如何保护我们的数据不受损害？]
+
+* 把不可靠的磁盘变可靠：RAID
+* 实现崩溃一致性：fsck，日志
+
+---
+
+# The Three Easy Pieces!
+
+Virtualization
+
+* 进程 & 虚存
+
+Concurrency
+
+* 线程 & 库函数 (printf)
+
+Persistence
+
+* 一切尽在write中
+
+----
+
+Wow! .green[我们几乎解释了Hello, World程序的全部！]
+
+* 你不仅知道hello world执行了什么系统调用 (design/minilabs)
+* 还知道如何在你的小操作系统上实现它们 (implementation/oslabs)
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

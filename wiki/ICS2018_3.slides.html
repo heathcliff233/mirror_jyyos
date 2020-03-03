@@ -1,0 +1,455 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>C语言拾遗；PA选讲</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# C语言拾遗；PA选讲
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 复习
+
+之前已经介绍了C/Linux入门：
+
+* 做好编程和测试
+* 无时不刻不编程
+* STFW, RTFM, RTFSC
+
+----
+
+这一次课：与PA代码有关的C语言姿势
+
+<font color="red">友情提醒：注意截止日期；Lab1已经布置</font>
+
+---
+
+class: center, middle
+
+# PA代码解读 (1)
+
+How to RTFSC?
+
+模拟器代码PA2开始后讲解
+
+---
+
+# 从C程序的入口开始
+
+C语言的代码从`main`函数开始执行。粗暴的办法：
+
+```bash
+grep -ns main $(find .) # -n: 打印行号
+                        # -s: 无视错误信息
+```
+
+这个命令**不完美**，但它**能*work***：
+
+* 在几秒钟内定位到`main`：
+
+* `./src/main.c:4:int main(int argc, char *argv[]) {`
+
+----
+
+更好的版本 (scale，仍不完美，但明显更耗时间)：
+
+```bash
+find . | xargs grep --color -nse '\<main\>'
+```
+
+---
+
+# main()
+
+如我们所讲：
+
+```c
+int main(int argc, char *argv[]) { ... }
+```
+
+`main`一共有两个参数：参数的count (`argc`)和vector (`argv`)，参数的解析是在另一个函数里完成的
+
+```c
+int is_batch_mode = init_monitor(argc, argv);
+```
+
+原来还可以把(argc, argv)传递给另一个函数啊……当然可以了！不过<font color="red">init_monitor在哪里呢</font>？
+
+----
+
+你需要另一个阅读代码的工具
+
+* 有了更先进的工具，就不要再需要原始的grep了
+
+---
+
+# parse_args()
+
+这个函数的名字起的很好，看了就知道要做什么(满足不言自明的特性)
+
+* 的确是用来解析命令行参数的，`-b`, `-l`, ...
+* 使用了`getopt` → RTFM!
+
+<font color="red">失败的尝试</font>：`man getopt` → getopt (1)
+
+--
+
+count: false
+
+----
+
+成功的尝试
+
+* 捷径版：STFW “C getopt” → 网页/博客/...
+* 专业版：`man -k getopt` → `man 3 getopt`
+
+意外之喜：man还送了个例子！跟`parse_args`的用法一样耶
+
+---
+
+# 且慢
+
+```c
+static inline void parse_args(int argc, char *argv[]) { ... }
+```
+
+`parse_args`函数是static, inline的，这是什么意思？
+
+--
+
+count: false
+
+----
+
+* inline (C99 6.7.4 #5): Making a function an inline function suggests that calls to the function be as fast as possible. The extent to which such suggestions are effective is implementation-defined. (inline更多有趣的行为请大家RTFM)
+* static (C99 6.2.2 #3): If the declaration of a file scope identifier for an object or a function contains the storage- class specifier **static**, the identifier has internal linkage.
+
+联合使用：告诉编译器符号不要泄露到程序(*translation unit*)之外。
+
+---
+
+# 更多关于static inline (1)
+
+我们都知道，如果在两个文件里定义了重名的函数，互相能够编译，但链接会出错：
+
+```c
+/* a.c */ int f() { return 0; }
+/* b.c */ int f() { return 1; }
+```
+
+b.c:(.text+0x0): multiple definition of *f*; a.c:(.text+0xb): first defined here
+
+----
+
+这也是为什么不在头文件里定义函数的原因
+
+* 两个translation unit同时引用，就导致multiple definition
+* <font color="red">思考题</font>：为什么C++能把class都定义到头文件里？？？像`vector`的实现就是直接粘贴进去的
+
+---
+
+# 更多关于static inline (2)
+
+如果你的程序较短且性能攸关，则可以使用static inline函数定义在头文件中。例子 (include/cpu/reg.h:37)：
+
+```c
+static inline int check_reg_index(int index) {
+  assert(index >= 0 && index < 8);
+  return index;
+}
+```
+
+`check_reg_index`完全可以单独放在一个C文件里，头文件中只保留声明：
+
+```c
+int check_reg_index(int index);
+```
+
+* 但这样会导致在编译时，编译出一条额外的call指令
+* 使用inline可以在调用`check_reg_index(0)`编译优化成<font color="red">零开销</font> (现场试验)
+
+---
+
+# 新的问题：啥是assert？
+
+`assert(cond)` → `{ if (cond) { } else { panic(...); } }`
+
+问题：<font color="red">如何实现</font>？注意特殊情况：
+
+```c
+assert(1);
+if (...) assert(1); // 你的assert对么？
+else ...
+```
+
+--
+
+count: false
+
+----
+
+```c
+#define assert(cond) \
+  do { \
+    if (!(cond)) { \
+      fprintf(...); exit(1); \
+    } \
+  } while (0)
+```
+
+
+
+---
+
+# 回到parse_args()
+
+这个函数也很好读：根据`-b`, `-l`设置变量，参数不够报错
+
+* `is_batch_mode` 是否是batch mode
+* `log_file` 日志文件
+* `img_file` 镜像文件名，如果没有提供就打印个log
+
+----
+
+有趣的是`Log`和`panic` (include/debug.h)，一大堆宏，你是否想放弃？
+
+--
+
+count: false
+
+<font color="red">不要放弃，去看看C语言的书嘛，宏很简单的</font>，读懂代码只需要：
+
+* 坚持：预编译就是文本替换，人工展开
+* 使用工具 (gcc -E)……
+
+---
+
+# 阅读代码的技术
+
+阅读代码时可能会遇到很多障碍，产生“还有这种操作”的困惑：
+
+它们来自你不理解的语法特性
+
+- `"a" "b"`
+- `#define concat(a, b) a##b`
+- `__FILE__`
+- `__VAR_ARGS__`
+
+办法：<font color="red">RTFM, RTFSC, 写个小程序动手尝试</font>
+
+* 还记得上次的保存自动编译执行么？这样的**基础设施**你值得拥有
+
+----
+
+现场展示：include/debug.h解析
+
+---
+
+# 千辛万苦……
+
+之后的历程似乎就比较轻松了。有些东西不太明白(比如init_device())，但好像也不是很要紧，到了`welcome()`：
+
+```c
+static inline void welcome() {
+  printf("Welcome to NEMU!\n");
+  Log("Build time: %s, %s", __TIME__, __DATE__);
+  printf("For help, type \"help\"\n");
+}
+```
+
+哇，还能打印出编译的时间日期，真是神了，之后回到`main`，主要的事情就是`cpu_exec`了，最后调用的是
+
+```c
+exec_wrapper(print_flag);
+```
+
+这个和yemu调用execute()一样，一条一条指令解释执行……
+
+---
+
+class: center, middle
+
+# PA1：基础设施
+
+---
+
+# 为啥做没用的玩意？
+
+PAs：实现一个NEMU x86 full system emulator
+
+> - PA1.1: 实现单步执行, 打印寄存器状态, 扫描内存
+> - PA1.2: 实现算术表达式求值
+> - PA1.3: 实现所有要求, 提交完整的实验报告
+
+我们已经看过yemu的代码了，模拟器就那么简单
+
+* 写一个`execute()`函数就完了
+
+直接抄手册不就完事了么，<font color="red">为什么要做这些没用的东西</font>？
+
+---
+
+# 原因：写对代码不简单
+
+大家都经历过<font color="red">瞪一个几十行的程序半天都找不到错</font>的恐惧，也经历过<font color="red">各种本地测试通过交上去就WA</font>的痛苦
+
+写对100行的程序就已经很困难了，3,000行 (PA大致工程量) 的呢？
+
+----
+
+无论你用多好的办法组织源代码 (yemu也许给你一些启发)，如果bug是随机发生的，你也很难找😵
+
+- 指令的数量远比几个要多
+- 指令的语义远比R[rt] ← op(R[rt], R[rs])复杂 (不能简单用RTYPE/MTYPE的宏搞定，而是需要分别译码、执行)
+
+---
+
+# 有关bug的理论
+
+Fault, Error和Failure
+
+* Fault (Bug) ← 你犯下的恶果，代码里的，你毫不知情
+* Error ← 悄悄地，程序运行时某个变量值错了
+* Failure ← 你可以观察到的挫败感：crash, WA, eip跑路……
+
+--
+
+count: false
+
+----
+
+例子：
+
+```diff
++ if (opcode == 0b1011) {
+- if (opcode == 0x1011) { 
+```
+
+一条指令中的某一部分功能就被<font color="red">删除</font>了，这个错误可能很久之后才会显现(使用了这个数值的指令导致其他指令出错)，甚至出现诡异难以解释的结果(这时候怎么办？)
+
+* 黄金准则：机器永远是对的
+
+---
+
+# PA1：解读
+
+* 程序中的数据以**计算机**方便管理的形式存储(`u8 pc, R[], M[]`)
+* 你并不知道何时(pc, R, M)的状态是**正确**的，Fault出现在<font color="red">第一次引入Error的地方</font>
+  * 理想情况：证明每条指令实现与手册一致，但这太困难了
+  * 现实情况：你知道有个状态错的很离谱，但不知道Fault，以及第一个Error的状态(Error会向后传递)
+
+我们不知道1, 2, ... n这些指令中哪一条是错的(但n肯定是错的)，但我们能检查某个状态是否正确，如何找到第一个出错的状态？
+
+--
+
+count: false
+
+----
+
+答案：二分查找 (常用手段，gdb就是如此，`man git-bisect`)
+
+* 二分本身很耗时 ← 难怪nemu要执行n条指令
+* 检查状态是否正确更耗时 ← PA1的作用就在这里！
+
+---
+
+# PA1：一个编程小习题
+
+跟一个OJ题差不多：输入一个表达式，求出它的值
+
+```
+0xc0100000+   ($eax +5)*4 - *(  $ebp + 8) + number
+```
+
+大约是个微型的语言解释器
+
+--
+
+count: false
+
+----
+
+<font color="red">大家能否survive很大程度依赖这个调试器</font>
+
+* 肯定要遇到bug的，而且遇到很多bug
+* 用gdb调试nemu是非常困难的
+  * gdb对我们模拟的“机器”完全没有概念，重建这套概念(不是不可以)，但内置调试器带来更多额外的好处
+* 用好工具，能得到10X甚至100X的效率提升
+  * 十几分钟 vs. 几天；成功搞定 vs. 项目黄了
+
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

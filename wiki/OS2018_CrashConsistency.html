@@ -1,0 +1,153 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>崩溃一致性</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">崩溃一致性</h1>
+<p>磁盘和文件系统是用来<strong>持久</strong>地存储用户数据的——磁盘是一种non-volatile memory。因此我们对它的要求自然也比内存要高一些：当系统掉电以后，我们很自然地认为内存中的数据会全部丢失，但我们却希望无论在何种情况下，磁盘都能正确保存用户的数据。</p>
+<div class="fenced fenced-green">
+<h4 id="_2">思考题：允许断电</h4>
+<p>文件系统看似简单——不过是磁盘上的数据结构，而文件系统的实现是把文件系统操作翻译成一系列磁盘块的read/write操作。因为read不会影响磁盘上的数据，我们只需考虑向磁盘的所有写操作。</p>
+<p>然而在任何时刻，计算机系统都有可能崩溃(软件bug、断电、……)，考虑上次课介绍过的一些具体文件系统的实现，此时磁盘上数据的状态还正确吗？没错。当你真正需要实现实际系统的时候，你就必须尽自己绝对最大的努力让它<strong>正确</strong>。</p>
+</div>
+<p>崩溃一致性的难点来自两个方面：</p>
+<ol>
+<li>磁盘比我们想象得要复杂一些。为了让磁盘的速度看起来更快，硬件中通常都内置了缓存，并且可能根据磁盘实际的机械/物理特性进行优化，调换读写操作的顺序。这和编译器/CPU很像：<code>x = 1; y = 2;</code>两个写操作允许被调换顺序，同样的，两个先后到达的对磁盘块的写操作也可以被调换顺序(也许是因为后到达的那个请求可以立即被执行)。</li>
+<li>
+<p>文件系统的实现有多方面的考虑，例如：</p>
+<ol>
+<li><strong>性能</strong>：文件系统的访问必须尽可能地快，目前因为内存比磁盘快得多(更重要的是延迟小得多)，因此对文件系统的读写操作通常都发生在内存中的缓存里。</li>
+<li><strong>(崩溃)一致性</strong>：希望文件系统在系统任意时刻崩溃后，磁盘上保存的数据都能恢复到最近某个“实际存在过的”的文件系统状态。</li>
+<li><strong>持久性</strong>：同时我们也希望对文件系统的操作在执行完毕后就立即反映到磁盘上——这才符合程序员对“文件系统”的认识，当我写入文件时，并不是写入一个内存中的缓存，而是确确实实地写入了物理磁盘中。</li>
+</ol>
+<p>但很不幸的是，这些多方面的因素是相互冲突的。例如，如果我们希望持久性，即对文件系统的操作立即反映到磁盘，允许向脏缓存中写数据(提高了性能)无疑破坏了这种持久性。同样，为了满足一致性，我们需要在磁盘上写入额外的数据，也降低了性能。</p>
+</li>
+</ol>
+<div class="fenced fenced-blue">
+<h4 id="_3">计算机系统中作出的权衡</h4>
+<p>计算机系统领域最重要的就是“把一件重要的事情做成”。在这门课程中，我们已经看过了很多这样精彩的例子：分时多线程、虚拟存储、文件系统……而在一个实际的环境中搭建一个实际的系统，难免会遇到很多限制：硬件能力的限制(因为只有有限的电路，因此硬件只能提供比较有限的机制)、互相冲突的需求(在文件系统中性能、一致性、持久性的需求)等等，因此计算机系统设计和实现面临着对很多选择的<strong>权衡</strong> (trade-off)。</p>
+<p>操作系统课程中的实验也体现了某种权衡，你觉得是什么？</p>
+</div>
+<h2 id="_4">实现崩溃一致性：准备工作</h2>
+<h3 id="_5">磁盘模型</h3>
+<p>简单来看，磁盘是一个以块为单位读写的“数组”，除了<code>read(#blk)</code>, <code>write(#blk, data)</code>以外，磁盘还额外支持<code>flush</code>操作，保证在<code>flush</code>之前的所有写操作都进入磁盘才返回。当<code>flush</code>返回以后，<code>flush</code>之前的数据保证在磁盘中被持久化。</p>
+<p><code>flush</code>是实现崩溃一致性的基础：在简化的模型中，仅使用<code>read</code>, <code>write</code> (并且写操作可以被任意乱序)是无法保证崩溃一致性的。</p>
+<h3 id="_6">文件系统实现</h3>
+<p>实现崩溃一致性的另一个重要的理解是“文件系统实现把文件系统操作翻译成一系列磁盘块的read/write操作“。因此，一个文件操作包含了多个对磁盘的写操作——例如我们希望在一个文件之后追加写入一些数据，即便是最简单的情况，也会涉及到以下操作：</p>
+<ul>
+<li>分配一个数据块，因此会涉及<code>write(#d)</code>的操作，更新数据块的位图(标记一块为已分配)，<code>d</code>是相关位图块的编号；</li>
+<li>写入实际分配的数据块，因此会涉及<code>write(#D)</code>的操作，<code>D</code>是数据块的编号。</li>
+<li>更新inode中的size和index信息，因此会涉及<code>write(#i)</code>的操作，<code>i</code>代表包含了inode的数据块编号。</li>
+</ul>
+<p>所以我们真正希望的是一个“lock/unlock”的机制，在获得锁之后释放锁之前不允许系统崩溃(虽然不太可能)，但大概我们希望达到的效果就是这样的：</p>
+<pre class="codehilite"><code class="language-c">lock(); // 在unlock之前不允许系统崩溃
+write(#d);
+write(#D);
+write(#i); // 按任何顺序写入这些数据都没问题
+flush(); // flush之后，数据就被持久化了
+unlock();</code></pre>
+
+
+<p>为了达到这个效果，我们可以允许文件系统磁盘上的状态一定程度的不一致，但在系统崩溃后，我们总能找回某个一致的状态——这就足够了。</p>
+<div class="fenced fenced-green">
+<h4 id="_7">顺着这个想法，实现崩溃一致性</h4>
+<p>带着“允许磁盘上一定程度的不一致，并在崩溃后恢复”这个大致的想法，你应该能设计出很多实现崩溃一致性的策略。建议大家先想一想，再阅读后面的内容。</p>
+</div>
+<h2 id="_8">实现崩溃一致性</h2>
+<p>参考书的作者Remzi Arpaci-Dusseau是文件系统领域的绝对权威，我写任何东西都显得班门弄斧，所以直接传送门：<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/file-journaling.pdf">参考书第24节</a>。在这一节中，作者提供了很多来自他们研究组的有趣工作，例如怎样实现更好的fsck，有兴趣的同学可以读一读。</p>
+<div class="fenced fenced-blue">
+<h4 id="crazy-idea">“Crazy Idea”并不疯狂</h4>
+<p>把所有数据结构的“操作”都记录下来以表示数据结构的办法并不疯狂，而且可以说非常高明。事实上就有那么一种数据结构，它保存了key-value pairs，每个key代表了一个用户(由public key决定)，每个value代表了他当前拥有的钱的数量。在实际存储中，数据结构里保存了所有<strong>交易的历史</strong>(以及交易的结果)，并用数字签名技术验证。</p>
+<p>没错，这就是时下最火热的“比特币”的技术核心之一。有兴趣的同学可以从<a href="https://en.wikipedia.org/wiki/Blockchain">维基百科的介绍</a>读起。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

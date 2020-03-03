@@ -1,0 +1,209 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>生存指南</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">生存指南</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<p>Don't Panic. (不要慌。) — <em>The Hitchhiker's Guide to the Galaxy</em> (Douglas Adams).</p>
+<p>你已经成功从 PA 里活下来了。曾经 OSLabs 是传说中最可怕的课程实验，现在 PA 取代了这个位置。如果你没有，也还是不要慌。不过还是要花点时间说一下怎么在这门课生存下来，因为<strong>这是一门硬核的编程课</strong>。</p>
+</div></div></div>
+
+<h2 id="_2">课程的两个主题</h2>
+<h3 id="linux-mini-labs">操作系统设计：Linux 和 Mini Labs</h3>
+<p>学习操作系统，首先必不可少地是实际地体验一个操作系统。我们选择 Linux (准确来说是 POSIX) 作为课程教学的平台，因为它既免费也自由 (能知道它内部的实现)，而且互联网上有丰富的 (英文) 文档，而且：</p>
+<ul>
+<li>UNIX 设计的哲学就是 “Keep It Simple, Stupid”，这个古老的设计在今天依然历久弥新。</li>
+<li><em>Everything is a file</em>，能让大家非常容易地玩转操作系统里的东西。你想看看你磁盘的主引导扇区究竟是什么代码？好办，一条命令就行了：<code>cat /dev/sda | head -c 512 | ndisasm -b 16 -</code>。课程中不断会给大家一些有趣的小惊喜。</li>
+<li>不仅有工业级的完整实现 (Linux Kernel 有数千万行的代码)，还有众多 “迷你版” 的替代实现，能容易地帮助大家理解代码背后的原理。</li>
+</ul>
+<p>为了帮助大家更好地理解 UNIX/Linux 操作系统的<strong>设计</strong> (即操作系统到底为应用程序提供了什么对象对象以及操作这些对象的 API)，我们设置了若干 Linux 系统上的 Mini Programming Labs，每个 200 行左右的代码，实际调用 Linux 操作系统 API 完成一些仅使用 C 标准库难以办到的任务。</p>
+<p>开头对于 Linux 的恐惧是难免的。<a href="OS_References.html">参考资料</a>中有一些非常棒的入门材料，例如 “Harley Hahn's Guide to Unix and Linux”，引人入胜。从这里开始，你就能慢慢克服恐惧了。</p>
+<h3 id="xv6-os-labs">操作系统实现：xv6 和 OS Labs</h3>
+<p>Linux 系统的实现 (尤其是今天的实现) 对于刚入门的新手来说的确不太合适。因此我们在课堂上选用 <a href="http://pdos.csail.mit.edu/6.828/xv6">xv6</a> 作为讲解操作系统的例子 (最新的代码已经迁移到 RISC-V；但考虑到大家《计算机系统基础》的课程背景，我们仍然讲解 i386 的 xv6 代码)。同时，大家也需要在 Operating system labs 中，大家从 “裸机” (bare-metal) 编程开始，自底向上实现一个支持多处理器、文件系统、虚拟存储的迷你操作系统内核。 </p>
+<p>不必对 “写一个操作系统” 感到惊讶。操作系统也是普通的 C 代码。如果对硬件机制做一定的封装 (例如本学期使用的 AbstractMachine)，你也可以用几行代码轻松地实现 “操作系统”：</p>
+<pre class="codehilite"><code class="language-c">#include &lt;am.h&gt;
+
+_Context *on_interrupt(Event ev, _Context *ctx) {
+  // “操作系统完成初始化后，就是一个中断处理程序”
+}
+
+void percpu_entry() {
+  _intr_write(1); // 在当前CPU上开启中断
+  _yield();       // 执行后不会返回
+}
+
+int main(const char *args) {
+  _cte_init(on_interrupt);
+  _mpe_init(percpu_entry); // 启动所有处理器
+}</code></pre>
+
+
+<h2 id="_3">操作系统课中的代码</h2>
+<h3 id="c">C 语言</h3>
+<p>没有惊喜——这门课还是用 C 语言，没有你喜欢的 C++/Go/Rust/...这基本上等于<strong>把你的手脚捆起来</strong>编程。原因很简单：操作系统是与机器打交道的。用 C 能让你很明白地知道在机器层面发生了什么。</p>
+<p>C 不但简单 (如果你没有学好，用几周的时间补上应该也没问题)，而且透过对 C 语言的深入理解，可以更好地揭示更高级语言工作的原理。一个例子是 “面向对象”，我们在 C 里也可以实现：</p>
+<pre class="codehilite"><code class="language-c">struct foo {
+  int (*bar)(struct foo *this, int a, int b); // 函数指针
+};
+
+void baz() {
+  struct foo *ptr = fetch_object();
+  ptr-&gt;bar(ptr, 3, 4);
+  // 等效于C++: ptr-&gt;bar(3, 4)
+}</code></pre>
+
+
+<p>而 C++ 里的对象，的确也是这样 (类似) 实现的。如果要实现动态绑定 (用父类的指针调用子类的方法)，我们只需把虚函数的入口放到一张表中，通过查表得到函数实际的入口地址：</p>
+<pre class="codehilite"><code class="language-c">struct object_header {
+  void **vptr;
+};
+
+struct foo {
+  struct object_header header;
+  ...
+};
+
+void baz {
+  struct foo *ptr = fetch_object();
+  // ptr-&gt;bar(3, 4), dynamic binding
+  // INDEX_OF_BAR在编译时由编译器确定
+  (int (*)(void *, int, int)) (ptr-&gt;header.vptr[INDEX_OF_BAR]) (ptr, 3, 4);
+}</code></pre>
+
+
+<p>能理解上述的例子，说明你已经有相当扎实的 C 语言基础了。如果不能，建议大家阅读参考书中推荐的 “The C programming language”。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">思考题：多重继承</h4>
+<p>C++ 支持多重继承，即一个类可以拥有两个父类。你想到多重继承的实现方法了吗？多重继承的实现是把多个父类同时嵌入进来 (会拥有两个 <code>header</code>)。编译器会处理好调用、动态绑定等问题。</p>
+<p>从写 C 程序的角度 (操作系统也就是个运行在计算机硬件上的 C 程序)，所谓 “编程” 不过是用那些编程语言提供的机制，把内存里的数据取出来，算一算，再放回去。There is <em>no</em> magic in computer systems.</p>
+</div></div></div>
+
+<h3 id="_4">测试与调试</h3>
+<p>选修过《计算机系统基础》的同学一定已经经历过调试 bug 的噩梦。无数次你打算放弃 (或者实际放弃)，或选择不要某个 labs/PA 的成绩，或选择抱大腿同学的实现……你们做出的妥协都可以理解，但在这个过程中忽略的调试经验，只会让你们在调试越来越大系统的时候越来越吃力。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">思考题：怎样尽可能编出<strong>正确</strong>的代码？</h4>
+<p>在 “面向 OJ 编程” 成为习惯以后，编程不过 “是测试<math class="inline-math">\to</math>不通过<math class="inline-math">\to</math>修改” 的循环。但如果你希望<strong>说服别人你的代码真的是对的</strong>，你有什么办法吗？</p>
+<p>试着提前想一想这个问题。这个学期里，大家会面对多线程并发的编程，这时候程序的正确性就尤为重要，只靠“盲试”就有些不够了。</p>
+</div></div></div>
+
+<h3 id="rtfsc">RTFSC</h3>
+<p>在操作系统的世界里，一切代码说了算，Linux 的作者 Linus 也说 “Talk is cheap. Show me the code.” 阅读代码可以循序渐进。记得在 Linux/UNIX 世界里，所有的代码都能得到。而且很多工具都有简易版、读得懂的实现。比如来自早期版本 busybox 的 <a href="https://git.busybox.net/busybox/tree/editors/vi.c?h=1_00_stable">vi 实现</a>，只有一个文件。虽然这个文件有 3993 行，但你如果使用正确的工具把函数代码折叠起来，你会发现这简单，你也写得出。课程上也会引导大家阅读相关的代码。</p>
+<h2 id="_5">其他常见问题</h2>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<p>Q: 说好的操作系统呢？图形界面跑哪里去了？？为什么不能吃鸡？？？我是不是学了假的操作系统？？？？</p>
+</div></div></div>
+
+<p>A: 你如果把终端的每一个字符看成是像素点，那终端也勉强算是个图形界面了。实际上，操作系统也是这么管理图形界面的——由一个程序 (可能运行在 GPU 上) 算出每个像素点该显示什么颜色，就像 vi 在终端上显示字符、导航栏一样。鉴于画出图形来涉及到的知识太多，课程上就不多啰嗦了，假装能完成这个类比，无法假装的同学可以选修《计算机图形学》。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<p>Q: 为什么不是C++/Go/Rust/...?</p>
+</div></div></div>
+
+<p>A: <strong>它们很容易绊到你的脚</strong>。相信大部分同学无法准确回答虚函数、静态对象初始化和 RTTI 在机器指令级的实现。想弄清楚 C++ 的行为要花费 (海量) 额外的时间，在搞不清楚的时候，退回去一步没有太大损失——用 C 的最大好处是你知道一切的一切是怎么发生在处理器上的，C 就是高级的汇编语言。Golang/Rust 都是不错的选择，但也很容易绊到脚；但也许有一天课程就会迁移到新的平台上。</p>
+<p>一句额外的话，如果你熟悉现代 C++/Rust，你就会对对象的 ownership 非常敏感。即便你在写 C，这种好的思维习惯依然会时刻保护你。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<p>Q: 我想退课/蹭课？</p>
+</div></div></div>
+
+<p>A: 我墙裂认为<strong>不写代码这门课就白上了</strong>，所以才有那么多编程作业。如果觉得基础没有打好，就先努力学好 C 语言。这门课的唯一要求就是<strong>会使用 C 语言编程</strong>，还有<strong>能读懂手册</strong>。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<p>Q: 我想做纯理论。代码什么的关我️✖️事？</p>
+</div></div></div>
+
+<p>A: 有那个智力和坚持，写点 C 代码真是太简单了。万一有一天纯理论做不下去要去当码农了呢？遇到这麻烦的人我没少见过。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<p>Q: 我好怕。</p>
+</div></div></div>
+
+<p>A: Don't Panic。不要慌。也许我们可以来办公室聊一聊。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

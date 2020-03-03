@@ -1,0 +1,167 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Lab1：乘法</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="lab1">Lab1：乘法</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">小实验说明</h4>
+<p>小实验(Labs)是ICS这门课程里的一些综合编程题，旨在结合课堂知识解决一些实际中的问题。因为问题来自实际，所以有时候未必能立即在课本上找到相关知识的答案，而是需要“活学活用”。</p>
+<p>所以Labs其实一点也不简单，给大家的建议是：(1) 谢绝拖延；(2) STFW。利用互联网上的知识解决这些问题，但<strong>不要</strong>试图直接搜索这些问题的答案，即便有也不要点进去(也请自觉不要公开发布答案)。</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="20181014-235959">⚠️ 截止日期：2018年10月14日 23:59:59</h4>
+<p>但这个很费时的，请大家不要拖延！</p>
+</div>
+<h2 id="_2">提交</h2>
+<div class="fenced fenced-red">
+<h4 id="_3">提交方法</h4>
+<p>将所有待提交的文件保存到同一目录中，设置好<code>STUID</code>和<code>STUNAME</code>环境变量后，在命令行中(当前工作目录为提交文件所在目录)，执行</p>
+<pre class="codehilite"><code>bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</code></pre>
+
+
+<p>(复制上述命令，没有连字符)，输入<code>Lab1</code>提交(注意大小写)。</p>
+<p>提交内容：(1) 以你学号命名的pdf为实验报告；(2) p1.c, p2.c等源文件。文件由脚本自动处理，提交不正确的文件名视同于没有提交。</p>
+</div>
+<h3 id="_4">收到的提交</h3>
+<table class="submissions"><tr><td>161180204<br><span class="submit-date">(20:02 Jan 18)</span></td><td>161240007<br><span class="submit-date">(18:15 Jan 18)</span></td><td>161240039<br><span class="submit-date">(15:08 Jan 11)</span></td><td>161240045<br><span class="submit-date">(18:08 Nov 12)</span></td><td>171180589<br><span class="submit-date">(10:52 Dec 22)</span></td><td>171180593<br><span class="submit-date">(21:23 Dec 30)</span></td><td>171820548<br><span class="submit-date">(14:24 Jan 01)</span></td></tr><tr><td>171860609<br><span class="submit-date">(20:10 Jan 11)</span></td><td>171860655<br><span class="submit-date">(23:18 Jan 02)</span></td><td>181180200<br><span class="submit-date">(19:32 Dec 17)</span></td><td>181220001<br><span class="submit-date">(20:04 Jan 12)</span></td><td>181220002<br><span class="submit-date">(17:56 Dec 24)</span></td><td>181220003<br><span class="submit-date">(21:51 Dec 30)</span></td><td>181220004<br><span class="submit-date">(19:09 Dec 13)</span></td></tr><tr><td>181220005<br><span class="submit-date">(17:11 Dec 26)</span></td><td>181220006<br><span class="submit-date">(00:54 Jan 13)</span></td><td>181220010<br><span class="submit-date">(19:17 Dec 26)</span></td><td>181220011<br><span class="submit-date">(21:23 Dec 25)</span></td><td>181220012<br><span class="submit-date">(18:56 Jan 11)</span></td><td>181220013<br><span class="submit-date">(16:30 Jan 04)</span></td><td>181220014<br><span class="submit-date">(14:59 Jan 04)</span></td></tr><tr><td>181220016<br><span class="submit-date">(22:01 Dec 20)</span></td><td>181220018<br><span class="submit-date">(21:30 Jan 08)</span></td><td>181220019<br><span class="submit-date">(20:19 Jan 12)</span></td><td>181220022<br><span class="submit-date">(18:44 Dec 14)</span></td><td>181220026<br><span class="submit-date">(00:58 Jan 09)</span></td><td>181220027<br><span class="submit-date">(21:39 Dec 26)</span></td><td>181220028<br><span class="submit-date">(01:18 Jan 04)</span></td></tr><tr><td>181220029<br><span class="submit-date">(16:07 Jan 11)</span></td><td>181220030<br><span class="submit-date">(18:30 Dec 23)</span></td><td>181220031<br><span class="submit-date">(15:01 Dec 25)</span></td><td>181220032<br><span class="submit-date">(09:51 Jan 09)</span></td><td>181220033<br><span class="submit-date">(13:51 Jan 12)</span></td><td>181220034<br><span class="submit-date">(00:32 Dec 27)</span></td><td>181220035<br><span class="submit-date">(08:55 Jan 06)</span></td></tr><tr><td>181220036<br><span class="submit-date">(21:47 Dec 27)</span></td><td>181220038<br><span class="submit-date">(20:53 Jan 01)</span></td><td>181220039<br><span class="submit-date">(14:24 Dec 25)</span></td><td>181220040<br><span class="submit-date">(11:03 Jan 10)</span></td><td>181220041<br><span class="submit-date">(19:44 Jan 01)</span></td><td>181220043<br><span class="submit-date">(16:48 Jan 01)</span></td><td>181220044<br><span class="submit-date">(20:05 Jan 12)</span></td></tr><tr><td>181220045<br><span class="submit-date">(17:13 Jan 02)</span></td><td>181220046<br><span class="submit-date">(21:05 Jan 12)</span></td><td>181220047<br><span class="submit-date">(02:26 Jan 12)</span></td><td>181220048<br><span class="submit-date">(19:23 Nov 26)</span></td><td>181220049<br><span class="submit-date">(18:54 Dec 14)</span></td><td>181220051<br><span class="submit-date">(18:27 Dec 28)</span></td><td>181220052<br><span class="submit-date">(17:37 Dec 23)</span></td></tr><tr><td>181220054<br><span class="submit-date">(20:35 Jan 12)</span></td><td>181220055<br><span class="submit-date">(23:37 Dec 31)</span></td><td>181220056<br><span class="submit-date">(20:51 Jan 08)</span></td><td>181220057<br><span class="submit-date">(20:59 Dec 22)</span></td><td>181220058<br><span class="submit-date">(21:52 Jan 12)</span></td><td>181220060<br><span class="submit-date">(14:41 Dec 21)</span></td><td>181220061<br><span class="submit-date">(18:14 Dec 26)</span></td></tr><tr><td>181220062<br><span class="submit-date">(14:45 Jan 12)</span></td><td>181220063<br><span class="submit-date">(19:17 Nov 25)</span></td><td>181220064<br><span class="submit-date">(14:54 Dec 16)</span></td><td>181220066<br><span class="submit-date">(22:12 Jan 12)</span></td><td>181220067<br><span class="submit-date">(23:30 Nov 12)</span></td><td>181220068<br><span class="submit-date">(19:57 Jan 17)</span></td><td>181220069<br><span class="submit-date">(23:50 Jan 12)</span></td></tr><tr><td>181220071<br><span class="submit-date">(17:09 Jan 12)</span></td><td>181220072<br><span class="submit-date">(21:36 Dec 23)</span></td><td>181220073<br><span class="submit-date">(23:22 Jan 12)</span></td><td>181220074<br><span class="submit-date">(10:42 Dec 26)</span></td><td>181220075<br><span class="submit-date">(01:42 Dec 22)</span></td><td>181220076<br><span class="submit-date">(19:17 Dec 24)</span></td><td>181220077<br><span class="submit-date">(21:44 Jan 12)</span></td></tr><tr><td>181220078<br><span class="submit-date">(16:29 Dec 26)</span></td><td>181220079<br><span class="submit-date">(15:02 Jan 11)</span></td><td>181220080<br><span class="submit-date">(23:41 Dec 18)</span></td><td>181220081<br><span class="submit-date">(21:33 Jan 12)</span></td><td>181240004<br><span class="submit-date">(15:43 Dec 29)</span></td><td>181240008<br><span class="submit-date">(16:08 Jan 12)</span></td><td>181240010<br><span class="submit-date">(15:04 Jan 04)</span></td></tr><tr><td>181240014<br><span class="submit-date">(23:35 Jan 11)</span></td><td>181240016<br><span class="submit-date">(21:04 Jan 12)</span></td><td>181240019<br><span class="submit-date">(15:45 Dec 29)</span></td><td>181240020<br><span class="submit-date">(19:23 Dec 06)</span></td><td>181240030<br><span class="submit-date">(16:11 Dec 29)</span></td><td>181240035<br><span class="submit-date">(22:29 Dec 16)</span></td><td>181240045<br><span class="submit-date">(23:16 Jan 11)</span></td></tr><tr><td>181240047<br><span class="submit-date">(23:18 Jan 11)</span></td><td>181240050<br><span class="submit-date">(19:11 Dec 31)</span></td><td>181240055<br><span class="submit-date">(16:02 Jan 04)</span></td><td>181240063<br><span class="submit-date">(11:17 Jan 12)</span></td><td>181240064<br><span class="submit-date">(01:00 Jan 02)</span></td><td>181240068<br><span class="submit-date">(23:05 Dec 15)</span></td><td>181240078<br><span class="submit-date">(18:47 Dec 24)</span></td></tr><tr><td>181240082<br><span class="submit-date">(21:08 Jan 12)</span></td><td>181250012<br><span class="submit-date">(09:19 Nov 20)</span></td><td>181250097<br><span class="submit-date">(19:14 Jan 11)</span></td><td>181250125<br><span class="submit-date">(21:53 Jan 12)</span></td><td>181250177<br><span class="submit-date">(22:55 Nov 24)</span></td><td>181250195<br><span class="submit-date">(16:09 Dec 13)</span></td><td>181830101<br><span class="submit-date">(20:39 Dec 28)</span></td></tr><tr><td>181830196<br><span class="submit-date">(21:49 Jan 12)</span></td><td>181840013<br><span class="submit-date">(23:55 Jan 12)</span></td><td>181840064<br><span class="submit-date">(17:12 Nov 16)</span></td><td>181840135<br><span class="submit-date">(18:50 Dec 09)</span></td><td>181840204<br><span class="submit-date">(17:34 Dec 16)</span></td><td>181840223<br><span class="submit-date">(10:04 Dec 24)</span></td><td>181840264<br><span class="submit-date">(23:57 Jan 09)</span></td></tr><tr><td>181840273<br><span class="submit-date">(14:50 Jan 12)</span></td><td>181840326<br><span class="submit-date">(23:44 Dec 07)</span></td><td>181850236<br><span class="submit-date">(15:08 Jan 03)</span></td><td>181860020<br><span class="submit-date">(00:08 Jan 05)</span></td><td>181860035<br><span class="submit-date">(12:46 Nov 25)</span></td><td>181860066<br><span class="submit-date">(17:02 Jan 01)</span></td><td>181860104<br><span class="submit-date">(15:18 Dec 21)</span></td></tr><tr><td>181860124<br><span class="submit-date">(11:30 Dec 06)</span></td><td>181860134<br><span class="submit-date">(12:34 Nov 25)</span></td><td>181860137<br><span class="submit-date">(22:28 Dec 15)</span></td><td>181860152<br><span class="submit-date">(23:37 Jan 07)</span></td><td>181860158<br><span class="submit-date">(20:30 Dec 22)</span></td><td>181870015<br><span class="submit-date">(11:22 Jan 11)</span></td><td></td></tr></table>
+
+<h2 id="_5">实验描述</h2>
+<p>给定64位有符号整数<math>a</math>, <math>b</math>, <math>m</math>  (类型为<code>int64_t</code>)，你希望求出<math>a\times b\mod m</math>的数值，即最小的非负整数<math>t</math>，满足<math>a\times b\equiv t\mod m</math>。</p>
+<p>你很容易写出如下实现：</p>
+<pre class="codehilite"><code class="language-c">int64_t multimod(int64_t a, int64_t b, int64_t m) {
+  return (a * b) % m;
+}</code></pre>
+
+
+<p>但这段看起来正常的代码其实是错的：<code>a * b</code>存在溢出的行为。有符号整数溢出导致<a href="https://en.wikipedia.org/wiki/Undefined_behavior">undefined behavior (UB)</a>，即便不是UB而是得到mod <math>2^{64}</math>的结果，计算出的数值也是错误的 (为什么？)。</p>
+<p>在这个实验中，你的任务是根据你所掌握的知识，实现正确、高效的<code>multimod</code>。</p>
+<h2 id="1multimod">任务1：实现<code>multimod</code></h2>
+<p>给出一个正确的<code>multimod</code>实现，使得它对于任意在<math>0\ldots 2^{63}-1</math>范围内的<math>a</math>, <math>b</math>, <math>m</math>均能正确求出<math>a\times b\mod m</math>的数值，且在任何时候不触发有符号整数溢出。在实验报告中给出充足的测试用例或证据，说明你的实现正确，这将作为你的基准实现。</p>
+<p>将<code>multimod</code>函数保存在<code>p1.c</code>中(只需函数定义，需要能够直接使用<code>gcc -c</code>编译)，随实验报告提交。我们根据<code>p1.c</code>的正确性评分。</p>
+<h2 id="2">任务2：性能优化</h2>
+<p>寻找一种方法能尽可能准确地衡量<code>multimod</code>函数在你计算机上的执行时间，在实验报告中阐述你选择的方法，及其合理性。</p>
+<p>试图优化你的<code>multimod</code>实现(可移植通用代码，仅使用64位或以下整数的运算)。比较各个实现(包括基准实现，和至少一个优化过的实现)在编译器<code>-O0</code>, <code>-O1</code>, <code>-O2</code>优化级别下的运行时间，将这些结果记录在实验报告中，并给出你的分析。</p>
+<div class="fenced fenced-red">
+<h4 id="_6">危险的编译优化</h4>
+<p>编译优化有时可能会非预期地改变程序的行为，例如</p>
+<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; 1000000000; i++) {
+  multimod(a, b, m);
+}</code></pre>
+
+
+<p>在编译优化的情况下可能会被完全“删除”——它们没有对程序的全局状态产生任何效果，从而删掉之后的程序语义和原程序等价。因此你在度量运行时间时应当格外小心，建议使用<code>objdump</code>阅读生成的汇编代码。</p>
+</div>
+<p>将你优化过的程序保存成<code>p2.c</code>, <code>p3.c</code>, ... 以此类推。我们将根据正确性、性能和你实验报告中结果的可靠性评分。</p>
+<h2 id="3">任务3：解析神秘代码</h2>
+<p>任务3中，你获得了一份ACM-ICPC圈子中广为流传的一段神奇代码，出处和年代太久远已经很难考证了：</p>
+<pre class="codehilite"><code class="language-c">int64_t multimod_fast(int64_t a, int64_t b, int64_t m) {
+  int64_t t = a * b - (int64_t)((double)a * b / m + 1e-8) * m;
+  return t &lt; 0 ? t + m : t;
+}</code></pre>
+
+
+<p>这段代码神奇地……竟然可以在<math>O(1)</math>时间就搞定溢出的问题？其中最精髓的一段在于</p>
+<pre class="codehilite"><code class="language-c">(int64_t)((double)a * b / m + 1e-8)</code></pre>
+
+
+<p>把整数<code>a</code>强行转换成了浮点数(假设使用IEEE754 64位双精度类型)。我们知道浮点数的精度也不是无限的，仅仅类型转换就已经损失精度了，<code>double</code>更不可能准确保存<code>a * b</code>的结果了啊？</p>
+<div class="fenced fenced-blue">
+<h4 id="_7">神奇的代码</h4>
+<p>这都可以？你已经在《计算机系统基础》课程中所有这些操作的行为了。</p>
+<p>首先，这段代码会触发Undefined Behavior，因此它首先对<code>int64_t</code>的乘法做了wraparound的假设(好像是两个64位整数相乘得到128位整数，取低64位)。幸运的是，x86的确是这样的，gcc一般也不会对这个UB做过激的处理。于是这个严格意义上不正确的代码，竟然可以正常工作？</p>
+</div>
+<p>现在，我们假设整数乘法不导致UB，即对于<code>int64_t</code>类型的<code>a</code>和<code>b</code>，<code>a * b</code>表达式的值等于<code>(int64_t)((uint64_t)a * (uint64_t)b)</code>，且假设<math>0\le a,b\le 2^{63}-1</math>，你的任务是分析<code>multimod_fast</code>的正确性：</p>
+<p>确定<code>a</code>, <code>b</code>, <code>m</code>的范围(区间)，并证明在此范围内，<code>multimod_fast</code>总是能返回正确的数值，并比对这一实现和你之前所有实现的性能(在不同优化选项下均进行比较)，回答这个快速实现是否真的比你优化过的实现更快。</p>
+<p>我们根据你范围的正确性、分析的合理性评分。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

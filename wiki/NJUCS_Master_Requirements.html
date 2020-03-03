@@ -1,0 +1,113 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>计算机科学与技术系硕士研究生申请学位要求实施细则 (2019)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="2019">计算机科学与技术系硕士研究生申请学位要求实施细则 (2019)</h1>
+<p>硕士研究生申请学位，须经导师审核认可学位论文质量，并达到下列要求 (论文/专利/系统) 之一：</p>
+<h2 id="_1">论文</h2>
+<p>CCF + ESI 期刊/会议论文一篇，或者下列中文学术期刊论文一篇：</p>
+<ol>
+<li>《中国科学》、《软件学报》、《计算机学报》、《电子学报》、《自动化学报》、《计算机研究与发展》、《科学通报》（不论排名，但同一篇论文申请硕士学位只能用一次）。</li>
+<li>《计算机辅助设计与图形学学报》、《通信学报》、《中文信息学报》、《模式识别与人工智能》、《信息安全学报》、《中国图像图形学报》、《系统仿真学报》、《计算机科学与探索》、《密码学报》（第一作者）。</li>
+</ol>
+<h2 id="_2">专利</h2>
+<p>已获受理，并取得申请号的国家发明专利一篇 (不论排名)，同一份专利申请硕士学位只能用一次。</p>
+<h2 id="_3">系统</h2>
+<p>由系学位委员会组织演示评审 (包括功能、关键技术问题、主要贡献、代码量等)。</p>
+<h2 id="_4">补充说明</h2>
+<ol>
+<li>上述三项指标均须由导师签字确认申请学位的研究生对该项工作具有实质性贡献。</li>
+<li>特殊情况需提前半年向系学位委员会申请裁定。 </li>
+</ol>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

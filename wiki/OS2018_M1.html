@@ -1,0 +1,280 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>M1: 打印进程树(pstree)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="m1-pstree">M1: 打印进程树(pstree)</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">截止日期</h4>
+<p>3月25日(周日)晚23:59:59。</p>
+<p>提交方法：从github上pull最新的Makefile (<code>git pull origin master</code>)，设置好<code>STUID</code>和<code>STUNAME</code>环境变量，分别是学号和姓名(默认为UTF-8编码)，然后<code>make submit</code>，注意：</p>
+<ul>
+<li>请保证系统中安装了<code>curl</code>；</li>
+<li>学号和姓名从教务系统中导入，如果有其他选修的同学希望提交作业请联系我；</li>
+<li>请搜索如何设置环境变量。</li>
+</ul>
+<p>如因不可抗力导致迟交，请在<strong>截止日期前</strong>提交辅导员签字确认的情况说明或让辅导员联系我，否则每迟交<math>n</math>天扣除<math>10\%\cdot n</math>的分数。不足一天以一天计(超过一秒即扣除<math>10\%</math>)，直到扣除<math>40\%</math>为止(总是能得到<math>60\%</math>的分数)。</p>
+<ul>
+<li>下次提交将会覆盖上次提交的结果，但所有历史提交都有保存。</li>
+<li>提交需校园网、配置环境变量。请预留好足够时间。提交时间以最新提交在服务器上保存的时间戳为准。</li>
+<li>服务器时间已与北京时间同步，可能存在少量误差，但仍以服务器时间为准。</li>
+<li>如提交截止前服务器故障，提交时间将顺延。</li>
+</ul>
+</div>
+<h3 id="_2">收到的作业</h3>
+<p><table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></p>
+<div class="fenced fenced-blue">
+<h4 id="_3">概述</h4>
+<p>本学期的第一个mini programming lab，作为热身的小实验让大家复习(或者预习)这学期需要的基本C语言知识、熟悉操作系统最基本的使用，理解UNIX世界的编程规范，体验一下“Everything is a file”。</p>
+</div>
+<h2 id="_4">背景</h2>
+<p>操作系统能同时运行多个程序。大家都用过<a href="https://www.cyberciti.biz/tips/top-linux-monitoring-tools.html">任务管理器</a>——能够显示当前系统运行的状态、进程、处理器占用等等。</p>
+<p><img alt="" src="../static/wiki/os/2018/img/system-monitor.png" /></p>
+<p>上图是Deepin的任务管理器，除了系统的状态，还可以显示进程的信息。任务管理器当然也是操作系统支持的应用程序，本学期的第一个实验就是实现任务管理器中进程列表的部分。用类似的办法，可以从Linux系统中读取出CPU占用率、内存使用等信息，你其实就已经获得了实现任务管理器的足够数据。</p>
+<h2 id="_5">实验描述</h2>
+<p><code>pstree</code> - 打印进程之间的树状的父子关系。在这个实验中，你可以自由选择展示树的方式(例如使用缩进表示父子关系，这是最容易的)。在Linux中，进程树会以非常漂亮的格式排版(每个进程的第一个孩子都与它处在同一行，之后的孩子保持相同的缩进)：</p>
+<pre class="codehilite"><code>systemd─┬─accounts-daemon─┬─{gdbus}
+        │                 └─{gmain}
+        ├─acpid
+        ├─agetty
+        ├─atd
+        ├─cron
+        ├─dbus-daemon
+        ├─dhclient
+        ├─2*[iscsid]
+        ├─lvmetad
+        ├─lxcfs───10*[{lxcfs}]
+        ├─mdadm
+        ├─polkitd─┬─{gdbus}
+        │         └─{gmain}
+        ├─rsyslogd─┬─{in:imklog}
+        │          ├─{in:imuxsock}
+        │          └─{rs:main Q:Reg}
+        ...</code></pre>
+
+
+<p>Linux的psmisc中<code>pstree</code>的实现大约有1300行，支持多种命令行参数。这个实验里实现最简单的就行。大家可以先玩一下Linux的<code>pstree</code>，它真的很简单。</p>
+<h3 id="_6">总览</h3>
+<p><center>pstree [<u>OPTION</u>]…</center></p>
+<h3 id="_7">描述</h3>
+<p>把系统中的进程按照父亲-孩子的树状结构打印到终端。</p>
+<p><code>-p</code>, <code>--show-pids</code>: 打印每个进程的进程号。</p>
+<p><code>-n</code> <code>--numeric-sort</code>: 按照pid的数值从小到大顺序输出一个进程的直接孩子。</p>
+<p><code>-V</code> <code>--version</code>: 打印版本信息。</p>
+<p>在命令行用这些参数执行<code>pstree</code> (如<code>pstree -V</code>、<code>pstree --show-pids</code>)参考它们的行为。</p>
+<h3 id="_8">解释</h3>
+<p>上述实验要求描述是参照man page的格式写出的，但其中有很多UNIX命令行工具遵守的共同约定(大家都默认，所以给初学者学习造成了很大的困扰)，例如<a href="http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html">POSIX</a>就对命令行参数有一定的约定，从中摘抄一些约定如下：</p>
+<ol>
+<li>中括号扩起的参数是可选参数，<code>[]</code>后的<code>…</code>代表参数的0次或多次重复。因此<code>-p</code>, <code>-n</code>, <code>-V</code>都是可选的参数。</li>
+<li>同一个选项可以有不同的名字。在<code>pstree</code>中，<code>-p</code>和<code>--show-pids</code>的含义是一样的。</li>
+<li>若不另行说明，整数范围在32位有符号整数范围内；但如果数值和文件大小有关，则其合法的范围是是0到系统最大支持的文件大小(以后会遇到有数值的参数)。</li>
+</ol>
+<p>此外，<code>main</code>函数的返回值代表了命令执行的状态，其中<code>EXIT_SUCCESS</code>表示命令执行成功，<code>EXIT_FAILURE</code>表示执行失败。对于POSIX来说，0代表成功，非0代表失败：例如<code>diff</code>用1表示比较的文件不同，而用2表示读取文件失败(<code>cmp</code>的行为也应当如此)。UNIX Shell对返回值有<a href="http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html">额外的处理</a>。这解释了为什么一些OJ会明确要求main函数返回值为0，当返回非0时将被认为是Runtime Error。</p>
+<p><strong>如果不知道这些约定，就会对使用Linux/Unix感到十分困难——Unix世界有一套自己定义的“游戏规则”。</strong>也难怪会有笑话：</p>
+<blockquote>
+<p>Unix is <em>user-friendly</em> — it's just choosy about who its friends are.</p>
+</blockquote>
+<p>当然，在渐渐熟悉游戏规则以后就会发现，这套设计简洁好用(但也有很多人批评它不够优雅)。如果你的目标是用最短的时间把事情搞定，用Shell和各种命令行工具的组合一定是你的第一选择，记住：<em>Keep it simple, stupid</em>和<em>Everything is a file</em>.</p>
+<h2 id="_9">作业提交与评分</h2>
+<div class="fenced fenced-red">
+<h4 id="mini-programming-labs">Mini Programming Labs注意事项</h4>
+<ol>
+<li><strong>在Linux下完成</strong>。请尽量写出可移植的代码，兼容32/64位环境。</li>
+<li><strong>全程只有一个C源代码文件，控制在500行以内</strong>。参考实现一般在100-200行，指定功能实现正确就能得满分。Mini Programming Labs的扩展性极高，顺着写下去，1,000行，10,000行，100,000行都是有可能的，克制你的欲望，想发挥可以自己开个项目。</li>
+<li><strong>只允许使用指定的Makefile编译(使用<code>make</code>)、只允许编辑已有的一个<code>.c文件</code></strong>，以便我们追踪代码修改。一方面这是预防抄袭的手段，另一方面也是我们研究编程规律的数据。Git记录不全将被视为抄袭，如Git出现问题请及时和助教联系。</li>
+<li><strong>如果在多个地点完成作业，请将整个目录完整移动</strong>，以保持Git记录的完整。</li>
+<li><strong>不需要实验报告</strong>。助教将会编译运行代码并根据实现正确性评分。重要的话可以写在注释里。</li>
+</ol>
+</div>
+<p>在命令行使用<code>git clone https://github.com/NJU-ProjectN/pstree.git</code>将代码下载(将会创建一个名为<code>pstree</code>的目录)。目录结构：</p>
+<pre class="codehilite"><code class="language-text">.git/ - Git相关文件，请不要删除
+Makefile - 用于编译的脚本
+Makefile.git - 用于Git追踪的相关脚本
+pstree.c - 唯一的源文件</code></pre>
+
+
+<p>使用<code>make</code>编译(名为生成<code>pstree</code>的二进制文件)；使用<code>./pstree</code>执行。</p>
+<p>使用<code>make submit</code>提交。提交脚本会<code>cd ..</code>进入上级目录，然后把名为<code>pstree</code>的目录打包成<code>submission.tar.bz2</code>。这就是你提交的文件。提交前请请检查其中内容，以免因为种种原因(如没有权限写入)导致提交失败。</p>
+<h2 id="_10">把大象装进冰箱</h2>
+<div class="fenced fenced-blue">
+<h4 id="_11">想自己尝试？</h4>
+<p>鼓励大家忽略下面的教程，自己动手搞定，遇到不明白的地方可以求助Google。当然还是希望在完成实验以后把讲义的后半部分读完，毕竟写东西很费时间的，没准还有惊喜呢。</p>
+</div>
+<blockquote>
+<p>“把大象放进冰箱总共分几步？”</p>
+<p>“三步，第一步把冰箱门打开；第二步把大象放进去，第三步把冰箱门带上。”</p>
+<p>— 赵本山、宋丹丹《钟点工》</p>
+</blockquote>
+<p>如果你觉得打印进程树这个问题比较困难，我们也把问题分解一下：</p>
+<ol>
+<li>得到命令行的参数，根据要求设置标志变量的数值；</li>
+<li>得到系统中所有进程的编号(每个进程都会有唯一的编号)保存到列表里；</li>
+<li>对列表里的每个编号，得到它的的父亲是谁；</li>
+<li>在内存中把树建好，按命令行参数要求排序；</li>
+<li>把树打印到终端上。</li>
+</ol>
+<p>因为人的脑容量有限，通常解决问题的办法就是把比较复杂的问题分解成小问题，再把小问题继续分解下去。而在学校里所做的训练就是<strong>建立问题分解的思路和培养解决问题的能力</strong>。</p>
+<h3 id="1">1. 命令行参数</h3>
+<p>获取命令行参数的一小段代码：</p>
+<pre class="codehilite"><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;assert.h&gt;
+
+int main(int argc, char *argv[]) {
+  int i;
+  for (i = 0; i &lt; argc; i++) {
+    assert(argv[i]); // specification
+    printf(&quot;argv[%d] = %s\n&quot;, i, argv[i]);
+  }
+  assert(!argv[argc]); // specification
+  return 0;
+}</code></pre>
+
+
+<p>可以在终端里试试给这个程序传入不同的参数会输出什么，获取命令行参数的。这个问题就算是很好地解决啦：<code>argv[0], ..., argv[argc-1]</code>就是所有命令行的参数，这是操作系统与C程序之间的约定。</p>
+<p>之后会反复编译运行这个程序，所以<strong>编译和测试自动化</strong>非常重要。比较常见的项目组织是编写Makefile，在命令行中使用<code>make</code>实现编译，<code>make test</code>完成测试。</p>
+<div class="fenced fenced-green">
+<h4 id="_12">提示</h4>
+<p>回想一下大家做OJ题的过程。在编程的过程中，难免会经历修改代码 <math>\to</math> 编译 <math>\to</math> 运行 <math>\to</math> 修改代码……这样的循环。你会选择怎么做呢？不靠谱的人每次都键入命令(或者他发现Ctrl-p可以重复命令)。</p>
+<ul>
+<li>聪明一些的人发现，可以把命令写在一行里，比如<code>gcc a.c &amp;&amp; ./a.out</code>，一键就能编译运行了。</li>
+<li>更聪明的人发现可以写个Makefile (就像这个实验一样)，用<code>make test</code>跑完所有测试。</li>
+<li>更聪明的人发现可以每次在文件改动以后自动运行所有测试……有个神奇的命令叫<code>inotifywait</code>。</li>
+</ul>
+<p>我不否认在编写大项目的时候IDE更好用，不过在写小项目的时候能得到一点即时的反馈也是很不错的，尤其是能弄清背后的道理。就帮你们到这里啦！UNIX哲学是无处不在的，说得更具体一点，“只要你敢想，就一定能做到”。祝大家编程愉快。</p>
+<p>最后，以下两点有助于调试时放平心态：(1) <strong>机器永远是对的</strong>；(2) <strong>未测代码永远是错的</strong>。</p>
+</div>
+<h3 id="2">2. 得到系统中进程的编号</h3>
+<p>已经剧透过，系统里的<strong>每个进程都有唯一的编号</strong>，它在C语言中的类型是<code>pid_t</code>。不知道这是什么？Google一把就知道啦。你能找到glibc对它的<a href="https://www.gnu.org/software/libc/manual/html_node/Process-Identification.html">官方文档解释</a>。以后遇到问题要自己找答案哦！</p>
+<p>操作系统以什么样的方式让你获取系统里的进程呢？之前已经提示过了：</p>
+<blockquote>
+<p>Everything is a file.</p>
+</blockquote>
+<p>一切皆文件，进程信息当然也是“一切”的一部分。Linux提供了<a href="https://en.wikipedia.org/wiki/Procfs">procfs</a>，目录是<code>/proc</code>。如果你进去看一眼，就会发现除了一些比如<code>cpuinfo</code>这样的文件，还有很多以数字命名的目录——聪明的你也许已经猜到了，这些就是操作系统里的进程啦！</p>
+<p>可以先玩一会儿，用<code>cat</code>可以打印文件的值，可以把文件的内容打出来看看，再对照文档。</p>
+<p>现在的问题就变成：怎样得到<code>/proc</code>目录下的所有以数字为开头的目录。如果你找对关键字，会发现有很多种方法，一定要自己试一试哦。</p>
+<h3 id="3">3. 得到进程之间的关系</h3>
+<p>procfs里还有很多有趣的东西，每个进程的父进程也隐藏在<code>/proc/[pid]/</code>中的某个文件里。试试<code>man 5 proc</code>，里面有详细的文档。还有，你们的OJ就是读取<code>/proc/[pid]/</code>中的信息得到时间/内存等统计信息的。</p>
+<p>就像一个普通的文件一样，你可以用你熟悉的方式打开它，把你要的信息读出来就行了:</p>
+<pre class="codehilite"><code class="language-c">FILE *fp = fopen(filename, &quot;r&quot;);
+if (fp) {
+  // 用fscanf, fgets等函数读取
+  fclose(fp);
+} else {
+  // 错误处理
+}</code></pre>
+
+
+<p>procfs里的信息足够让你写一个非常不错的任务管理器。</p>
+<h3 id="4">4. 建树和打印</h3>
+<p>这是数据结构方面的内容，这门课不会涉及啦。把它当一个OJ题就好了。如果你没有头绪，试着定义一个递归过程：</p>
+<ol>
+<li>定义<math>f(T) \to [s_1,s_2,\ldots,s_n]</math>把<math>T</math>打印成若干行(第<math>i</math>行是字符串<math>s_i</math>)。</li>
+<li>求<math>f(T)</math>时，先把它所有子树的字符串序列求出来。</li>
+<li>把这些字符串拼到适当的位置，加上一些连接线。</li>
+</ol>
+<p>然后你会发现你并不需要真的实现<math>f(T)</math>，而是一遍递归一边打印就行。</p>
+<h2 id="_13">写出正确的代码</h2>
+<div class="fenced fenced-red">
+<h4 id="_14">完成了？</h4>
+<p>是时候问问自己：我的程序对吗？</p>
+</div>
+<p>提示：助教可能会在各种奇葩的条件下运行你的程序哦！除了你们做的OJ题中会有复杂的逻辑(参数的组合)导致bug之外，和系统打交道的编程可有更多的麻烦之处：</p>
+<ol>
+<li>你的程序遵守POSIX的返回值规定吗？程序是否有出错的可能？它会不会crash？如果系统里的进程很多呢？如果内存不够了呢？如果<code>open</code>或者<code>malloc</code>失败了呢？要知道，crash一般是因为<a href="https://en.wikipedia.org/wiki/Undefined_behavior">undefined behavior (UB)</a>导致的——UB没把所有的文件都删掉真是谢天谢地了。</li>
+<li>万一我得到进程号以后，进去发现文件没了(进程终止了)，怎么办？会不会有这种情况？万一有我的程序会不会crash……？</li>
+<li>进程的信息一直在变，文件的内容也一直在变(两次<code>cat</code>的结果不同)。那我会不会读到不一致的信息(前一半是旧信息、新一半是新信息)？</li>
+<li>如果我不确信这些事会不会发生，我有没有写一个程序，至少在压力环境下测试一下它们有没有可能发生？嗯，如果我同时运行很多程序，每个程序都不断扫描目录、读取文件，也观察不到这个问题，至少应该可以放点心。</li>
+</ol>
+<p>随着课程的深入，这些问题都会得到解答。</p>
+<p>当你的程序越来越复杂，这些问题也许将会成为你挥之不去的阴影。这就对了——从Intel的CPU到Linux Kernel，到已经被形式化验证的编译器，都有数不清的bug。写出正确的代码远比想象中困难——目前地球上还没人能保证复杂的系统没有bug和漏洞。我个人热切盼望着没有bug的那一天的到来，不过似乎遥不可及。不过也不用太绝望，这门课里会教给大家一些有关“写代码”的知识，更重要的是正确的思维方式(“世界观”)：操作系统会提供什么、该提供什么、不该提供什么、应该怎么提供。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

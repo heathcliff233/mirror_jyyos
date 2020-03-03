@@ -1,0 +1,243 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>并发：进程与线程</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">并发：进程与线程</h1>
+<h2 id="_2">多进程并发</h2>
+<p>通过<code>fork</code> API就能在操作系统中创建多个同时(并发)运行的进程。这些进程随时都有可能调用系统调用，因此即便进程拥有独立的地址空间，它们请求操作系统调用的时间顺序也可能会导致意料之外的后果。</p>
+<p>例如，如果我们希望实现一个函数<code>log</code>能把调试日志输出，这还不简单吗：</p>
+<pre class="codehilite"><code class="language-c">void log(const char *str) {
+  printf(&quot;[LOG] %s\n&quot;, str);
+}</code></pre>
+
+
+<p>且慢！我们考虑以下场景：</p>
+<ol>
+<li><code>fork()</code>之后父子进程都持有对<code>stdout</code>的文件描述符，这个时候，父子进程都可以调用<code>log()</code>输出，如何保证日志文件里每行都是一条日志，而不会出现<code>[LOG] [LOG] parent child</code>这样的情况？</li>
+<li>如果父子进程都写入到文件中，例如<code>./a.out &gt; a.log</code>，那么会不会出现互相覆盖的情况？</li>
+<li>如果两个进程都使用<code>O_APPEND</code>打开日志文件，例如<code>worker 1 &gt;&gt; a.log &amp; ; worker 2 &gt;&gt; a.log &amp;</code>，日志输出是否正确？</li>
+</ol>
+<p>你就知道这件事情没那么简单了。</p>
+<div class="fenced fenced-green">
+<h4 id="_3">思考题：系统调用的并发行为</h4>
+<p>操作系统到底规定了并发的<code>write</code>系统调用具有怎样的行为？以及<code>log()</code>的<code>printf</code>实现为什么不能保证日志的正确输出？花一点时间到网上搜索相关的材料能加深你的操作系统“规约”的理解。</p>
+</div>
+<p>然后你可能看到<code>write</code>的手册里这么写：</p>
+<h3 id="bugs">BUGS</h3>
+<p>According to POSIX.1-2008/SUSv4 Section XSI 2.9.7 ("Thread Interactions with Regular File Operations"):</p>
+<blockquote>
+<p>All of the following functions shall  be  atomic  with  respect  to  each  other  in  the  effects  specified  in POSIX.1-2008 when they operate on regular files or symbolic links: ... </p>
+</blockquote>
+<p>Among  the  APIs  subsequently  listed are <code>write()</code> and <code>writev</code>(2).  And among the effects that should be atomic across threads (and processes) are updates of the file offset.  However, on Linux before version  3.14,  this  was  not  the case: if two processes that share an open file description (see open(2)) perform a <code>write</code>() (or <code>writev</code>(2)) at the same time, then the I/O operations were not atomic with respect updating the file offset, with the result that the  blocks of data output by the two processes might (incorrectly) overlap.  This problem was fixed in Linux 3.14.</p>
+<p>你没有看错——现实就是那么残酷，如Linux 3都没能保证并发执行下语义的正确——任何系统调用在几乎任何情况下都可能被并发执行，以及有人在StackOverflow上关于<code>write</code>原子性的回帖：</p>
+<blockquote>
+<p>It's not luck, in the sense that if you dig into the kernel you can probably prove that in your particular circumstances it will never happen that one processes' write is interleaved with another one. I am assuming that:</p>
+<ul>
+<li>You are not hitting any file size limits</li>
+<li>You are not filling the filesystem in which you create the test file</li>
+<li>The file is a regular file (not a socket, pipe, or something else)</li>
+<li>The filesystem is local</li>
+<li>The buffer does not span multiple virtual memory mappings (this one is known to be true, because it's malloc()ed, which puts it on the heap, which it contiguous.</li>
+<li>The processes aren't interrupted, signaled, or traced while write() is busy.</li>
+<li>There are no disk I/O errors, RAM failures, or any other abnormal conditions.
+(Maybe others)</li>
+</ul>
+<p>You will probably indeed find that if <em>all</em> those assumptions hold, it is the case that the kernel of the operating system you happen to be using always accomplishes a single <code>write</code>() system call with a single atomic contiguous write to the following file.</p>
+<p>That doesn't mean you can count on this always being true. You never know when it might not be true when:</p>
+<ul>
+<li>the program is run on a different operating system</li>
+<li>the file moves to an NFS filesystem</li>
+<li>the process gets a signal while the write() is in progress and the write() returns a partial result (fewer bytes than requested). Not sure if POSIX really allows this to happen but I program defensively!</li>
+<li>etc...</li>
+</ul>
+</blockquote>
+<p>嗯。系统调用不仅有我们“正常”理解中的语义，还有无数的细节情况，例如超过文件大小、底层文件实现、内存映射、操作可能被中断/失败……负责任地说，现今的操作系统内核中依然有很多bug。</p>
+<p>那么，进程/系统调用并发执行的行为到底是什么呢？也许永远是个谜，没有人知道。但我们可以知道的是，在较为有限的情况里，有些并发程序执行的结果是预期的、有些是非预期的。作为操作系统的使用者，至少要建立概念：在一般情况下(例如正常文件)，操作系统将会提供怎样的并发行为的保证？逐渐你就能体会操作系统API设计中的种种精妙之处。</p>
+<h2 id="c">操作系统 = C程序</h2>
+<p>没错，之前我们已经讲过，操作系统不过是一个C程序。在OSLab0当中，我们也已经对这个想法做了一定的实践：我们的C程序经过了加载以后，真的直接运行在了<code>qemu-system-i386</code>的计算机上，而且真的能调用各种API (绝大多数也都是用C语言实现的，借助少量机器指令的)直接控制计算机系统中的I/O设备，例如扫描PCI总线上的设备。</p>
+<p>为了能实现多进程分时复用处理器，硬件提供了存储保护和中断(异常)机制。每当中断到来后，操作系统(C语言)代码就接管了所有程序的执行。因此，实现系统调用也非常简单，以i386为例，进程会把系统调用的参数保存到寄存器里(例如对于<code>write(fd, buf, size)</code>，会将write系统调用的编号存入<code>EAX</code>，其他参数也保存在寄存器中)，然后调用<code>int</code>指令产生一个异常。处理器执行<code>int</code>指令会跳转到操作系统指定的代码执行，软硬件共同完成保存寄存器现场等一系列工作，然后调用<code>do_write</code>实际执行系统调用——就这么简单。</p>
+<p>真正的麻烦在于，如果你写入1,000,000,000字节的数据，你不能让整个系统卡死对吧？所以，在write系统调用执行的过程中，你应该允许它被中断，然后write系统调用的代码执行的寄存器现场被保存，切换到其他进程执行。</p>
+<div class="fenced fenced-red">
+<h4 id="c_1">操作系统 = 并发的C程序</h4>
+<p>所以，<strong>即便每个进程都拥有独立的地址空间，操作系统在执行系统调用时仍是并发的</strong>——操作系统是历史上最早的(实际的)并发程序之一。结合上面的例子，这也解释了为什么大家都觉得写操作系统不是一件那么容易的事情了。</p>
+</div>
+<h2 id="_4">多线程并发</h2>
+<p>顺着“操作系统是并发程序”的故事继续，操作系统的代码运行在共享的内存里，例如，操作系统需要维护每个进程文件描述符对应的文件，例如pid = 1234和pid = 1235的两个进程，编号为4的文件描述符都对应了管道的写口。因此，为什么我们不能让进程共享地址空间呢？当然能啦。之前已经分析过，程序需要执行，只要有代码、数据和堆栈就可以了——借助虚拟存储机制，动态链接库的代码已经实现了共享。因此就有了线程，来自百度百科的莫名其妙定义：</p>
+<blockquote>
+<p>线程，有时被称为轻量级进程(Lightweight Process，LWP)，是程序执行流的最小单元。一个标准的线程由线程ID，当前指令指针(PC)，寄存器集合和堆栈组成。另外，线程是进程中的一个实体，是被系统独立调度和分派的基本单位，线程自己不拥有系统资源，只拥有在运行中必不可少的资源，但它可与同属一个进程的其它线程共享进程所拥有的全部资源。</p>
+<p>一个线程可以创建和撤消另一个线程，同一进程中的多个线程之间可以并发执行。由于线程之间的相互制约，致使线程在运行中呈现出间断性。线程也有就绪、阻塞和运行三种基本状态。就绪状态是指线程具备运行的所有条件，逻辑上可以运行，在等待处理机；运行状态是指线程占有处理机正在运行；阻塞状态是指线程在等待一个事件（如某个信号量），逻辑上不可执行。每一个程序都至少有一个线程，若程序只有一个线程，那就是程序本身。</p>
+</blockquote>
+<p>基本来说，“进程”代表了一个执行的程序，而“线程”就是程序里的一个执行流，多个线程共享进程的一些资源(内存、文件描述符)，同时也拥有自己的独立资源。</p>
+<div class="fenced fenced-green">
+<h4 id="_5">那么，线程的堆栈到底是共享的，还是独占的？</h4>
+<p>首先，我们无法为两个执行流共享一个ESP寄存器(同一段内存作为堆栈)，因为两个线程必须能够独立地执行函数。因此，我们必须在内存中为每个线程分配独立的堆栈。那么，这个内存是仅线程可见，还是其他线程也可见的？为什么？</p>
+<p>首先，对于C语言程序来说，堆栈上的地址是能够引用的，也就是说可以用<code>&amp;x</code>取出局部变量<code>x</code>的地址，传递给另一个线程使用。对于不允许这么做的语言来说，让每个线程的堆栈独立位于自己的地址空间内是可以的。这带来了一些好处，也带来了一些坏处。</p>
+</div>
+<p>当多个线程拥有共享内存的时候，程序的行为就变得相当难以捉摸了，例如：</p>
+<pre class="codehilite"><code class="language-c">#define N 1000000000
+int sum = 0;
+void thread1() {
+  for(inti=0;i&lt;N;i++)
+    sum++;
+}
+void thread2() {
+  for(inti=0;i&lt;N;i++)
+    sum++;
+}</code></pre>
+
+
+<p>假设<code>thread1()</code>和<code>thread2()</code>在两个线程中执行，执行结果：</p>
+<ul>
+<li><code>gcc -O0</code> (8.726s) sum = 1054212206</li>
+<li><code>gcc -O1</code> (0.388s) sum = 1000000000 </li>
+<li><code>gcc -O2</code> (0.002s) sum = 2000000000</li>
+</ul>
+<p><code>gcc -O0</code>告诉我们：看似<code>sum++</code>是一条语句，但实际执行的时候，它可能被打断，更像是：</p>
+<pre class="codehilite"><code class="language-c">tmp = sum;
+tmp += 1;
+sum = tmp;</code></pre>
+
+
+<p>这三条语句的执行。因此有可能出现：</p>
+<pre class="codehilite"><code class="language-c">// sum = 10
+(thread1)    (thread2)
+tmp = sum // 10
+             tmp = sum // 10
+tmp += 1 // 11
+sum = tmp // 11
+tmp = sum // 11
+tmp += 1 // 12
+             tmp += 1 // 11
+sum = tmp // 12
+             sum = tmp // sum = 11</code></pre>
+
+
+<p>也就是说，出现了程序“前进几步”，又被“后退”的情况：<strong>在共享内存中，语句的执行并不是原子(atomic)的</strong>。</p>
+<p>而<code>-O1</code>和<code>-O2</code>的情况又告诉我们：你也许并不知道编译器实际会把你的程序编译成什么。在<code>-O1</code>时，<code>gcc</code>用<code>rax</code>寄存器表示了<code>sum</code>并在循环结束后才一次性写入，因此最终写入了<code>N</code>；而<code>-O2</code>干脆把整个循环优化成了<code>sum += N</code>。</p>
+<p>当然一个更让人费解的例子是：</p>
+<pre class="codehilite"><code class="language-c">int volatile x = 0, y = 0;
+void thread1() {
+  (1) x = 1;
+  (2) read(y);
+}
+void thread2() {
+  (3) y = 1;
+  (4) read(x);
+}</code></pre>
+
+
+<div class="fenced fenced-green">
+<h4 id="_6">又一个保研面试题</h4>
+<p>以前我经常和别人开玩笑说，如果有人要保研，我就问他C和Java里<code>volatile</code>关键字到底有什么区别。从这个问题就从程序设计语言问到操作系统，一直问到了计算机硬件。从你现在的角度来说，C为什么需要<code>volatile</code>关键字？</p>
+</div>
+<p>这个程序太简单了，就是写一个变量，读另一个变量嘛(最后输出(tx, ty)的值)。把语句看作指令(实际上也正是如此编译成指令的)有以下执行顺序：</p>
+<ul>
+<li>
+<math>(1)\to(2)\to(3)\to(4)</math>, 最后将得到(0, 1)</li>
+<li>
+<math>(3)\to(4)\to(1)\to(2)</math>，最后将得到(1, 0)</li>
+<li>
+<math>(1)\to(3)\to(4)\to(2)</math>，最后将得到(1, 1)</li>
+<li>
+<math>(1)\to(3)\to(2)\to(4)​</math>, 最后将得到(1, 1)</li>
+<li>...</li>
+</ul>
+<p>无论如何，第一个执行的指令总是<math>(1)</math>或<math>(2)​</math>，因此……什么？在实际执行的时候，我压根就没看到过(1, 1)，但是却看到了(0, 0)？看不到(1, 1)还可以接受：这两条指令在0.000000001s就执行完了，没来得及切换，但看到(0, 0)似乎有些过分了？</p>
+<p>换句话说：</p>
+<div class="fenced fenced-red">
+<h4 id="_7">并发程序在多处理器上执行的语义</h4>
+<p>并发程序执行的结果并不一定等同于所有执行过指令排成某一个顺序以后依次执行的结果。并发程序执行的行为由<a href="https://en.wikipedia.org/wiki/Memory_model_(programming)">内存模型(memory model)</a>定义。</p>
+<p>这个问题超出了本课程讨论的范围，你只需要记住：<strong>在多个线程共享内存时，并发程序行为的准确建模是十分困难的</strong>。通常我们(作为正常程序员)都显式地借助线程API写出正确的多线程程序。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

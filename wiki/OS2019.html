@@ -1,0 +1,157 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>操作系统设计与实现(2019)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="2019">操作系统设计与实现(2019)</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">关于作业提交</h4>
+<p>因网站URL改变，请大家执行<code>git pull origin master</code>更新Makefile。</p>
+<p>对于所有实验：</p>
+<ul>
+<li>Hard Deadline：6月30日23:59:59；超过扣除10%成绩；</li>
+<li>Hard Hard Deadline：7月31日23:59:59，此后不再接受新提交。</li>
+</ul>
+</div>
+<div class="fenced fenced-blue">
+<h4 id="_2">课程概况</h4>
+<p>先修课程：《计算机系统基础》和/或《计算机体系结构》。本课程假设你已经独立完成了<a href="https://nju-ics.gitbooks.io/ics2018-programming-assignment/">NEMU模拟器实验</a>，相应地，我们假设你：</p>
+<ul>
+<li>掌握C语言编程的技术和技巧，包括测试与调试。</li>
+<li>熟悉至少一个指令集(包括应用和系统指令)，包括但不限于x86, MIPS, 或RISC-V；编写过一个全系统模拟器。</li>
+</ul>
+<p>这门课程将会为大家揭秘操作系统——我们一直以来接触最多但却也觉得最神秘的软件之一——是如何设计和实现的。</p>
+</div>
+<ul>
+<li><a href="OS_References.html">教科书与参考资料</a>；<a href="OS2019_GUIDE.html">生存指南</a></li>
+<li>课时：每周一10:00–12:00、周四14:00–16:00；上课地点：仙II-112</li>
+<li>成绩：期末考试 (40%), 期中测验 (10%), 系统实验 [L] (25%), 编程实验 [M] (25%)</li>
+<li>Office Hours: 周一13:00 — 14:00；周五13:00 — 14:00</li>
+<li>助教：陈冬杰 <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#100;&#111;&#110;&#103;&#106;&#105;&#101;&#95;&#99;&#100;&#106;&#64;&#49;&#54;&#51;&#46;&#99;&#111;&#109;">&#100;&#111;&#110;&#103;&#106;&#105;&#101;&#95;&#99;&#100;&#106;&#64;&#49;&#54;&#51;&#46;&#99;&#111;&#109;</a>、欧先飞 <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#111;&#117;&#120;&#105;&#97;&#110;&#102;&#101;&#105;&#64;&#115;&#109;&#97;&#105;&#108;&#46;&#110;&#106;&#117;&#46;&#101;&#100;&#117;&#46;&#99;&#110;">&#111;&#117;&#120;&#105;&#97;&#110;&#102;&#101;&#105;&#64;&#115;&#109;&#97;&#105;&#108;&#46;&#110;&#106;&#117;&#46;&#101;&#100;&#117;&#46;&#99;&#110;</a>、赵士轩<a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#104;&#105;&#120;&#117;&#97;&#110;&#46;&#122;&#104;&#97;&#111;&#64;&#104;&#111;&#116;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#104;&#105;&#120;&#117;&#97;&#110;&#46;&#122;&#104;&#97;&#111;&#64;&#104;&#111;&#116;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></li>
+</ul>
+<h2 id="_3">课程概述</h2>
+<p>操作系统对每个同学来说都既陌生又熟悉。一方面每天我们都在使用操作系统，另一方面它又是现今计算机系统中最神秘和复杂的软件之一。首先，操作系统是一个典型的“system”——它完成对计算机硬件系统的<font color="red">抽象</font>，提供应用程序的运行环境：</p>
+<ul>
+<li>从应用程序的视角看，操作系统就是一组API规约(specification)——系统调用。操作系统规定了何时执行何种系统调用将会得到怎样的结果。不要小看这组API，它们不仅能实现应用程序(浏览器、游戏……)，还能实现各种神奇的系统程序(容器、虚拟机、调试器、游戏外挂……)</li>
+<li>从硬件的视角看，操作系统是一个拥有访问全部硬件功能的程序(所以操作系统也就是个C程序嘛，不用怕)。操作系统在加载第一个程序执行后，从此进入后台作为“中断处理程序”在后台管理整个计算机系统。</li>
+</ul>
+<p>操作系统使用正确的抽象使构造庞大的计算机软件/硬件生态从不可能变为可能。在这门课里你将会学到操作系统是<font color="red">如何设计</font>、<font color="red">怎样实现</font>的：操作系统应该提供怎样的API，并且应该一层一层构造抽象在硬件上实现这些API。</p>
+<hr />
+<p>本学期课程分为五个主要部分：</p>
+<ul>
+<li>原理课(<span class="box box-blue">&nbsp;</span>/<span class="box box-green">&nbsp;</span>/<span class="box box-red">&nbsp;</span>)：以教科书内容为主，介绍操作系统的原理性内容；</li>
+<li>代码课(<span class="box box-yellow">&nbsp;</span>)：讲解操作系统相关的代码实现和编程技巧；</li>
+<li>Mini labs (应用程序视角)：通过实现一系列有趣的(<del>黑科技</del>)代码理解操作系统API的使用方法和这些API背后的设计理念；</li>
+<li>OS labs (计算机硬件视角)：基于<a href="AM.html">抽象计算机</a>实现一个简易操作系统内核，向应用程序提供一些基础的操作系统API；</li>
+<li>专题(<span class="box box-gray">&nbsp;</span>)：与计算机系统/操作系统有关的扩展知识。</li>
+</ul>
+<h2 id="_4">课程讲义</h2>
+<ol>
+<li><a href="OS2019_Intro.html">操作系统概述</a> <a href="OS2019_1.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <span class="box box-yellow">C</span> <a href="OS2019_OSAPP.html">应用眼中的操作系统</a> <a href="OS2019_C1.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_M1.html">[M1] pstree</a> | <a href="OS2019_L0.html">[L0] amgame</a></li>
+<li><span class="box box-blue">并发</span> <a href="OS2019_Concurrency.html">共享内存多线程</a> <a href="OS2019_2.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <span class="box box-yellow">C</span> <a href="OS2019_Hardware.html">硬件眼中的操作系统</a> <a href="OS2019_C2.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_M2.html">[M2] libco</a></li>
+<li><span class="box box-blue">并发</span> <a href="OS2019_Mutex.html">互斥</a>  <a href="OS2019_3.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <span class="box box-yellow">C</span> <a href="OS2019_ConcurrentDS.html">并发数据结构</a> <a href="OS2019_C3.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_L1.html">[L1] kalloc</a></li>
+<li><span class="box box-blue">并发</span> <a href="OS2019_Sync.html">同步</a>  <a href="OS2019_4.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>  | <span class="box box-yellow">C</span> <a href="OS2019_CBugs.html">并发bugs</a> <a href="OS2019_C4.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></li>
+<li><span class="box box-green">虚拟化</span> <a href="OS2019_Process.html">进程抽象</a>  <a href="OS2019_5.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <span class="box box-yellow">C</span> <a href="OS2019_Shell.html">终端和Shell</a>  <a href="OS2019_C5.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_M3.html">[M3] sperf</a></li>
+<li><span class="box box-green">虚拟化</span> <a href="OS2019_Sched.html">处理器调度</a> by 杨已彪 | <span class="box box-yellow">C</span> 链接与加载 <a href="../static/wiki/os/2019/slides/OS2019_C6.pdf"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_M4.html">[M4] crepl</a></li>
+<li><span class="box box-green">虚拟化</span> <a href="OS2019_VMem.html">虚存抽象</a>  <a href="OS2019_7.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>  |  <span class="box box-yellow">C</span> <a href="OS2019_Debug.html">调试操作系统内核</a> <a href="OS2019_C7.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_L2.html">[L2] kthreads</a></li>
+<li>期中复习 <a href="OS2019_8.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | 随堂期中测验</li>
+<li><span class="box box-red">持久化</span> <a href="OS2019_BitStorage.html">存储介质</a> <a href="OS2019_9.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_IODev.html">I/O设备与驱动</a> <a href="OS2019_10.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> </li>
+<li><span class="box box-red">持久化</span> <a href="OS2019_FSConcept.html">文件系统概念</a> <a href="OS2019_11.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>  | <span class="box box-yellow">C</span> <a href="OS2019_FSAPI.html">文件系统API</a> <a href="OS2019_C8.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> </li>
+<li><span class="box box-red">持久化</span> <a href="OS2019_FSImpl.html">文件系统实现</a> <a href="OS2019_12.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_FSImpl2.html">FAT和ext2</a> <a href="OS2019_13.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>  | <a href="OS2019_M5.html">[M5] frecov</a> </li>
+<li><span class="box box-red">持久化</span> <a href="OS2019_RAID.html">持久数据的可靠性</a> <a href="OS2019_14.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_CrashConsistency.html">崩溃恢复与日志</a> <a href="OS2019_15.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>  | <a href="OS2019_M6.html">[M6] libkvdb</a> | <a href="OS2019_L3.html">[L3] vfs</a></li>
+<li>Putting Pieces Together <a href="OS2019_16.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_Microkernel.html">微内核操作系统</a> <a href="OS2019_17.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></li>
+<li><span class="box box-gray">专题</span> <a href="OS2019_AccessControl.html">多用户与访问控制</a> <a href="OS2019_18.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_Security.html">操作系统安全</a> <a href="OS2019_19.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></li>
+<li><span class="box box-gray">专题</span> 网络与套接字 <a href="OS2019_20.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | 分布式系统 <a href="OS2019_21.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="OS2019_L4.html">[L4] uproc</a></li>
+<li><span class="box box-gray">专题</span> 容器与虚拟机 <a href="OS2019_22.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | 期末复习 <a href="OS2019_23.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></li>
+</ol>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,118 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>SPAR Reading Seminar (2019 Fall)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="spar-reading-seminar-2019-fall">SPAR Reading Seminar (2019 Fall)</h1>
+<ul>
+<li>时间：每周二下午 4:00 - 5:00</li>
+<li>地点：计算机楼 230</li>
+</ul>
+<h2 id="pending">Pending</h2>
+<h2 id="past">Past</h2>
+<ol>
+<li>童燕翔 (Dec 24): Search-based test and improvement of machine-learning-based anomaly detection systems (ISSTA'19)</li>
+<li>李文杰 (Dec 17): Pinpointing performance ineﬀiciencies in Java (ESEC/FSE'19)</li>
+<li>李聪 (Dec 10): A lightweight framework for fine-grained lifecycle control of Android applications</li>
+<li>赵泽林 (Dec 3): Field-exhaustive testing (FSE'16)</li>
+<li>屈道涵 (Nov 26): Practical partial evaluation for high-performance dynamic language runtimes (PLDI'17)</li>
+<li>叶炜煜 (Nov 19): Improving the decision-making process of self-adaptive systems by accounting for tactic volatility (ASE'19)</li>
+<li>王国畅 (Nov 12): Scaling distributed machine learning with the parameter server (OSDI'14)</li>
+<li>李泽南 (Nov 5): Automatically improving accuracy for floating point expressions (PLDI'15)</li>
+<li>陈紫琦 (Oct 29): DeepHunter: A coverage-guided fuzz testing framework for deep neural networks (ISSTA'19)</li>
+<li>张晨曦 (Sept 24): Effective error-specification inference via domain-knowledge expansion (ESEC/FSE'19)</li>
+<li>陈冬杰 (Oct 8): Testing Scratch programs automatically (ESEC/FSE'19)</li>
+<li>欧先飞 (Oct 15): Off-Path TCP exploits, global rate limit considered dangerous (USENIX Security'16)</li>
+<li>李达 (Oct 22): Effective static analysis of concurrency use-after-free bugs in Linux device drivers (USENIX ATC'19)</li>
+</ol>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

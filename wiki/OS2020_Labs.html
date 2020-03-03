@@ -1,0 +1,266 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>OS 课程实验须知</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="os">OS 课程实验须知</h1>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="tl-dr">TL; DR</h4>
+<p>从 Github 下载指定的 repo，整个学期都在此目录中完成所有实验。</p>
+<p><strong>我们将使用我们的脚本/Makefile、在我们的环境下进行评测</strong>。因此如果你在本地修改了编译选项 (如去掉了 <code>-Wall -Werror</code> 等)、硬编码了路径 (<code>fopen("/home/jyy/log.txt", "w")</code>) 等，提交后可能会发生编译/运行错误。</p>
+</div></div></div>
+
+<h2 id="_1">设置实验环境</h2>
+<p>x86-64 Linux 系统 (任意发行版)。Debian/Ubuntu 是比较新手友好的选择；推荐在物理机上安装，但也可以使用虚拟机 (请分配足够的内存和磁盘空间)。</p>
+<p>获取实验框架，在终端中执行命令</p>
+<pre class="codehilite"><code>git clone https://github.com/NJU-ProjectN/os-workbench.git</code></pre>
+
+
+<p>将会克隆 <code>os-workbench</code> 到当前目录，之后的编程任务均在此完成。</p>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="git">使用 Git 记录编程过程 (<a href="https://zhuanlan.zhihu.com/p/40568346">为什么？</a>)</h4>
+<p>如果你对 Makefile 有修改，请保留 Git 追踪部分。</p>
+<p>如果你希望手工管理 Git 仓库，请将 master 作为你工作的主分支；你可以建立临时分支，但也请合并回 master。请<strong>妥善保管这个目录</strong> (<strong>如果在多个地点完成作业，请将整个目录完整移动</strong>，以保持 Git 记录的完整)。如遇问题请联系老师或助教。</p>
+</div></div></div>
+
+<h3 id="_2">实验环境</h3>
+<p>初始时，你 clone 下的目录中只有 <code>Makefile</code>, <code>Makefile.lab</code> 和 <code>.gitignore</code> 三个文件。在相应的实验页面上，有获取实验代码的方法。以 Mini Lab 为例，如果一切顺利，在 minilab 对应的目录中 <code>make</code>，将会得到 xxxx-32 和 xxxx-64 两个文件，分别是 32 位和 64 位平台上的二进制代码 (或运行库)。以下是第一个 Mini Lab (pstree) 框架代码的例子：</p>
+<pre class="codehilite"><code class="language-text">$ ls
+Makefile  pstree.c
+$ make
+gcc -m64 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-64 
+gcc -m32 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-32 
+$ ls
+Makefile  pstree-32*  pstree-64*  pstree.c
+$ ./pstree-32 hello
+argv[0] = ./pstree-32
+argv[1] = hello
+$ ./pstree-64 world
+argv[0] = ./pstree-64
+argv[1] = world
+jyy@pstree/$ </code></pre>
+
+
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="trouble-shooting">Trouble Shooting</h4>
+<p>一切顺利？一般都不会太顺利的。如果你第一次安装 Linux 环境，一定会遇到一些困难。给大家的建议：</p>
+<ol>
+<li>(非常非常非常重要，新手经常忽略) 仔细阅读、<strong>理解</strong>输出日志，尤其是错误信息。必要的时候使用一些命令行选项打印更多的日志</li>
+<li>在 Google/Bing/Stackoverflow 用英文关键字搜索相应的错误，并尝试解决</li>
+<li>禁止使用中文关键字，禁止使用百度/CSDN blogs。其中的很多不准确的信息可能会误导新手</li>
+<li>我们的<a href="OS_References.html">阅读材料</a>有一些入门材料，不耐心的同学可以读一下 “The Art of Command Line”，几乎有你这学期需要的全部</li>
+</ol>
+</div></div></div>
+
+<p>例如，如果你使用了非推荐的环境 (比如 Docker)，你可能会遇到 <code>hostnamectl</code> 没法执行的问题……你可以试着解决这个问题，但我们不推荐使用 docker——在未来你会遇到更多的问题。Docker 并不是设计给开发用的，而是给部署用的。</p>
+<p>再比如在64位环境下，如果没有安装编译器和相应的运行库，则第一次编译就会失败；如果安装了，<code>-m32</code> 也会编译错误，例如：</p>
+<pre class="codehilite"><code>In file included from /usr/include/features.h:399:0,
+                 from /usr/include/stdio.h:27,
+                 from ./pstree.c:1:
+/usr/include/gnu/stubs.h:7:27: fatal error: gnu/stubs-32.h: No such file or directory
+ # include &lt;gnu/stubs-32.h&gt;
+                           ^
+compilation terminated.
+make: *** [pstree-32] Error 1</code></pre>
+
+
+<p>这时候，两个反复提到的词再次出现：</p>
+<ul>
+<li><a href="https://www.urbandictionary.com/define.php?term=rtfm">RTFM</a>: Read The Friendly Manual</li>
+<li><a href="https://www.urbandictionary.com/define.php?term=stfw">STFW</a>: Search The Friendly Web</li>
+</ul>
+<p>其中的 “F” 让它们更具有传奇色彩。通过查阅官方文档和搜索互联网解决你遇到的问题，在《计算机系统基础》这门课中已经得到了充分的训练。再次强调要看清楚网上的解决方案是否适合你的系统环境，以及是否说明了出问题的原因。<code>make</code> 编译成功后，将会得到 <code>pstree-32</code> 和 <code>pstree-64</code> 两个文件，在命令行中执行可以打印所有命令行参数。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="-32-64">-32, -64?</h4>
+<p>同一份代码，Makefile 会同时使用 <code>-m32</code> 和 <code>-m64</code> 两个选项来编译。这<del>帮</del> (强) <del>助</del> (制) 大家写出可移植的代码。<a href="https://wiki.sei.cmu.edu/confluence/display/c/SEI+CERT+C+Coding+Standard">CERT C 编码规范</a>是非常棒的阅读材料，也作为书籍出版，大家可以收藏一本电子版。</p>
+</div></div></div>
+
+<h3 id="_3">注意事项</h3>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="mini-labs">Mini Labs 注意事项</h4>
+<ol>
+<li><strong>在 Linux 下完成</strong>。你的代码同时兼容 32/64 位环境是强制必须实现的，并在测试用例中体现。</li>
+<li><strong>全程只有一个 C 源代码文件，请控制在 500 行以内</strong>。参考实现一般在 100-200 行，测试通过即得满分。Mini Programming Labs 的扩展性极高，顺着写下去，1,000 行，10,000 行，100,000 行都是有可能的，请克制你的欲望。</li>
+<li><strong>只允许使用指定的 Makefile 编译 (使用 <code>make</code>)、只允许编辑已有的一个 <code>.c文件</code></strong>。评测时，我们仅复制这一个 C 文件 (添加其他文件在 Online Judge 会导致编译错误)。</li>
+<li><strong>不需要实验报告</strong>。</li>
+</ol>
+<h4 id="os-labs">OS Labs 注意事项</h4>
+<ol>
+<li>同样需要编写<strong>可移植的代码</strong>。我们将在 native, x86_64-qemu, x86-qemu 三个平台上测试。</li>
+<li>需要撰写实验报告 (以 pdf 格式存储在实验目录中)。除非特殊情况，实验报告不建议超过 2 页 A4 纸。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的 bug 等。无需事无巨细交代清楚；好的代码不言自明。</li>
+</ol>
+</div></div></div>
+
+<h2 id="_4">实验提交</h2>
+<p>你需要配置好 <code>STUID</code> (学号) 和 <code>STUNAME</code> (中文姓名) 两个环境变量。作为实验的热身，你需要了解一下什么是环境变量 (尽管现在你可能理解得并非完全彻底，但随着课程进展，我们会详细地讲解这部分)。我们在 Shell 中使用</p>
+<pre class="codehilite"><code>export STUID=12345678
+export STUNAME=蒋炎岩</code></pre>
+
+
+<p>设置环境变量。你可以把它们写在 bashrc/zshrc (user-specific configuration) 中，这样整个学期都不必重复输入了。在实验的目录中执行 <code>make submit</code> 将会自动完成提交；提交成功后会返回提交的 sha1sum：</p>
+<pre class="codehilite"><code>[SUCCESS] Received at server time 2020-XX-XX XX:XX:XX, sha1sum: XXXXXXXXXXXXXXXX</code></pre>
+
+
+<p>在课程主页右上角填入 sha1sum，在相应的实验页面查看 Online Judge 的返回结果。</p>
+<h2 id="_5">在线评测</h2>
+<p>在线评测基于计算机系云平台。程序在容器中编译、运行，并由机器自动判定结果是否正确。在此基础上，最终实验的评分仍有一部分由助教决定。你的程序将在以下环境运行：</p>
+<ul>
+<li><p>虚拟机中的 Ubuntu 18.04 容器 (<a href="https://www.docker.com/">Docker</a>)。容器中仅有最小的必要系统工具。使用以下 Dockerfile 配置与在线评测一致的环境；我们开放了容器的 <code>SYS_PTRACE</code> 权限；</p>
+<pre class="codehilite"><code>FROM ubuntu:18.04
+RUN bash /tmp/change-source.sh
+RUN apt-get update
+RUN apt-get install -y build-essential gcc-multilib qemu-system strace gdb sudo python3
+RUN apt-get upgrade -y
+RUN useradd -ms /bin/bash oj
+USER oj
+WORKDIR /home/oj</code></pre>
+
+
+</li>
+<li><p>Mini Labs 直接在容器中执行 (non-root user)；OS Labs 在容器中的 QEMU 虚拟机 (tcg 模式) 运行；</p>
+</li>
+<li>容器总内存限制 512 MiB，超过内存限会导致进程被杀死。超过一定时限未执行完的容器也将被杀死。</li>
+</ul>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="online-judge">被 Online Judge 支配的恐惧？</h4>
+<p>Online Judge 的最大特点就是<span class="red">严格</span>。有任何差错 (因为环境/配置等引发的编译错、细小的输出错误) 都将被 Online Judge 捕捉到。这有助于帮助大家摆脱 “糊弄” 的习惯，编写正确的程序。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/labs/compile-error.jpg" width="140px"></img></p>
+<p>系统课程的 labs 和 OJ 题有一点不同：大部分问题没有 “绝对正确” 的标准输出。因此我们并不是简单地运行程序检查结果，而是有一定系统化地测试你的程序：</p>
+<ul>
+<li>在多个环境下运行你的程序，如 i386 (32 位) 和 x86-64 (64位)，因此不可移植的代码可能无法编译；</li>
+<li>在模拟出的环境中执行程序，例如在线程调度时插入一些随机的 delays，从而提高某些并发 bug 触发的概率；</li>
+<li>链接我们修改过的库函数，例如 (在某些 lab 中) 使 <code>malloc()</code> 随机返回 <code>NULL</code>；</li>
+<li>解析程序的 log，并观察其中是否有 bug 出现的迹象。例如<span class="red">程序 crash 将被判定为不正确</span>、<span class="red">缺少某个重要输出也将被判定为不正确</span>。</li>
+</ul>
+</div></div></div>
+
+<h2 id="_6">评测与评分须知</h2>
+<p>测试用例分为两个等级 (easy 和 hard)，easy 通常是一些 “冒烟测试” (smoke test)，即使用最典型简单的方式运行程序，检查程序是否 crash 以及输出合理的结果。Hard 则是更接近实际应用场景的测试用例。虽然你不能看到程序的日志输出 (否则测试用例很容易泄露)，但我们会对每个测试用例提供一定的解释，以帮助大家诊断问题。与此同时，我们也会保留一定数量的测试用例用于评分使用，最终的评分将结合自动评测、保留测试用例和人工评价给出。评分规则：</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">评分规则</h4>
+<p>在没有<span class="red">抄袭</span>和<span class="red">作弊</span> (如硬编码答案、故意骗过 Online Judge 而不实现实验要求等) 的前提下</p>
+<p>Mini Labs (完全客观评分)</p>
+<ul>
+<li>Rejected, 编译错误或没有通过任何测试用例: 10% (诚信分)</li>
+<li>Accepted, 部分 easy 测试通过 (此时不运行 hard 用例): 50%</li>
+<li>Accepted, 全部 easy 测试通过、部分 hard 测试通过: 75%</li>
+<li>Accepted, 通过全部 easy/hard 测试: 100%</li>
+</ul>
+<p>OS Labs (几乎完全客观评分)</p>
+<ul>
+<li>Rejected, 编译错误或没有通过任何测试用例: 10% (诚信分)</li>
+<li>Accepted, 部分 easy 测试通过 (此时不运行 hard 用例): 30%</li>
+<li>Accepted, 全部 easy 测试通过、部分 hard 测试通过: ≥ 50%，剩余部分由隐藏的测试用例/人工评价给出</li>
+<li>Accepted, 通过全部 easy/hard 测试: ≥ 75%，剩余部分由隐藏的测试用例/人工评价给出</li>
+<li><span class="red">没有通过全部 easy 测试用例的作业将没有人工评分的机会</span> (即意味着<span class="red">实验报告不得分</span>。但我们会阅读你的反馈)。</li>
+</ul>
+</div></div></div>
+
+<p>我们希望这个机制能够强制大家写出高质量的代码。一开始会很痛苦，但之后你方能体会其中的良苦用心。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">按时提交奖励</h4>
+<p>每个实验都设有 Soft deadline。Soft deadline 之前提交：成绩 + 5% (如按时提交空项目将得到 15% 诚信分)</p>
+<ul>
+<li>单项得分可以超过 100% (例如按时提交正确的 Mini Lab 将得到该 lab 的 105%)</li>
+<li>Mini/OS Labs 得分由所有单个 Mini/OS Lab 得分总和而成，不超过 Mini/OS Labs 总分的 100%</li>
+<li>如果发现问题希望修复 (一旦进行过尝试)，之后的提交将不享受加分</li>
+<li>手滑提交 (非尝试修复 bugs) 可以告诉我们撤回</li>
+</ul>
+<p>所有实验在 Hard deadline (通常是期末考试后的一小段时间) 截止。请《计算机系统基础》课上将实验拖延到最后的同学吸取教训。</p>
+</div></div></div>
+
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">温 (血) 馨 (的) 提 (教) 示 (训)</h4>
+<p>Online Judge 平台并行度有限，遇到评测任务较多时请耐心等待，请避免在截止日期前极限操作，否则你将来不及修复 Online Judge 返回的错误。</p>
+</div></div></div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

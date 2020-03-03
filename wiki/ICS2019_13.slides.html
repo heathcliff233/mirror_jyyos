@@ -1,0 +1,422 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>存储器体系结构</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# 存储器体系结构
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 概述
+
+> 我们从学习编程开始，都工作在一个简化的内存模型上
+> * C 语言：内存 = 大数组
+> * 但真相远不止那么简单
+
+----
+
+
+存储器体系结构
+
+* 如何实现每个进程拥有独立的地址空间？
+* 如何编出对存储器体系结构友好的程序？
+* 硬件上是如何实现的？
+
+---
+
+
+class: center, middle
+
+# 虚拟存储
+
+---
+
+# 虚拟地址空间
+
+操作系统中的每个进程都有独立的地址空间
+
+* [vm-demo.c](/static/wiki/ics/2019/files/vm-demo.c) (同一个指针、不同的物理内存)
+* .green[硬件]维护的数据结构，它能在运行时把一个地址 <math>x</math> 映射到 <math>M(x)</math>，仅此而已
+
+----
+
+虚拟地址空间设计
+
+* 一般程序无权修改 <math>M(x)</math>
+* 访问未映射的内存产生异常 (Segmentation Fault)
+* 能够控制 read/write/execute 权限
+  * 代码、数据、堆栈分别设置为什么权限？
+
+---
+
+# VME APIs: 抽象视角的虚拟存储管理
+
+```c
+typedef struct _AddressSpace {
+  size_t pgsize;
+  _Area area;
+  void *ptr;
+} _AddressSpace;
+
+
+int _vme_init(
+  void *(*pgalloc)(size_t size), // 物理页管理
+  void (*pgfree)(void *));
+
+int _protect(_AddressSpace *as); // 创建地址空间
+void _unprotect(_AddressSpace *as); // 销毁地址空间
+
+int _map(_AddressSpace *as, void *va, void *pa,  // mmap va -> pa
+         int prot); // 权限: READ/WRITE/EXECUTE
+
+_Context *_ucontext(_AddressSpace *as,
+                    _Area ustack, _Area kstack,
+                    void *entry, void *args);
+```
+
+---
+
+# 地址翻译的实现
+
+实现数据结构好办，就是个`map<uintptr_t,uintptr_t>`嘛
+
+* .red[查询/修改速度要快]，最好 <math>O(1)</math>
+* .red[空间消耗要少] (`map`消耗 <math>c\cdot n</math> 的内存, <math>c>1</math>)
+
+----
+
+我们的老朋友：局部性
+
+* 内存是.red[连续]排布的：代码、数据、堆栈……
+* 而且访问也是局部的 (可以临时把一些页面从主存换到磁盘，虽然现在不怎么需要这个了……)
+* 因此可以按.red[页面] (4KiB, 4MiB, …) 来分配和管理内存
+
+---
+
+# 地址翻译：普通实现
+
+4GiB/4KiB = 1024 x 1024页，那就实现成一个 2 层的 1024 叉树
+
+.center[<img src="../static/wiki/ics/2018/slides/img/x86-pagewalk.svg" width=640px/>] 
+
+----
+
+可以通过增加树的深度支持更大的内存 (保持 4KiB 页大小)
+
+* PAE (3级页表), PML4 (4级页表), PML5 (5级页表)
+
+---
+
+# 地址翻译：文艺实现
+
+----
+
+非常聪明的实现：维护一张.red[线性表]，每一项都是
+
+* <math>(L_i, R_i, B_i)</math>: <math>\forall x\in [L_i, R_i), M(L_i + x) = B_i + x</math>
+* 在每次内存访问时由硬件负责查表；如果遇到查找失败，处理器异常，由操作系统重填这个表 (这样就可以实现任意的映射了)
+
+----
+
+这是.red[可编程 MMU] (MIPS)
+
+* 非常灵活，可以实现任意页表
+* 但 TLB miss 重填相对较慢
+* MIPS 是学生最容易实现完整计算机系统的指令集
+
+---
+
+# 地址翻译：二逼实现
+
+反正是个 <math>x \to M(x)</math> 的映射，我们直接用 hash table 维护所有的映射不就好了？
+
+--
+
+count: false
+
+* 只要系统里所有进程都.red[ASLR]，这真的是一个非常棒的方案！
+
+.center[<img src="../static/wiki/ics/2018/slides/img/invert-table.png" width=500px/>] 
+
+> J Huck, J Hays. Architectural support for translation table management in large address space machines. In *Proc. of ISCA*, 1993.
+
+
+---
+
+# 虚拟存储：操作系统视角
+
+操作系统：能够看到所有的物理内存
+
+* 不妨假设操作系统运行时 `*ptr` 就直接访问物理地址
+
+----
+
+操作系统调度用户进程的过程
+
+* 操作系统运行在高权限模式，能执行任何指令
+* 操作系统准备好用户进程的虚拟地址空间 <math>M</math> 和寄存器现场
+* 切换到用户进程执行 (处理器提供相关机制进入低权限运行，例如 `iret`)
+* 用户进程中断后，会自动返回高权限模式和操作系统代码
+
+---
+
+class: center, middle
+
+# 存储系统：实现
+
+---
+
+# 存储器的难题
+
+目前计算机系统通常使用线性地址的模型 (例如 C 语言)
+
+* 所有存储单元按从小到大编号 (地址)
+* 代码、数据、堆栈都在同一地址空间
+
+----
+
+但实现线性地址很难在物理上实现
+
+* 快的存储器做不大，还贵；慢的存储器可以很大很便宜
+* 寄存器 → 缓存 (L1/L2/L3) → 内存 (C 语言) → 磁盘
+
+---
+
+# 第 1 层：寄存器
+
+寄存器其实是一个.green[地址空间非常小]的内存
+
+* 5bit → 32 个寄存器
+* 6bit → 64 个寄存器
+* 因此寻址通常是非常快的
+
+----
+
+正是因为非常小，处理器在运行的时候可以创造多个“副本”
+
+* 乱序执行
+* 投机执行
+* ……
+
+---
+
+# 第 2 层：缓存
+
+内存访问符合 Locality of References，“局部性原理”
+
+> A phenomenon in which the same values, or related [storage](https://en.wikipedia.org/wiki/Computer_storage) locations, are frequently accessed, depending on the [memory access pattern](https://en.wikipedia.org/wiki/Memory_access_pattern).
+
+----
+
+从另一个角度，根据内存访问的历史，通常能较为准确地.red[预测]未来可能访问的内存，并且访问.red[临近]内存居多
+
+* 缓存对寄存器/CPU 是完全透明的 (吗？)
+
+---
+
+# 第 3 层：内存
+
+[内存 DRAM](http://www.qdpma.com/ServerSystems/DRAM.html) 即一个大数组。虽然是 RAM (Random Access Memory)，但顺序读写还是比随机读写快很多
+
+.center[<img src="../static/wiki/ics/2018/slides/img/DRAM_simple.png" width=480px/>] 
+
+---
+
+# 第 4 层：外部存储器
+
+.float-right[<img src="../static/wiki/ics/2018/slides/img/memory-hierarchy.png" width=450px/>] 更大、更便宜，更……复杂……
+
+* NVM/Flash 都是非常复杂的系统
+* 速度很高、有一定延迟、读/写不对称
+
+---
+
+class: middle, center
+
+# 存储器体系结构与编程
+
+---
+
+# 理解存储系统
+
+* 看得见的虚拟存储
+    * [test-memory.c](/static/wiki/ics/2019/files/test-memory.c)
+
+----
+
+* 看得见的缓存
+    * [Lab4](ICS2019_Lab4)
+    * 墙裂建议大家好好做，对提高期末考试成绩有奇效
+
+---
+
+# 内存访问模式分析
+
+分析以下程序/算法实现访问内存的模式，以及缓存对这些程序的运行时间有怎样的影响
+
+1. memcpy
+2. NEMU
+3. 快速排序
+4. 堆排序
+5. Bellman-Ford/Dijsktra
+
+---
+
+# 局部性：例子
+
+* Array merging
+
+  ```c
+  double a[N];
+  double b[N];
+  // JSOI历史上发生过这种惨案 ==>
+  struct { double a, double b; } ab[N];
+  ```
+
+* Array transpose
+
+  ```c
+  double a[M][N];
+  // ==>
+  double a[N][M]; // 课本例子
+  ```
+
+* Data copying
+
+  * 矩阵乘法，得到<math>B^T</math>，之后所有向量都有内存局部性
+
+---
+
+# Profilers
+
+现代处理器提供了 PMU (Performance Monitoring Unit)，由若干 PMC (Performance Monitoring Counter) 组成
+
+* [Linux perf](http://www.brendangregg.com/perf.html) 提供了各类事件的统计
+
+----
+
+```text
+$ perf list
+...
+  branch-instructions OR branches     [Hardware event]
+  branch-misses                       [Hardware event]
+  cache-misses                        [Hardware event]
+...
+  cpu-clock                           [Software event]
+  cpu-migrations OR migrations        [Software event]
+...
+  L1-dcache-load-misses               [Hardware cache event]
+  L1-dcache-loads                     [Hardware cache event]
+...
+
+$ perf state -e L1-dcache-load-misses,... ./a.out
+```
+
+---
+
+class: center, middle
+
+# 虚拟存储 + 层次存储
+
+---
+
+# 实现上的麻烦
+
+缓存虚拟地址还是物理地址？
+
+* 缓存虚拟地址：每次切换 <math>M</math> 都要清空缓存
+* 缓存物理地址：每次都要等地址翻译做完才知道地址
+
+----
+
+更大的麻烦：
+
+* <math>M</math> 允许多个虚拟页映射到同一个物理页 (aliasing problem)
+* 如果缓存虚拟地址……咋办？ → 去整个缓存里比一圈物理地址
+
+---
+
+# VIPT
+
+VIPT = Virtually Indexed, Physically Tagged，各做一半 (armv6)
+
+* 页面越大，VIPT就越容易，否则还是需要解决aliasing
+
+.center[<img src="../static/wiki/ics/2018/slides/img/vipt.png" width=600px/>] 
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

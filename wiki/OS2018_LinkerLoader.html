@@ -1,0 +1,173 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>链接与加载</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">链接与加载</h1>
+<div class="fenced fenced-green">
+<h4 id="_2">保研/工作面试题</h4>
+<p>我承认这个题有点难：</p>
+<pre class="codehilite"><code class="language-c">int main() {
+  printf(&quot;Hello, World!\n&quot;);
+}</code></pre>
+
+
+<p>这个程序的执行，从软件到硬件，都发生了什么？你作为计算机系的学生，一定非常渴望能回答这样的问题——如果这都回答不了，计算机系是不是有白上了的感觉？</p>
+</div>
+<h2 id="_3">第一条指令</h2>
+<p>课本上已经说了，程序就是指令。PA里也做了，解释器也写了。不过呢，下面这个问题还是有所困扰：</p>
+<blockquote>
+<p>进程执行的第一条指令到底是什么？</p>
+</blockquote>
+<p>要想回答这个问题，求助我们的老朋友：gdb就好啦。然后你发现不运行程序不能<code>si</code>；想打个断点也不知道打在哪。当然，既然你能想到，肯定有办法解决——去网上搜索就好啦。我才不会告诉你用什么关键字呢(多试试！不要用中文关键字和百度哦)。</p>
+<p>然后你看到了类似如下的stack trace：</p>
+<pre class="codehilite"><code class="language-text">#0  0x00007ffff7dd7c33 in _start () from /lib64/ld-linux-x86-64.so.2
+#1  0x0000000000000001 in ?? ()
+#2  0x00007fffffffe70e in ?? ()
+#3  0x0000000000000000 in ?? ()</code></pre>
+
+
+<p>看起来找到了第一条指令——在<code>ld-linux.so</code>：链接器里。链接器会做一系列的事情(就如你在strace中看到的)，读取动态链接库的信息(解析ELF文件)，然后把ELF文件映射到内存中的位置上。</p>
+<p>链接器执行了漫长的过程，才会调用<code>main</code>函数，走上正轨。终于轮到调用<code>printf</code>了。然后你发现居然没有调用<code>printf</code>，调用的是<code>&lt;puts@plt&gt;</code>。</p>
+<h2 id="printf">调用<code>printf</code></h2>
+<p><code>printf</code>被gcc优化成了<code>puts</code>——这个行为稍显意外，但也能理解：既然我们只是打印一个字符串常量，那就直接打印好了。</p>
+<div class="fenced fenced-green">
+<h4 id="_4">如何禁止这种行为？</h4>
+<p>这个行为在非常罕见的情况下可能会导致一些麻烦。想要这种情况不出现，那就用<code>gcc -O0</code>吧。结果……即便使用0级优化，gcc还是会把printf编译成puts。</p>
+<p>解决这个问题的办法是告诉gcc，不要假设有任何标准库的存在。我们编译操作系统内核时也用了同样的编译选项。</p>
+</div>
+<p>下一个问题是<code>&lt;puts@plt&gt;</code>是什么？在我们的印象中，如果我们在程序里定义一个函数，比如</p>
+<pre class="codehilite"><code class="language-c">int myprintf(const char *fmt, ...) {
+  ...
+}
+
+int main() {
+  myprintf(&quot;Hello, World\n&quot;);
+}</code></pre>
+
+
+<p>在没有inline优化的前提下，会被编译成一条<code>call</code>指令，在准备好参数之后直接跳转到<code>myprintf</code>的地址执行，就好比：</p>
+<pre class="codehilite"><code class="language-text">40059e:  e8 83 ff ff ff    callq  400526 &lt;myprintf&gt;</code></pre>
+
+
+<p>但这次，我们调用的并不是<code>puts</code>的代码，而是一个神奇的和<code>puts</code>有关的<code>&lt;puts@plt&gt;</code>。为什么会这样呢？</p>
+<h2 id="_5">两个问题</h2>
+<p>为什么会这样呢？原因是<strong>动态链接库在编译时并不知道自己将会被加载到哪个地址</strong>。不像静态链接时我们将所有地址重填，如果在动态链接时重填库(和应用程序)中的所有符号地址，那么：</p>
+<ul>
+<li>浪费时间。函数调用非常多，无疑拖慢了程序的启动。</li>
+<li>浪费空间。libc也许被系统里的1000个进程共享代码——如果代码不变的话，就不需要1000个副本，通过虚拟存储管理的<math>\textit{VM}(x)</math>，整个操作系统里只有一个libc的副本。但是如果每次都要根据加载的位置重填，好吧——这个空间优势就完全没有了。</li>
+</ul>
+<p>所以我们很自然地希望能用<strong>一份代码</strong>，能<strong>加载到任意位置执行</strong>，这也就是<code>-fPIC</code>选项的作用——编译出position independent code。在这里我们就需要解决两个麻烦的问题：</p>
+<ul>
+<li>在动态链接库中，调用<code>f()</code>时，<code>f</code>的地址不确定；</li>
+<li>在动态链接库中，访问全局变量<code>x</code>时，<code>x</code>的地址不确定；</li>
+<li>在静态链接的代码中，调用动态链接库中的函数，比如<code>puts</code>，它的地址不确定。</li>
+<li>在静态链接的代码中，访问动态链接库中的数据，好像是个更麻烦的问题。如果定义了<code>extern int x</code>，那么<code>x</code>的地址将会在静态链接时被重填。</li>
+</ul>
+<div class="fenced fenced-green">
+<h4 id="_6">思考题</h4>
+<p>究竟编译出怎样的代码能解决这个问题呢？关于最后一个问题……可以参考<code>stdin</code>，比如可以打印<code>&amp;stdin</code>和<code>sizeof(stdin)</code>。</p>
+</div>
+<h2 id="_7">动态链接与加载</h2>
+<p>链接与加载是理解操作系统运行程序的必要部分。之前我们已经知道，动态链接库是用过<code>mmap</code>系统调用映射到进程的地址空间的，而链接和加载器则实现了<a href="https://en.wikipedia.org/wiki/Application_binary_interface">Application Binary Interface</a> (ABI)中有关函数调用的部分。</p>
+<p>目前我认为网络上最好的有关链接和加载的短篇资料：<a href="../static/wiki/os/2018/dsohowto.pdf">How To Write Shared Libraries</a>。作者毫无疑问是这方面的专家，我决定不班门弄斧写三脚猫的讲义。</p>
+<p>如果你又认为更好的资料请联系我。</p>
+<h2 id="finally-hello-os-world">Finally, Hello, OS World</h2>
+<p>在你充分理解了Global Offset Table (GOT)和Procedure Linkage Table (PLT)之后，你终于知道<code>puts</code>的代码是如何调用的了，也终于知道<code>Hello World</code>的打印在用户空间发生了什么——剩下的事情都是<code>strace</code>里看到的系统调用帮我们完成的。</p>
+<p>是不是有点开心呢？Happy Hacking！</p>
+<div class="fenced fenced-green">
+<h4 id="hacking-oj">思考题：Hacking OJ</h4>
+<p>假设一个OJ有关键词过滤系统，会将预编译后程序做黑名单过滤(这样你<code>#define haha sys##tem("shut" "down -s -t 0")</code>的企图就落空了)。</p>
+<p>你如何通过不借助系统调用(只借助可以访问的PLT和GOT)，获得system的真正地址？假设你可以知道服务器libc的版本。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

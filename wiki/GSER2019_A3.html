@@ -1,0 +1,154 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>[A3] Research Proposal 提交稿</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="a3-research-proposal">[A3] Research Proposal 提交稿</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">注意</h4>
+<ul>
+<li>为了同行评议能及时进行，超过 deadline 的同学将被视为没有提交。</li>
+<li>请严格遵守 double-blind 规则，否则将会导致严重的扣分。</li>
+</ul>
+</div>
+<p>我们预期在一学期的修改中，你的 research proposal 的用词、组句、全文的逻辑流都已经调整到了最佳状态。在提交之前，你还需要对论文排版做最后的精调。完成排版后，在下框中提交 research proposal (pdf 格式，使用 acmart 模板)。</p>
+<div class="subbox fenced fenced-blue">
+<h4>作业提交 (截止日期：2019 年 12 月 15 日 23:59:59)</h4>
+<form method="POST" action="../store.html" enctype = "multipart/form-data">
+<p>
+学号：<input class="gser-input" type="text" name="stuid">
+<input type="file" name="submission">
+</p>
+<input type="hidden" name="task" value="A3">
+<p>
+<input type="submit" value="提交 (可多次提交，以最后一次提交为准)">
+</p>
+</form>
+</div>
+
+<p>之后，所有同学的 research proposal 将会经过同行评议，每个提交 research proposal 终稿的同学，都将被分配到三份其他同学的投稿。请妥善保存你最后提交的版本；同学们将以这个文件的 hash digest 作为索引获取自己待评议的 research proposals。</p>
+<h2 id="_2">排版要求</h2>
+<p>我们再次重申 research proposal 的提交要求：本次作业结合你的具体研究方向，写一份不超过 4 页正文的匿名 research proposal (研究计划)，阐述你所从事研究问题的背景、研究动机、研究规划、主要方法和预期 (或初步) 的结果。</p>
+<p>形式上的要求 (与很多国际会议提交要求相同)：</p>
+<ol>
+<li>
+<p>英文写作，使用 LaTeX (<a href="https://www.acm.org/publications/proceedings-template">acmart 模板</a>)：</p>
+<pre class="codehilite"><code>\documentclass[sigconf,review,screen]{acmart}</code></pre>
+
+
+<p>引用格式使用 <code>\bibliographystyle{ACM-Reference-Format}</code>。提交 pdf 格式的文件。选项错误 (单/双栏)、字号错误等将被 desk reject。</p>
+</li>
+<li>
+<p>Research proposal 将被提交 double-blind peer review，因此你需要隐藏作者身份，包括但不限于：Word 文件中的作者信息、在引用包含作者论文时的措辞等。关于 double blind review 的详细信息请<a href="GSER_DoubleBlind.html">阅读这里</a>；</p>
+</li>
+<li>正文部分不超过 4 页，总篇幅不超过 5 页。第 5 页只能包含参考文献，其他任何内容，如附录、证明等将被 desk reject。</li>
+</ol>
+<h3 id="_3">对排版的要求</h3>
+<p>首先，排版需要满足肉眼可见的美观、舒适。关于模板的使用，可以参考 acmart 的 texdoc (在命令行中键入 <code>texdoc acmart</code>)。请尽可能使你的排版满足较高的水准。<a href="http://jcsmith.people.clemson.edu/tips/LaTeX.html">这里</a>有一些 LaTeX 使用的常见误区。</p>
+<p>请尽可能消除视觉上的错误：溢出一行的文字、<a href="https://en.wikipedia.org/wiki/Widows_and_orphans">widow/orphan</a>、标题大小写等。形式上的优美、尽可能消灭语法/拼写错误能使阅读更顺畅。</p>
+<div class="fenced fenced-green">
+<h4 id="_4">寻求参考？</h4>
+<p>在各大会议中，排版做得最好的领域是 programming languages。POPL/PLDI/OOPSLA/ECOOP 的论文通常都有非常精美的排版。可以寻找和你的领域相近的论文，并且学习他们是如何排版的。</p>
+</div>
+<h3 id="_5">对图形/表格的要求</h3>
+<p>你的 research proposal 中应当包含一个方法的结构图等，它应该能较好地表达方法的工作流程，并提供足够的信息，如下图：</p>
+<p><center><img alt="" src="../static/wiki/gser/2019/img/diagram-example.png" width="600px" /></center></p>
+<p>你可以使用 Visio, Keynote, PowerPoint 等工具绘制；但如果要寻求最佳的 LaTeX 兼容性，我们推荐 TikZ：</p>
+<p><center><img alt="" src="../static/wiki/gser/2019/img/fig-example.png" width="600px" /></center></p>
+<p>在实验 (计划) 部分，我们希望你针对你的 evaluation plan 设计相应实验数据的展示图和数据表格。你不必展示任何实际的数据，使用随机数据即可——我们希望你在收集到实验数据后，可以直接将数据填入图形/表格中。 </p>
+<p><center><img alt="" src="../static/wiki/gser/2019/img/plot-example.png" width="600px" /></center></p>
+<p>在排版 plotting 时，可以使用现代的 plotting 工具导出成 LaTeX 格式；也可以使用 pgfplots (与 LaTeX 兼容更好)。在排版表格时，根据 acmart 模板的建议，使用 <code>booktab</code> 提供的功能，能够排版出更精美的表格；增加适当的色彩、表格元素，使表格更易读，而不是仅仅陈列一堆数据。</p>
+<p><center><img alt="" src="../static/wiki/gser/2019/img/tab-example.png" width="600px" /></center></p>
+<p>以及之前提到，TikZ/pgfplots 可以更好地与 LaTeX 协作，将 plotting 嵌入到表格中也是个不错的选项。注意到表中的几个细节 (<code>\textsc</code> 的使用、表格对象的表述方法、色彩的使用等)：</p>
+<p><center><img alt="" src="../static/wiki/gser/2019/img/tab-example-1.png" width="600px" /></center></p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

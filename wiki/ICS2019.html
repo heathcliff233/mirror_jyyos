@@ -1,0 +1,194 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>计算机系统基础习题课 (2019 秋季学期)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="2019">计算机系统基础习题课 (2019 秋季学期)</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">课程通知</h4>
+<ul>
+<li>⚠️ 期末考试：2020 年 1 月 6 日 14:00-16:00；仙 I-206 (基础班)、仙 I-207 (人工智能学院)。期末考试时可提交书面作业</li>
+<li>⚠️ 因需在年前提交成绩，2020 年 1 月 12 日 23:59:59 之后将不再接受任何 PA/Lab/HW 提交 (hard deadline)，请大家按时提交、独立完成作业</li>
+<li><a href="https://docs.qq.com/sheet/DVUN1blVIek9wbnNi">书面作业提交情况</a> (貌似作业交接可能有些问题，如果有作业已经提交但没看到的，请报告给 JYY)</li>
+</ul>
+</div>
+<ul>
+<li>计算机系/匡亚明学院：周四 16:00-18:00 仙 II-211</li>
+<li>人工智能学院： 周五 14:00-16:00 仙 II-420</li>
+<li>主讲：蒋炎岩 <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#106;&#105;&#97;&#110;&#103;&#121;&#121;&#64;&#111;&#117;&#116;&#108;&#111;&#111;&#107;&#46;&#99;&#111;&#109;">&#106;&#105;&#97;&#110;&#103;&#121;&#121;&#64;&#111;&#117;&#116;&#108;&#111;&#111;&#107;&#46;&#99;&#111;&#109;</a>; Office Hour: 周一 14:00-16:00 计算机楼 809</li>
+<li>顾问：余子濠 <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#121;&#117;&#122;&#105;&#104;&#97;&#111;&#64;&#105;&#99;&#116;&#46;&#97;&#99;&#46;&#99;&#110;">&#121;&#117;&#122;&#105;&#104;&#97;&#111;&#64;&#105;&#99;&#116;&#46;&#97;&#99;&#46;&#99;&#110;</a></li>
+<li>《计算机系统基础》<a href="SystemReading.html">阅读材料</a></li>
+</ul>
+<h2 id="_2">课程概述</h2>
+<p>大家在数字电路里都实现过“状态机”，例如一个计数器内部存储了数字 <math>x</math>，每次按下开关执行 <math>x\leftarrow (x+1)\mod 10</math>。计算机系统基础这门课 (以及实验部分) 的主体内容，就是告诉大家日常使用的计算机，也不过是这么一个状态机 (只是复杂得多)。</p>
+<p>在习题课部分，我们会带大家一步一步实现这样的状态机，同时体验 C 语言代码 → 指令 → 机器的执行过程。 其中的大实验 <a href="https://nju-ics.gitbooks.io/ics2018-programming-assignment/">PA 部分</a>是 yzh 学长呕心沥血之作，通过强无敌🌹的代码框架，让你能轻松愉快写出一个全系统模拟器，还能跑 (简易) 操作系统和仙剑游戏。模拟过硬件的执行，自然就能深 (痛) 入 (苦) 理解计算机系统了。</p>
+<h2 id="_3">课程资料</h2>
+<ol>
+<li>
+<p>Hello, Linux World
+  <a href="ICS2019_1.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>
+  | <a href="https://nju-projectn.github.io/ics-pa-gitbook/ics2019/PA0.html">PA0-开发环境配置</a> (<a href="ICS2019_PA0.html">收到的提交</a>)</p>
+</li>
+<li>
+<p>Hello, C World (1)
+  <a href="ICS2019_2.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>
+  | <a href="http://www.pgbovine.net/c-programming-tips.htm">C Programming Tips</a>
+  | <a href="https://nju-projectn.github.io/ics-pa-gitbook/ics2019/PA1.html">PA1-监视器</a> (<a href="ICS2019_PA1.html">收到的提交</a>)</p>
+</li>
+<li>
+<p>Hello, C World (2)
+  <a href="ICS2019_3.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>
+  | <a href="ICS2019_HW1.html">HW1-数据表示</a>
+  | <a href="ICS2019_Lab1.html">Lab1-数据表示</a></p>
+</li>
+<li>
+<p>框架代码选讲
+  <a href="ICS2019_4.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>
+  | <a href="https://nju-projectn.github.io/ics-pa-gitbook/ics2019/PA2.html">PA2-简单复杂的机器</a> (<a href="ICS2019_PA2.html">收到的提交</a>)</p>
+</li>
+<li>
+<p>数据的机器级表示
+  <a href="ICS2019_5.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></p>
+</li>
+<li>
+<p>PA 代码选讲
+  <a href="ICS2019_6.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></p>
+</li>
+<li>
+<p>x86-64
+  <a href="ICS2019_7.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>
+  | <a href="../static/wiki/ics/asm64-handout.pdf">x86-64-handout</a>
+  | <a href="ICS2019_HW2.html">HW2-程序表示</a>
+  | <a href="ICS2019_Lab2.html">Lab2-x86-64 汇编</a></p>
+</li>
+<li>
+<p>调试：理论与实践
+  <a href="ICS2019_8.slides.html"><img src="../static/img/slides.png"/ width="18px"></a>
+  | <a href="../static/wiki/ics/gdb-cheat-sheet.pdf">gdb cheat sheet</a>
+  | <a href="https://nju-projectn.github.io/ics-pa-gitbook/ics2019/PA3.html">PA3-批处理系统</a> (<a href="ICS2019_PA3.html">收到的提交</a>; <a href="../static/wiki/ics/pal-data.tar.bz2.tar">仙剑奇侠传数据</a>)</p>
+</li>
+<li>
+<p>系统编程与基础设施
+  <a href="ICS2019_9.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></p>
+</li>
+<li>
+<p>链接与加载
+  <a href="../static/wiki/ics/2019/slides/dynamic-linking.pptx"><img src="../static/img/slides.png"/ width="18px"></a>
+  <a href="../static/wiki/ics/2019/slides/ELF-structure.pptx"><img src="../static/img/slides.png"/ width="18px"></a></p>
+</li>
+<li>
+<p>计算机系统中的抽象
+  <a href="ICS2019_10.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="ICS2019_HW3.html">HW3-程序的连接</a> | <a href="ICS2019_Lab3.html">Lab3-性能分析</a></p>
+</li>
+<li>
+<p>输入/输出
+  <a href="ICS2019_11.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="https://nju-projectn.github.io/ics-pa-gitbook/ics2019/PA4.html">PA4-分时多任务</a> (<a href="ICS2019_PA4.html">收到的提交</a>)</p>
+</li>
+<li>
+<p>代码选讲与中断
+  <a href="ICS2019_12.slides.html"><img src="../static/img/slides.png"/ width="18px"></a> | <a href="ICS2019_Lab4.html">Lab4-缓存</a> | <a href="ICS2019_HW4.html">HW4-层次结构存储系统</a></p>
+</li>
+<li>
+<p>存储器体系结构
+  <a href="ICS2019_13.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></p>
+</li>
+<li>
+<p>轮子是如何做成的
+  <a href="ICS2019_14.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></p>
+</li>
+<li>
+<p>期末复习 &amp; 习题选讲
+  <a href="ICS2019_15.slides.html"><img src="../static/img/slides.png"/ width="18px"></a></p>
+</li>
+</ol>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,639 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>调试：理论与实践</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+class: center, middle
+
+# 调试：理论与实践
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 概述
+
+> 经历了痛苦的 coding 完了没想到更痛苦的是自己写出来的代码不对，还找不到为什么 (PA 体验极差)
+>
+> 调试的理论可以帮到你！
+
+----
+
+* 调试理论
+* 调试理论的应用：调试 “不是代码”
+* 调试理论的应用：调试 PA/Lab 代码
+* Inside GDB
+
+---
+class: center, middle
+
+
+# 在讲理论之前
+
+(PA 给大家的经验和教训)
+
+## 1. .red[机器永远是对的]
+
+> 不管是 crash 了，图形显示不正常了，还是 `HIT BAD TRAP` 了，最后都是你自己背锅
+
+## 2. .red[未测代码永远是错的]
+
+> 你以为最不可能出 bug 的地方，往往 bug 就在那躺着
+
+---
+
+# 调试理论
+
+程序是 “计算” (需求/规约的计算机实现) 的.red[抽象]
+
+* CPU 实际执行 C 程序 (翻译成的指令序列)
+* NEMU 模拟执行 C 程序 (翻译成的指令序列)
+
+----
+
+程序中的 bug 是程序与设计/意图违反之处
+
+* debug 就是定位到程序中 bug 的过程
+
+---
+
+# 为什么 debug 那么困难？
+
+因为 bug 的触发经历了漫长的过程
+
+* Fault (bug) → Error (程序状态错) → Failure (可观测的结果错)
+    * 我们只能观测到 failure
+    * 我们可以检查状态的正确性 (但非常费时)
+    * 无法预知 bug 在哪里 (每一行 “看起来” 都挺对的)
+
+----
+
+
+.center[
+<img src="../static/wiki/os/2019/img/fault-error-failure.png" width="640px"/>
+]
+
+---
+
+# 调试理论
+
+> 调试理论：如果我们能判定任意程序状态的正确性，那么给定一个 failure，我们可以通过二分查找定位到.red[第一个] error 的状态，此时的代码就是 fault (bug)。
+
+--
+count: false
+----
+
+* 这个理论有一个非常明显的缺陷：对 OJ 题之类的小程序还行，对于一个软件、大程序，根本.red[没法用]，因此有推论
+
+> 实际中的调试：通过.red[观察程序执行的轨迹] (trace)，缩小错误状态 (error) 可能产生的位置，从而定位到 bugs
+>
+> * printf → 自定义 log 的 trace
+> * gdb → 指令/语句级 trace
+
+---
+
+# printf v.s. gdb
+
+printf (logs)
+
+* Pros: 灵活可控、能快速定位问题大概位置、适用于大型软件
+* Cons: 无法精确定位、大量的 logs 管理起来比较麻烦
+
+----
+
+gdb
+
+* Pros: 精确、指令级定位、任意查看程序内部状态
+* Cons: 耗时
+
+--
+count: false
+----
+
+* debug 业务逻辑时一般使用 log
+* debug 具体 root cause 的时候一般用 gdb
+
+---
+
+class: center, middle
+
+# 调试理论：应用 (1)
+
+调试 (不是一般意义上 “程序” 的) bug
+
+---
+
+# PA 体验极差
+
+做实验会遇到大量与编程无关的问题
+
+* 也许没有想过：.red[问题诊断其实也是调试]
+* 我们应该利用调试理论去解决问题！
+
+----
+
+```text
+bash: curl: command not found
+```
+
+----
+
+```text
+fatal error: 'sys/cdefs.h': No such file or directory
+#include <sys/cdefs.h>
+```
+
+----
+
+```text
+make[2]: *** run: No such file or directory.  Stop.
+nexus-am/Makefile.app:31: recipe for target 'run' failed
+make[1]: *** [run] Error 2
+...
+```
+
+---
+
+# 调试 (不是程序的) bug
+
+UNIX 世界里你做任何事情都是在.red[编程]
+
+* 因此配置错、make 错等，都是.red[程序]或.red[输入/配置]有 bug
+* (输入/配置可以看成是程序的一部分)
+
+----
+
+.center[正确的态度：.red[把所有问题当程序来调试]]
+
+* 你写了一个程序，现在这个程序出 bug 了 (例如 Segmentation Fault)，你是怎样排查这个问题的？
+    * curl: command not found
+    * `'sys/cdefs.h'`: No such file or directory
+    * make: run: No such file or directory
+
+---
+
+# 使用调试理论
+
+Debug (fault localization) 的基本理论回顾：
+
+* Fault (.green[程序/输入/配置错]) → Error → Failure (.red[可观测])
+
+    * 绝大部分工具的 Failure 都有 “原因报告”，因此能帮助你快速定位 fault
+    * `man perror`：标准库有打印 error message 的函数
+
+----
+
+刚才的例子
+
+* 没有 “原因报告” (或原因报告不准) → 抓瞎
+* 我们需要更详细的程序执行.red[过程] (log)  → 既然我们有需求，那.green[别人肯定也会有这个需求]  →  肯定已经有人搞定这个了
+
+---
+
+# 使用调试理论 (cont'd)
+
+正确的方法：理解程序的.red[执行过程]，弄清楚到底为何导致了bug
+
+* `ssh`：使用 `-v` 选项检查日志
+* `gcc`：使用 `-v` 选项打印各种过程
+* `make`：使用 `-n` 选项查看完整命令
+    * `make -nB | grep -ve '^\(echo\|mkdir\)'` 可以查看完整编译 nemu 的编译过程
+
+----
+
+不仅限于 gdb，其实在各个程序都在更高.red[层次]上提供了调试的工具，帮助用户/开发者了解程序的.red[行为]
+
+* 怎样更好地理解程序行为，是个非常好的.green[研究问题]
+
+---
+
+# 例子：找不到 `sys/cdefs.h`
+
+`'sys/cdefs.h': No such file or directory`，找不到文件 (这看起来是用 `perror()` 打印出来的哦！)
+
+* 经过STFW，`#include` = 复制粘贴，自然会经过.red[路径解析]
+* (折腾20分钟) 明明 `/usr/include/x86_64-linux-gnu/sys/cdefs.h` 是存在的 (`man 1 locate`) → 极度挫败，体验极差
+
+--
+
+count: false
+
+----
+
+推理：`#include <>` 一定有一些搜索路径
+
+* `gcc -m32 -v` 验证： `-m32` 使搜索路径发生了变化 → 解决
+
+----
+
+这是标准的解决问题办法：.red[自己动手排查]
+
+* 在面对复杂/小众问题时比 STFW 有效
+
+---
+
+# ⚠️ (不要忽略的) 警告
+
+❌ .red[错误] (而且.red[危险])的做法
+
+* 找到大腿同学/群/老师/助教：出错了帮我搞下
+* 的确学到了经验 (如何解决.red[这个]问题)，但下次可能依旧抓瞎
+* 刚开始不可避免感到困难，但必须克服
+
+------
+
+✅ .green[正确]的做法
+
+* 自行解决问题：检查 log，排查问题发生的原因；STFW, RTFM
+* 实在无法解决，阅读[提问的智慧](https://github.com/ryanhanwu/How-To-Ask-Questions-The-Smart-Way/blob/master/README-zh_CN.md)后提问
+* 同样，帮助别人解决问题，可以提供 STFW 的.green[方法和思路]
+
+---
+class: center, middle
+
+# 调试理论：应用 (2)
+
+调试 PA/Lab 代码
+
+---
+
+# 调试NEMU的难处
+
+.float-right[<img src="../static/wiki/ics/2018/slides/img/questions.jpg" width="150px"/>] 我们的 NEMU 可.red[没有这些 debug 信息]，指令执行着执行着，悄悄就错了，直到在某个地方死循环
+
+* 到底哪里错了呢？
+* 对于 cpu-test，还能把指令一条一条打印出来看
+* 打字游戏的时候 bug 了，那么多指令……
+* LiteNES bug 了，这上哪玩啊……
+
+---
+
+# (1) 定位出错点
+
+如果你有一个已知的、能保证触发 bug 的程序状态 (例如执行了 1,000,000 条指令)，你已经完成了万里长征的第一步：
+
+* 实现错 (`nemu_assert`失败, HIT BAD TRAP)
+    * 计算结果一般立即检查，出错点大概率在 assert 附近
+    * 检查 nemu-log 执行过的指令
+    * 检查每条指令执行前后系统状态的变化
+* 其他莫名错误
+    * 增加一些额外的 `Log` 和 `Assert`
+    * 例如打印 I/O 的数值 ← 底层执行
+    * 打印函数调用的情况等  ← 高层抽象
+    
+---
+
+# (2) 向前追踪
+
+恭喜你！你已经找到了一条指令，算出了错误的值，例如
+
+```
+addl $2, %eax
+# nemu_assert(%eax == 4), bug
+```
+
+但此时还有三种可能的情况
+
+* `%eax`是对的，`addl`错了
+* `addl`是对的，`%eax`错了 (addl: 这锅我不背)
+* 值给错了指令也算错了，令人智熄 (不要笑，就是你)
+* 你需要：.red[检查指令的行为是否与手册一致] (回到软件的定义)
+
+----
+
+此处有.red[时间黑洞]
+
+---
+
+# 启发：输出什么调试信息？
+
+定位出错点、向前追踪都既需要.red[底层详细]的调试信息 (用于排查具体问题)，也需要.red[高层抽象]的调试信息 (用于快速定位)
+
+所以你需要不同类型的 logs！
+
+* 能够快速帮你映射到程序执行的总体走势 (function call logs)
+* 指令执行的日志 (框架代码已经提供了)
+* 更细致的指令检查工具 (PA1 的内容，知道为啥要做 PA1 了吧？)
+* 其他有用的信息 (例如 I/O 指令的内容、内存访问的日志等，按需打开)
+
+----
+
+核心思想：输出足够的信息，在.green[各个层面]上理解程序的执行
+
+---
+
+# 调试 NEMU
+
+在定位到出错指令后，PA 代码实际就是一个巨大的 switch-case，在不同指令执行时有不同行为
+
+* 根据调试理论，.red[精细]行为的调试应当使用 trace
+
+----
+
+GDB: 最常用的命令在 [gdb cheat sheet](/static/wiki/ics/gdb-cheat-sheet.pdf)
+
+* 和 NEMU 的 monitor 非常类似
+* 实现.red[程序执行流的控制]
+
+---
+
+# 例子：调试 Segmentation Fault
+
+.float-right[<img src="../static/wiki/ics/2018/slides/img/memory-core.jpg" width="150px"/>]
+```bash
+$ ./a.out
+Segmentation fault (core dumped)
+```
+
+----
+
+Segmentation fault 是一个非常好的出错点：某条指令访问了非法内存
+* 无非就是空指针、野指针、栈溢出、堆溢出……
+
+----
+
+.green[怎样定位 segmentation fault] 发生时的语句？
+
+* (core dumped)
+* gdb - 自带 backtrace，95%都能帮你定位到问题
+
+---
+
+# 调试 Core Dump
+
+观察出错时的.red[程序状态]
+
+* 查看 backtrace `bt`/`bt full`
+* 查看寄存器的值 `i reg`
+* 查看内存数值 `p`/`x`/...
+
+---
+
+# 在汇编级调试代码
+
+PA/Lab 偶尔可能需要进行指令级的调试
+
+* `si` 单步执行指令
+* 结合 objdump 结果
+
+----
+
+太浪费时间了！
+
+---
+
+# 想要更好的体验？RTFM！
+
+每次 gdb 都要输入一堆命令，都烦了
+
+* .red[当你感到不爽的时候，一定有办法解决]
+
+----
+
+gdb command file
+
+```text
+set pagination off
+set confirm off
+layout asm
+file a.out
+b main
+r
+```
+
+(效率 <math>\times</math> 1.05)
+
+---
+
+# 想要更好的体验？RTFM！
+
+gdb 有若干内置的 layout
+
+* src - 源代码
+* asm - 汇编
+* split - 源代码 + 汇编
+* regs - 汇编 + 寄存器
+
+----
+
+(效率 <math>\times</math> 3)
+
+---
+
+# 想要更好的体验？STFW！
+
+cgdb - 自带更佳分屏功能的 gdb
+
+> cgdb is a lightweight curses (terminal-based) interface to the GNU Debugger (GDB). In addition to the standard gdb console, cgdb provides a split screen view that displays the source code as it executes. The keyboard interface is modeled after vim, so vim users should feel at home using cgdb.
+
+* syntax-highlighted source window
+* visual breakpoint setting
+* keyboard shortcuts for common functions
+* searching source window (using regexp)
+
+----
+
+(效率 <math>\times</math> 1.5)
+
+---
+
+# 想要更好的体验？STFW！ (cont'd)
+
+既然第三方程序可以和 GDB 交互 (cgdb 只是一个 interface)，凭什么宇宙第一编辑器不能呢……？
+
+* IDE 的调试功能
+    * 增加一些按钮，发送 GDB 命令
+    * 解析 GDB 输出并显示
+
+----
+
+(效率 <math>\times</math> 10)
+
+---
+class: center, middle
+
+# Inside GDB
+---
+
+# GDB 的实现
+
+怎样让已有的程序在 breakpoint / 单步时停下来？
+
+* 单步 = 动态创建下条指令的断点
+* 一个非常简单的想法：hack 断点处的指令！
+
+--
+count: false
+----
+
+GDB 拥有被调试进程的所有权限
+
+* 把断点/下条指令替换成 `INT3` (trap, `opcode = 0xcc`)
+    * read-only 代码无法调试
+* 被调试进程执行到断点时会产生异常
+* 操作系统将异常返回给 gdb
+    * gdb 能读取异常发生时的寄存器现场
+
+---
+
+# 调试：Crazy Ideas
+
+gdb 能帮助我们完成
+
+* 向前执行一定数量/满足一定条件 (`s`, `b`, `wa`)
+* 观察当前程序状态 (`p`, `bt`, ...)，例如 core dump
+
+----
+
+我们能否 “travel back in time”?
+
+* [record and replay](https://www.usenix.org/conference/osdi-02/revirt-enabling-intrusion-analysis-through-virtual-machine-logging-and-replay) (OSDI'02)
+    * 完整记录下一次程序的执行，可以用来 debug 非常微妙的行为 (例如病毒)
+* [reverse debugging](https://www.usenix.org/conference/osdi18/presentation/weidong) (OSDI'18)
+    * 根据 core dump 向前推导执行的情况
+
+---
+
+class: center, middle
+
+# 总结
+
+---
+
+# 残酷的现实
+
+说了那么多，听起来都对，但.red[出 bug 了，我还是完全不知道该怎么下手啊]！大腿快来帮帮我……
+
+----
+
+主要原因：对代码的一些关键部分不熟悉且畏惧 (.red[缺乏自信]，或者.red[缺乏基础知识])，抱有“我不理解这个也行”的侥幸信息
+
+* x86 手册太难读，从网上找点旁门资料，反正过了测试就行
+* C 语言这里不太看的懂，算了，反正只要写我的部分就行
+* Makefile 又长又杂，估计跟我也没啥关系 (你是否错过了 nemu 的编译选项？)
+
+----
+
+在 PA 中自己解决问题，STFW, RTFM 的过程，就是.red[消除畏惧]的过程，但有些同学还没能理解
+
+---
+
+# 实际中的 Debugging
+
+努力做到.red[你知道程序里的每一个细节]
+
+* 能够理解程序任意时刻的状态 (PA1 的表达式求值)
+* 能在程序的某个状态下知道下一条指令的行为 (x86 手册)，从而检查模拟器是否实现正确
+* 能非常方便顺手地检查程序的状态 (PA1 的断点)
+
+----
+
+“为你自己的代码负责”
+
+* 写代码不仅是写代码，更重要的是与代码配套的.red[基础设施]
+* 戒掉 “糊弄” 一下的心态，试着把一件事做到自己 100% 的极限
+
+---
+
+# 用好调试理论
+
+调试理论
+
+* Fault (bug) → Error → Failure (可观测)
+* 调试的目的：找到首个 error 发生的位置
+    * 二分查找、观察 trace、……
+
+----
+
+调试实践
+
+* 理解程序如何完成对现实世界任务的.red[抽象]
+    * 我们很容易用一小句话来概括一大段程序执行过程
+    * 并且排除/确认其中的问题
+
+---
+
+# 基础设施：轮子的重要性
+
+以下基础设施没有一个是必须的，有没有它们会带来什么影响？
+
+* 有/没有 native vs. x86-nemu
+* 有/没有 Makefile
+* 有/没有指令 log
+* 有/没有 monitor
+* 有/没有 cputest
+* 有/没有 differential testing
+
+
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

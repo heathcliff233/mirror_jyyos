@@ -1,0 +1,481 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/wiki.css"/>
+<link rel="stylesheet" href="../static/css/slides.css"/>
+
+
+    <title>[C] 硬件眼中的操作系统</title>
+  </Head>
+  <body>
+   
+   
+<textarea id="source">
+public: True
+
+class: center, middle
+
+# [C] 硬件眼中的操作系统
+
+蒋炎岩 <jyy@nju.edu.cn>
+
+南京大学计算机软件研究所
+
+---
+
+# 本讲概述
+
+> 引子：我们已经知道操作系统是“管理资源、服务应用”的程序，但.red[到底什么是操作系统]？
+
+----
+
+* Top-Down：操作系统 = 游戏规则
+* Bottom-Up：操作系统 = C程序 (x86-qemu为例)
+* 多处理器编程：拒绝放弃
+
+---
+
+class: center, middle
+
+# 为Bare-Metal编程
+
+---
+
+# Bare-Metal与程序员的约定
+
+为了让计算机能.red[运行任何我们的程序]，一定存在一个加载一段“初始代码”的约定
+
+* 通常，CPU Reset后，寄存器会有一个初始状态(尤其是PC)
+* 初始PC指向一段.blue[内存映射的ROM指令序列]，完成系统初始化 (厂商提供，所以称为固件firmware)
+* 对于x86系统，RESET后`CS:IP = ffff:0000` (通常是一条jmp跳向firmware)
+
+----
+
+Legacy BIOS vs. UEFI
+
+* BIOS (Basic I/O System): 一个小型“操作系统”，能完成硬件配置等
+* UEFI (Unified Extensible Firmware Interface): 内置驱动、图形界面……活脱脱就是一个操作系统
+
+---
+
+# 历史：CIH病毒
+
+Intel 430TX芯片组允许.red[写入Flash BIOS]
+
+* 只要向Flash BIOS写入特定序列，Flash就变为可写(固件更新)
+* 要得到这个序列其实并不困难——似乎文档里就有，还可以解析BIOS的更新程序
+* Boom…… (CPU RESET之后就……了)
+
+----
+
+CIH的作者陈盈豪被逮捕，但并未被定罪
+
+> 提起這段過往，這名昔日的網路小子帶著些許不堪回首的心情說：「怪自己當時太著迷寫電腦程式，想試試各家防毒軟體的本事，不料造成這麼大的風波。」他接著回憶，「那時到了刑事局，以為這輩子完了，腦筋一片空白，不斷發抖。」
+
+---
+
+# 系统启动之前：镜像生成
+
+让我们观察AM编译amgame的全过程：
+
+```bash
+make -nB | grep -ve '^\(echo\|mkdir\|gcc\|make\)'
+                              #     ^
+                              # 正则表达式！
+```
+
+* `-n`: Print the commands that would be executed, but do not execute them (except in certain circumstances)
+* `-B`: Unconditionally make all targets
+* 省略了echo (提示信息)、mkdir (目录建立)、gcc (编译)、make (sub-goals)
+
+----
+
+
+
+---
+
+# Legacy Boot (0) - BIOS约定
+
+约定：BIOS (固件)会把引导盘的第一个扇区(主引导扇区)加载到内存的7c00位置
+
+* 规定CS:IP = 0x7c00, `(R[CS] << 4) | R[IP] == 0x7c00`
+  * 可能性1：CS = 0x07c0, IP = 0
+  * 可能性2：CS = 0, IP = 0x7c00
+* 其他没有任何约束
+
+----
+
+货真价实的16位代码
+
+---
+
+# Legacy Boot (1) - 32bit模式
+
+```assembly
+  lgdt    gdtdesc          # 设置初始GDT (内核数据段、内核代码段)
+  movl    %cr0, %eax
+  orl     $CR0_PE, %eax
+  movl    %eax, %cr0       # R[CR0] := R[CR0] | CR0_PE
+  ljmp    $GDT_ENTRY(1), $start32 # 跳转到32位代码执行
+
+.code32
+start32:
+  movw    $GDT_ENTRY(2), %ax # 设置DS, ES, SS段寄存器
+  movw    %ax, %ds
+  movw    %ax, %es
+  movw    %ax, %ss
+
+  movl    $0x7000, %esp      # bootstrap stack
+  call    bootmain           # 调用C程序 (ELF Loader)
+```
+
+---
+
+# Legacy Boot (2) - 加载器
+
+和ICS Lab中的加载器十分类似：
+
+```c
+elf = (struct ELFHeader*)0x8000;
+// 读磁盘，等效于memcpy(dst, nbytes, FILE + offset)
+readseg((unsigned char*)elf, 4096, 0);
+ph = (struct ProgramHeader*)((char *)elf + elf->phoff);
+eph = ph + elf->phnum;
+for(; ph < eph; ph ++) {
+  pa = (unsigned char*)(ph->paddr);
+  readseg(pa, ph->filesz, ph->off);
+  for (i = pa + ph->filesz; i < pa + ph->memsz; *i ++ = 0);
+}
+// 加载已经完成
+((void(*)(void))elf->entry)();
+```
+
+然后.red[C程序就开始执行了]！
+
+---
+
+class: center, middle
+
+# Bottom-Up
+
+# 操作系统 = C程序
+
+---
+
+# 初始化
+
+程序的入口是在链接时确定的(体系结构相关的`x86-qemu.mk`)：
+
+```bash
+ld -melf_i386 \
+   -Ttext 0x00100000 \
+   -o $(BINARY).o \
+   --start-group $(LINK_FILES) --end-group
+```
+
+加载到`0x100000`开始的位置；入口默认为`_start` (已经是C函数了)
+
+```c
+void _start() { // the bootloader jumps here (CPU0)
+  bootcpu_init();     // 查找系统中的处理器
+  heap_init();        // 查找系统中可用内存
+  percpu_initgdt();   // 初始化CPU0 GDT (内核/用户代码/数据)
+  percpu_initlapic(); // 初始化CPU0 APIC (本地中断控制器)
+  ioapic_init();      // 初始化IOAPIC
+  _halt(main());
+}
+```
+
+---
+
+# A Minimal C Runtime
+
+C语言不可见的(隐藏)状态
+
+* 仅有CPU0 (bootstrap CPU)启动，其他处理器未启动
+* 32bit protected mode, page disabled
+* flat segment (`00000000-ffffffff`)
+* 中断关闭 (`EFLAGS_IF == 0`)
+* LAPIC/IOAPIC初始化完成，自动EOI模式
+
+----
+
+C语言可见的状态：.red[该有的都有了]！.red[OS = C程序]！
+
+* .code, .data, .bss正确加载和初始化(bootloader完成)
+* 有足够大的初始堆栈(0x7000, `start.S`)
+* [`_heap.start`, `_heap.end`)标记了可用的物理内存
+
+---
+
+class: center, middle
+
+# 多处理器系统：代码导读
+
+---
+
+# 管理多处理器：AM MPE API
+
+```c
+int mpe_init(void (*entry)());
+int ncpu();
+int cpu();
+intptr_t atomic_xchg(volatile intptr_t *addr, intptr_t newval); // 之后解释
+```
+
+- `mpe_init`启动所有处理器，使它们同时从entry开始执行
+- `ncpu()`返回系统中处理器的数量
+- `cpu()`返回当前处理器的编号
+
+------
+
+太简单了，就相当于使用thread.h：
+
+```c
+for (int i = 0; i < ncpu(); i++) {
+  create(entry);
+}
+// no join
+```
+
+---
+
+# 启动多处理器
+
+准备工作：.red[每个处理器都需要分配独立的堆栈]
+
+* 扫描内存中的处理器信息 @ `cpu.c:bootcpu_init()`
+* bootstrap stack是硬编码的，因此需要`jump_to`实现堆栈切换
+* `struct boot_info`是一个存储在0x7000的结构体，帮助bootloader知道是否是CPU0
+
+----
+
+通过IPI (inter-processor interrupt)唤醒
+
+* `mpe.c:percpu_entry()`: 在CPU0
+* `lapic_bootap()`唤醒其他处理器
+
+---
+
+# 启动多处理器 (cont'd)
+
+每个处理器都从16位模式开始运行
+
+* 但`boot_info`已经被CPU0修改过了(`is_ap == 1`)
+
+```c
+volatile struct boot_info *boot = (void*)0x7000;
+int is_ap = boot->is_ap;
+if (is_ap == 1) {
+  // 直接跳转到入口，不执行加载
+  boot->entry(); // percpu_entry();
+                 // jump_to(user_entry);
+}
+...
+```
+
+---
+
+class: center, middle
+
+# 多处理器编程：拒绝放弃
+
+---
+
+# 回顾：从入门到放弃
+
+* 编译器：.red[顺序]的丧失
+* 操作系统：.red[原子性]的丧失
+* 多处理器：.red[可见性]的丧失
+
+----
+
+在多处理器上直接用C语言访问共享内存是非常非常非常困难的
+
+* 但.blue[硬件可以帮忙解决这些问题啊！]
+
+---
+
+# The LOCK Prefix
+
+x86指令的prefix bytes
+
+* `0xf3` - REP, REPE (循环)
+* `0xf2` - REPNE (循环)
+* `0x64` - FS override (段寄存器指定)
+* .red[`0xf0` - LOCK]: *instruction will have exclusive use of all shared memory until completion*
+
+---
+
+# 回到计数的例子
+
+LOCK: 保证一条指令执行完成不被打断(即便包含超过一次读/写)
+
+* `lock add`能实现`atomic_inc()`
+
+----
+
+```c
+for (int i = 0; i < 100000000; i++) {
+  asm volatile("addq $1, %0"     : "=m"(sum));
+  asm volatile("lock addq $1, %0": "=m"(sum));
+}
+```
+
+---
+
+# Atomic Exchange
+
+.red[交换]两个数字：
+
+```c
+intptr_t atomic_xchg(volatile intptr_t *addr,
+                               intptr_t newval) {
+  // swap(*addr, newval);
+  intptr_t result;
+  asm volatile ("lock xchg %0, %1":
+    "+m"(*addr), "=a"(result) : "1"(newval) : "cc");
+  return result;
+}
+```
+
+汇编代码：
+
+```c
+0000000000000610 <atomic_xchg>:
+ 610:   48 89 f0                mov    %rsi,%rax
+ 613:   f0 48 87 07             lock xchg %rax,(%rdi)
+ 617:   c3                      retq
+```
+
+---
+
+# 顺序 + 原子性 + 可见性
+
+LOCK指令同时满足.green[顺序、原子性、可见性]
+
+* 保证此条指令的.red[原子性]
+* 访问同一内存的所有LOCK指令按照某个.red[顺序]发生
+* 保证MFENCE语义，其他处理器.red[可见]之前所有操作
+  * 实现：保证清空store buffer，等待所有数据到达L1 Cache
+
+----
+
+[一篇博客：Memory Barriers Are Like Source Control Operations](https://preshing.com/20120710/memory-barriers-are-like-source-control-operations/)
+
+---
+
+# 实现互斥锁
+
+```c
+intptr_t locked = 0;
+
+void lock() {
+  while (1) {
+[1]  intptr_t value = atomic_xchg(&locked, 1);
+[2]  if (value == 0) {
+[3]    break;
+    }
+  }
+}
+
+void unlock() {
+[4]  atomic_xchg(&locked, 0);
+}
+```
+
+----
+
+用互斥锁保护求和：[sum-locked.c](/static/wiki/os/2019/demos/sum-locked.c)
+
+---
+
+# 这就是自旋锁(spin lock)
+
+名字来自量子物理里的自旋“spin”
+
+.center[<img src="../static/wiki/os/2019/img/spin.gif" width=200px/>]
+
+* 锁不断地“spin”——用atomic xchg设置`locked = 1`
+* 一旦交换出了`0`，当前线程就持有了这把锁
+
+----
+
+* 思考题：.green[如何证明这个算法的正确性？]
+
+---
+
+# 自旋锁：正确性证明
+
+建模程序的.red[状态]：
+
+* `locked`: {0, 1}
+* PC: {1, 2, 3, 4}
+
+----
+
+证明的性质：
+
+* safety：任意时刻至多只有一个线程PC = 3 (进入临界区)
+* liveness：至少有一个线程能进入临界区
+</textarea>
+
+<script src="../static/js/remark-latest.min.js"></script>
+
+<script>
+  var slideshow = remark.create();
+</script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

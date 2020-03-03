@@ -1,0 +1,178 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Lab1：数据的机器表示</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="lab1">Lab1：数据的机器表示</h1>
+<div class="fenced fenced-blue">
+<h4 id="_1">小实验说明</h4>
+<p>小实验 (Labs) 是 ICS 这门课程里的一些综合编程题，旨在结合课堂知识解决一些实际中的问题。因为问题来自实际，所以有时候未必能立即在课本上找到相关知识的答案，而是需要“活学活用”。因此，大家需要利用互联网上的知识解决这些问题，但<strong>不要</strong>试图直接搜索这些问题的答案，即便有也不要点进去 (也请自觉不要公开发布答案)。</p>
+</div>
+<div class="fenced fenced-red">
+<h4 id="_2">实验说明</h4>
+<p>请先阅读<a href="ICS2019_Code.html">《计算机系统基础》Labs 须知</a>。</p>
+<p>获取代码：在 <code>ics-workbench</code> 中执行</p>
+<pre class="codehilite"><code class="language-bash">git pull origin lab1</code></pre>
+
+
+<p>提交方法：在 <code>multimod</code> 目录下设置好 <code>STUID</code>, <code>STUNAME</code> 环境变量后，执行 <code>make submit</code> 提交。</p>
+</div>
+<h2 id="_3">收到的提交</h2>
+<table class="submissions"><tr><td>161180204<br><span class="submit-date">(20:02 Jan 18)</span></td><td>161240007<br><span class="submit-date">(18:15 Jan 18)</span></td><td>161240039<br><span class="submit-date">(15:08 Jan 11)</span></td><td>161240045<br><span class="submit-date">(18:08 Nov 12)</span></td><td>171180589<br><span class="submit-date">(10:52 Dec 22)</span></td><td>171180593<br><span class="submit-date">(21:23 Dec 30)</span></td><td>171820548<br><span class="submit-date">(14:24 Jan 01)</span></td></tr><tr><td>171860609<br><span class="submit-date">(20:10 Jan 11)</span></td><td>171860655<br><span class="submit-date">(23:18 Jan 02)</span></td><td>181180200<br><span class="submit-date">(19:32 Dec 17)</span></td><td>181220001<br><span class="submit-date">(20:04 Jan 12)</span></td><td>181220002<br><span class="submit-date">(17:56 Dec 24)</span></td><td>181220003<br><span class="submit-date">(21:51 Dec 30)</span></td><td>181220004<br><span class="submit-date">(19:09 Dec 13)</span></td></tr><tr><td>181220005<br><span class="submit-date">(17:11 Dec 26)</span></td><td>181220006<br><span class="submit-date">(00:54 Jan 13)</span></td><td>181220010<br><span class="submit-date">(19:17 Dec 26)</span></td><td>181220011<br><span class="submit-date">(21:23 Dec 25)</span></td><td>181220012<br><span class="submit-date">(18:56 Jan 11)</span></td><td>181220013<br><span class="submit-date">(16:30 Jan 04)</span></td><td>181220014<br><span class="submit-date">(14:59 Jan 04)</span></td></tr><tr><td>181220016<br><span class="submit-date">(22:01 Dec 20)</span></td><td>181220018<br><span class="submit-date">(21:30 Jan 08)</span></td><td>181220019<br><span class="submit-date">(20:19 Jan 12)</span></td><td>181220022<br><span class="submit-date">(18:44 Dec 14)</span></td><td>181220026<br><span class="submit-date">(00:58 Jan 09)</span></td><td>181220027<br><span class="submit-date">(21:39 Dec 26)</span></td><td>181220028<br><span class="submit-date">(01:18 Jan 04)</span></td></tr><tr><td>181220029<br><span class="submit-date">(16:07 Jan 11)</span></td><td>181220030<br><span class="submit-date">(18:30 Dec 23)</span></td><td>181220031<br><span class="submit-date">(15:01 Dec 25)</span></td><td>181220032<br><span class="submit-date">(09:51 Jan 09)</span></td><td>181220033<br><span class="submit-date">(13:51 Jan 12)</span></td><td>181220034<br><span class="submit-date">(00:32 Dec 27)</span></td><td>181220035<br><span class="submit-date">(08:55 Jan 06)</span></td></tr><tr><td>181220036<br><span class="submit-date">(21:47 Dec 27)</span></td><td>181220038<br><span class="submit-date">(20:53 Jan 01)</span></td><td>181220039<br><span class="submit-date">(14:24 Dec 25)</span></td><td>181220040<br><span class="submit-date">(11:03 Jan 10)</span></td><td>181220041<br><span class="submit-date">(19:44 Jan 01)</span></td><td>181220043<br><span class="submit-date">(16:48 Jan 01)</span></td><td>181220044<br><span class="submit-date">(20:05 Jan 12)</span></td></tr><tr><td>181220045<br><span class="submit-date">(17:13 Jan 02)</span></td><td>181220046<br><span class="submit-date">(21:05 Jan 12)</span></td><td>181220047<br><span class="submit-date">(02:26 Jan 12)</span></td><td>181220048<br><span class="submit-date">(19:23 Nov 26)</span></td><td>181220049<br><span class="submit-date">(18:54 Dec 14)</span></td><td>181220051<br><span class="submit-date">(18:27 Dec 28)</span></td><td>181220052<br><span class="submit-date">(17:37 Dec 23)</span></td></tr><tr><td>181220054<br><span class="submit-date">(20:35 Jan 12)</span></td><td>181220055<br><span class="submit-date">(23:37 Dec 31)</span></td><td>181220056<br><span class="submit-date">(20:51 Jan 08)</span></td><td>181220057<br><span class="submit-date">(20:59 Dec 22)</span></td><td>181220058<br><span class="submit-date">(21:52 Jan 12)</span></td><td>181220060<br><span class="submit-date">(14:41 Dec 21)</span></td><td>181220061<br><span class="submit-date">(18:14 Dec 26)</span></td></tr><tr><td>181220062<br><span class="submit-date">(14:45 Jan 12)</span></td><td>181220063<br><span class="submit-date">(19:17 Nov 25)</span></td><td>181220064<br><span class="submit-date">(14:54 Dec 16)</span></td><td>181220066<br><span class="submit-date">(22:12 Jan 12)</span></td><td>181220067<br><span class="submit-date">(23:30 Nov 12)</span></td><td>181220068<br><span class="submit-date">(19:57 Jan 17)</span></td><td>181220069<br><span class="submit-date">(23:50 Jan 12)</span></td></tr><tr><td>181220071<br><span class="submit-date">(17:09 Jan 12)</span></td><td>181220072<br><span class="submit-date">(21:36 Dec 23)</span></td><td>181220073<br><span class="submit-date">(23:22 Jan 12)</span></td><td>181220074<br><span class="submit-date">(10:42 Dec 26)</span></td><td>181220075<br><span class="submit-date">(01:42 Dec 22)</span></td><td>181220076<br><span class="submit-date">(19:17 Dec 24)</span></td><td>181220077<br><span class="submit-date">(21:44 Jan 12)</span></td></tr><tr><td>181220078<br><span class="submit-date">(16:29 Dec 26)</span></td><td>181220079<br><span class="submit-date">(15:02 Jan 11)</span></td><td>181220080<br><span class="submit-date">(23:41 Dec 18)</span></td><td>181220081<br><span class="submit-date">(21:33 Jan 12)</span></td><td>181240004<br><span class="submit-date">(15:43 Dec 29)</span></td><td>181240008<br><span class="submit-date">(16:08 Jan 12)</span></td><td>181240010<br><span class="submit-date">(15:04 Jan 04)</span></td></tr><tr><td>181240014<br><span class="submit-date">(23:35 Jan 11)</span></td><td>181240016<br><span class="submit-date">(21:04 Jan 12)</span></td><td>181240019<br><span class="submit-date">(15:45 Dec 29)</span></td><td>181240020<br><span class="submit-date">(19:23 Dec 06)</span></td><td>181240030<br><span class="submit-date">(16:11 Dec 29)</span></td><td>181240035<br><span class="submit-date">(22:29 Dec 16)</span></td><td>181240045<br><span class="submit-date">(23:16 Jan 11)</span></td></tr><tr><td>181240047<br><span class="submit-date">(23:18 Jan 11)</span></td><td>181240050<br><span class="submit-date">(19:11 Dec 31)</span></td><td>181240055<br><span class="submit-date">(16:02 Jan 04)</span></td><td>181240063<br><span class="submit-date">(11:17 Jan 12)</span></td><td>181240064<br><span class="submit-date">(01:00 Jan 02)</span></td><td>181240068<br><span class="submit-date">(23:05 Dec 15)</span></td><td>181240078<br><span class="submit-date">(18:47 Dec 24)</span></td></tr><tr><td>181240082<br><span class="submit-date">(21:08 Jan 12)</span></td><td>181250012<br><span class="submit-date">(09:19 Nov 20)</span></td><td>181250097<br><span class="submit-date">(19:14 Jan 11)</span></td><td>181250125<br><span class="submit-date">(21:53 Jan 12)</span></td><td>181250177<br><span class="submit-date">(22:55 Nov 24)</span></td><td>181250195<br><span class="submit-date">(16:09 Dec 13)</span></td><td>181830101<br><span class="submit-date">(20:39 Dec 28)</span></td></tr><tr><td>181830196<br><span class="submit-date">(21:49 Jan 12)</span></td><td>181840013<br><span class="submit-date">(23:55 Jan 12)</span></td><td>181840064<br><span class="submit-date">(17:12 Nov 16)</span></td><td>181840135<br><span class="submit-date">(18:50 Dec 09)</span></td><td>181840204<br><span class="submit-date">(17:34 Dec 16)</span></td><td>181840223<br><span class="submit-date">(10:04 Dec 24)</span></td><td>181840264<br><span class="submit-date">(23:57 Jan 09)</span></td></tr><tr><td>181840273<br><span class="submit-date">(14:50 Jan 12)</span></td><td>181840326<br><span class="submit-date">(23:44 Dec 07)</span></td><td>181850236<br><span class="submit-date">(15:08 Jan 03)</span></td><td>181860020<br><span class="submit-date">(00:08 Jan 05)</span></td><td>181860035<br><span class="submit-date">(12:46 Nov 25)</span></td><td>181860066<br><span class="submit-date">(17:02 Jan 01)</span></td><td>181860104<br><span class="submit-date">(15:18 Dec 21)</span></td></tr><tr><td>181860124<br><span class="submit-date">(11:30 Dec 06)</span></td><td>181860134<br><span class="submit-date">(12:34 Nov 25)</span></td><td>181860137<br><span class="submit-date">(22:28 Dec 15)</span></td><td>181860152<br><span class="submit-date">(23:37 Jan 07)</span></td><td>181860158<br><span class="submit-date">(20:30 Dec 22)</span></td><td>181870015<br><span class="submit-date">(11:22 Jan 11)</span></td><td></td></tr></table>
+
+<h2 id="_4">实验描述</h2>
+<div class="fenced fenced-blue">
+<h4 id="_5">背景</h4>
+<p>我们在《计算机系统基础》课程中，学习了数据是如何用机器表示的，以及计算机支持的数据的运算。在这个实验中，我们将会灵活地使用这些计算机系统的运算，实现一个非常基础的数学运算，并尝试着做一些性能统计。最后，我们通过一段代码帮助大家理解 IEEE754 浮点数的表示和运算。</p>
+</div>
+<p>给定 64 位有符号整数 <math>a</math>, <math>b</math>, <math>m</math> (类型为 <code>int64_t</code>)，你希望求出 <math>a\times b\mod m</math> 的数值，即最小的非负整数 <math>t</math>，满足 <math>a\times b\equiv t\mod m</math>。</p>
+<p>你很容易写出如下实现：</p>
+<pre class="codehilite"><code class="language-c">int64_t multimod(int64_t a, int64_t b, int64_t m) {
+  return (a * b) % m;
+}</code></pre>
+
+
+<p>但这段看起来正常的代码其实是错误的：<code>a * b</code> 计算两个 64 位整数的乘积，只能保留乘积的低 64 位。有符号整数溢出导致<a href="https://en.wikipedia.org/wiki/Undefined_behavior">undefined behavior (UB)</a>，即便不是UB而是得到 mod <math>2^{64}</math> 的结果，计算出的数值也是错误的 (为什么？)。</p>
+<p>在这个实验中，你的任务是根据你所掌握的知识，实现正确、高效的<code>multimod</code>。</p>
+<h2 id="1-multimod">任务1：实现 multimod</h2>
+<p>给出一个正确的 <code>multimod</code> 实现，使得它对于任意在 <math>0\ldots 2^{63}-1</math> 范围内的 <math>a</math>, <math>b</math>, <math>m</math> 均能正确求出 <math>a\times b\mod m</math> 的数值，且在任何时候不触发有符号整数溢出。在实验报告中给出充足的测试用例或证据，说明你的实现正确，这将作为你的基准实现。</p>
+<p>将 <code>multimod</code> 函数保存在 <code>p1.c</code> 中 (只实现函数体，请不要修改代码的其他部分)，随实验报告提交。我们根据 <code>p1.c</code> 的正确性评分。你可以回顾一下你过去实现的 “大数” 运算，这比较容易保证代码的正确性。</p>
+<h2 id="2">任务2：性能优化</h2>
+<p>寻找一种方法能尽可能准确地衡量 <code>multimod</code> 函数在你计算机上的执行时间，在实验报告中阐述你选择的方法，及其合理性。</p>
+<p>试图优化你的 <code>multimod</code> 实现 (仅使用 64 位或以下整数的运算)。比较各个实现 (包括基准实现，和至少一个优化过的实现) 在编译器 <code>-O0</code>, <code>-O1</code>, <code>-O2</code> 优化级别下的运行时间，将这些结果记录在实验报告中，并给出你的分析。</p>
+<div class="fenced fenced-red">
+<h4 id="_6">危险的编译优化</h4>
+<p>编译优化有时可能会非预期地改变程序的行为，例如</p>
+<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; 1000000000; i++) {
+  multimod(a, b, m);
+}</code></pre>
+
+
+<p>在编译优化的情况下可能会被完全“删除”——它们没有对程序的全局状态产生任何效果，从而删掉之后的程序语义和原程序等价。因此你在度量运行时间时应当格外小心，建议使用 <code>objdump</code> 阅读生成的汇编代码。</p>
+</div>
+<p>优化的 <code>multimod</code> 实现保存在 <code>p2.c</code> 中 (只实现函数体，请不要修改代码的其他部分)。我们将根据正确性、性能和你实验报告中结果的可靠性评分。提示：合理地使用位运算，将以下式子用乘法分配律展开</p>
+<p><center><math> a \cdot b = (a_0 \cdot 2^0 + a_1 \cdot 2^1 + \ldots + a_{62} \cdot 2^{62}) \cdot b </math></center></p>
+<p>做一些合适的公式变形，你会体会到 “代数” 在解决计算机科学问题中的威力。</p>
+<h2 id="3">任务3：解析神秘代码</h2>
+<p>任务 3 中，你获得了一份 ACM-ICPC 圈子中广为流传的一段神奇代码，出处和年代太久远已经很难考证了：</p>
+<pre class="codehilite"><code class="language-c">int64_t multimod_fast(int64_t a, int64_t b, int64_t m) {
+  int64_t t = (a * b - (int64_t)((double)a * b / m) * m) % m;
+  return t &lt; 0 ? t + m : t;
+}</code></pre>
+
+
+<p>这段代码神奇地……竟然可以在 <math>O(1)</math> 时间就搞定溢出的问题？其中最精髓的一段在于</p>
+<pre class="codehilite"><code class="language-c">(int64_t)((double)a * b / m)</code></pre>
+
+
+<p>把整数 <code>a</code> 强行转换成了浮点数 (假设使用IEEE754 64位双精度类型)。我们知道浮点数的精度也不是无限的，仅仅类型转换就已经损失精度了，<code>double</code> 更不可能准确保存 <code>a * b</code> 的结果。请你利用学习过的数据的机器表示知识，理解 <code>multimod_fast</code> 中每一个子表达式的含义，并且分析其正确性。</p>
+<div class="fenced fenced-blue">
+<h4 id="_7">神奇的代码</h4>
+<p>这都可以？如果你第一次见到这个代码，你一定很好奇它为什么对/不对。</p>
+<p>首先，这段代码会触发 Undefined Behavior，因此它首先对 <code>int64_t</code> 的乘法做了wraparound的假设 (好像是两个 64 位整数相乘得到 128 位整数，取低 64 位)。幸运的是，x86 的确是这样的，gcc 一般也不会对这个 UB 做过激的处理。于是这个严格意义上不正确的代码，竟然可以正常工作？</p>
+<p>然后，你会希望写一个测试程序，看看到底对什么样的输入 (<code>a</code>, <code>b</code>, <code>m</code>)，这个程序的结果能对；什么样的输入不对。显然，如果 <code>a * b</code> 没有导致溢出，这个结果将总是正确的。我们建议你使用 Python：</p>
+<pre class="codehilite"><code class="language-python">(x, y, m) = random_xym()
+ret = subprocess.check_output(
+    [&quot;multimod_fast&quot;, str(x), str(y), str(m)])
+if ret.decode() == x * y % m:
+    # 正确
+else:
+    # 错误</code></pre>
+
+
+<p>然后，你可以 (用人脑) 训练一个分类器，分类出什么样的输入正确、什么样的输入不正确，并用具体数字的计算过程帮助你理解为什么计算正确/错误。</p>
+</div>
+<p>现在，我们假设整数乘法不导致UB，即对于<code>int64_t</code>类型的<code>a</code>和<code>b</code>，<code>a * b</code>表达式的值等于<code>(int64_t)((uint64_t)a * (uint64_t)b)</code>，且假设<math>0\le a,b\le 2^{63}-1</math>，你的任务是分析<code>multimod_fast</code>的正确性：</p>
+<p>确定一个合理的 <code>a</code>, <code>b</code>, <code>m</code> 满足的条件，使 <code>multimod_fast</code> 能返回正确的数值，并比对这一实现和你之前所有实现的性能 (在不同优化选项下均进行比较)，回答这个快速实现是否真的比你优化过的实现更快。</p>
+<p>我们根据你范围的正确性、分析的合理性评分。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

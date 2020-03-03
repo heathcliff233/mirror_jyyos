@@ -1,0 +1,177 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>进程抽象</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">进程抽象</h1>
+<div class="fenced fenced-blue">
+<h4 id="_2">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a>第3, 4, 5, 6章。</p>
+</div>
+<h2 id="_3">进程：虚拟计算机</h2>
+<p>总的来说，如果程序只完成“计算”的任务而不做任何输入输出，它就可以看成是一个状态机。程序的内存<math>M</math>和寄存器<math>R</math>构成了程序任意时刻的状态<math>(M,R)</math>。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/program-is-automaton.png" width="500px" /></center></p>
+<p>例如对x86来说，假如<math>M[R[\texttt{EIP}]]=\texttt{0xc3}</math>，也就是EIP位置的指令是“ret”指令，那么执行一条指令的<strong>语义</strong>(也就是执行它的效果)就是得到<math>(M_1,R_1)</math>，其中
+<math>R_1[\texttt{EIP}] = M[R[\texttt{ESP}]]</math>, 
+<math>R_1[\texttt{ESP}] = R[\texttt{ESP}] + 4</math>, 
+<math>M'=M</math>, 对于其他<math>x</math>, <math>R'[x] = R[x]</math>。</p>
+<p>我们在ICS的PA中已经知道，处理器就是这么简单——每次按照EIP寄存器对应位置的指令执行，所以程序的执行就可以看成是一系列的状态转移：</p>
+<p><center><math>\ldots, (M_{i},R_{i})\to(M_{i+1},R_{i+1})\to(M_{i+2},R_{i+2})\to\ldots</math></center></p>
+<p>其中每一个箭头<math>\to</math>都代表处理器的执行，可以是一条指令，也许是多条指令(现代处理器有更多的内部状态，例如缓存、TLB，可以算作<math>R</math>的一部分)。</p>
+<p>这基本就是早期处理器运行的模型：计算机有一份内存<math>M</math>，一份寄存器<math>R</math>，然后处理器能不断执行指令。不过随着计算机越来越快但I/O设备速度无法跟上，如果处理器只运行一个程序，没一会儿就要等I/O，真是太讨厌了。能不能用一份计算机(一个<math>M</math>和一个<math>R</math>和一个执行部件)做出多个<math>(M,R)</math>同时运行的假象呢？</p>
+<p>于是诞生了一个绝妙的想法：分时复用处理器。</p>
+<h3 id="_4">分时复用处理器</h3>
+<p>首先，假设我们有两份内存<math>M</math>和<math>M'</math>，两份寄存器<math>R</math>和<math>R'</math>，但只有一个执行部件。我们先让处理器在<math>(M,R)</math>上执行：</p>
+<p><center><math>\ldots, (M_{i},R_{i})\to(M_{i+1},R_{i+1})\to(M_{i+2},R_{i+2})\to\ldots</math></center></p>
+<p>只要我们能在某一个时刻，<strong>把<math>M</math>和<math>R</math>从处理器上拆下来，换上<math>(M',R')</math></strong>，不就行了吗，好比下面红色的箭头。</p>
+<p><center><math>\ldots, (M_{i+2},R_{i+2})\ {\color{red} \to }\ (M_{0}',R_{0}')\to(M_{1}',R_{1}')\to\ldots</math></center></p>
+<p>在物理上，这是完全办得到的，在适当的时候停下CPU，把导线重新连接一下就行。如果我们做这么一个物理部件，就能让一个CPU同时运行两个程序了。</p>
+<p>把处理器“拆下来”的机制就是中断/系统调用。实际上，虽然进程认为自己是独占计算机系统运行的，但这一切都是操作系统安排的假象。操作系统实际从一开始就驻留在内存中，并且配置了中断处理程序的入口地址，一旦进程发生中断/异常/系统调用，操作系统代码就立即接手执行。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/os-as-automaton.png" width="500px" /></center></p>
+<h3 id="_5">分时复用寄存器</h3>
+<p>剩下的问题就是每个进程都需要自己的<math>R</math>。好消息是寄存器和内存没有本质的区别，它们都是<strong>数据</strong>。所以寄存器的虚拟化也是非常容易地：只要我们能想办法把寄存器保存在某个地方，再切换到另一个进程的寄存器现场就行了。</p>
+<p>此外，借助虚拟内存机制(例如x86的CR3寄存器)，只需要一份物理内存就可以服务多个进程需要内存的需求了。当我们想把<math>(M,R)</math> (进程<math>A</math>的状态)切换到<math>(M',R')</math> (进程<math>B</math>的状态)时，为了保证<math>A</math>还能回来，只需把<math>R</math>保存到内存中的某个位置，然后把内存中保存的<math>R'</math>写入寄存器组即可。硬件提供了指令来完成这些操作。</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/context-switch.png" width="500px" /></center></p>
+<h3 id="_6">操作系统：实现虚拟化</h3>
+<p>这样，操作系统就不那么神秘了，它就是一个运行在计算机上的程序，其重要职责之一就是实现<math>(M,R)\ {\color{red} \to }\ (M',R')</math>的转换。</p>
+<p>操作系统也是程序，所以它也有自己的内存，也需要寄存器来运行。在适当的时候，操作系统的代码会被硬件调用。在调用前，进程的状态是<math>(M,R)</math>，操作系统代码会将<math>R</math>保存到操作系统的内存中，然后寻找下一个需要调度进程的<math>R'</math>，切换寄存器现场(称为<em>context switch</em>，而<math>R</math>就是一个进程的上下文<em>context</em>)，执行<math>(M',R')</math>。</p>
+<p>所以在现代计算机系统实现虚拟化里最重要的两个想法就是：</p>
+<ol>
+<li>使用虚拟地址空间<math>\textit{VM}</math>让多个程序共享一个物理内存；</li>
+<li>把<math>(M,R)</math>中寄存器现场<math>R</math>当做数据保存，并在寄存器现场<math>R</math>之间切换(<math>\textit{VM}</math>通常是<math>R</math>的一部分)。</li>
+</ol>
+<p>这样就在有一套计算机硬件上模拟出了多个程序，每个程序都有自己的<math>(M,R)</math>执行指令<math>\ldots\to(M_{i},R_{i})\to(M_{i+1},R_{i+1})\to\ldots</math>。我们将会在OS Labs中真正实现上下文切换。</p>
+<h2 id="_7">管理应用程序有序执行</h2>
+<p>回顾：</p>
+<p><center><math>\ldots, (M_{i},R_{i})\to(M_{i+1},R_{i+1})\to(M_{i+2},R_{i+2})\to\ldots</math></center></p>
+<p>代表了一个程序执行纯粹计算的过程。我们已经知道如何用一套内存、一套物理寄存器和一个处理器来模拟多个这样程序的执行。应用程序(进程)在计算时，没有任何权限访问不属于自己的内存(例如另一个进程的<math>(M',R')</math>)，也没有权限访问任何I/O设备，系统中除了分配给这个进程的资源外，全都被“保护”了。这样应用程序就能有序地执行，而应用程序想从外界输入/输出任何信息、请求操作系统完成任何功能，都需要通过<strong>系统调用</strong>。</p>
+<p>系统调用通常是用一条或多条指令实现的。系统调用也可以看成是状态的转移：在<math>(M,R)</math>状态下执行系统调用，将会得到新的状态<math>(M_1,R_1)</math>，例如x64 Linux系统中的<code>read</code>系统调用会读取编号为<math>R[\texttt{RDI}]</math>文件描述符中的内容，将最多<math>R[\texttt{RDX}]</math>字节的内容写入地址<math>M[R[\texttt{RSI}]]</math> (所以<math>M</math>和<math>M_1</math>可能有多个内存字节发生变化)，并将读取的字节数存放至<math>R[\texttt{RAX}]</math>。</p>
+<p>把程序看成状态的转移提供了宏观理解操作系统运行的视角，这个视角在建模操作系统里多个线程的并发执行时将非常有用。这个lecture notes用了如此多的符号只是为了说明一件事：<strong>机器永远是对的</strong>。机器总是按照一定的规则执行：</p>
+<ol>
+<li>程序总是按照它的语义执行(包括编译器)。指令总是按照处理器的实际电路执行。处理器的行为原则上满足手册的描述。</li>
+<li>系统调用总是按照它的实现执行(假设处理器的实现正确)，绝大部分行为都在TFM中被正确描述，但不排除实现和规约不一致的极少情况。</li>
+</ol>
+<h2 id="api">进程管理API</h2>
+<p>实现进程管理中很重要的一环就是能在操作系统中创建新的进程。在UNIX世界中，这是由<code>fork()</code>系统调用完成的。</p>
+<p><code>fork()</code>系统调用在系统中创建一个与当前进程几乎完全相同的进程(同样的地址空间、同样的内存数据)，为了区别新旧进程，父进程(执行<code>fork</code>的进程)返回被创建进程(子进程)的进程号(pid)，而子进程返回0。</p>
+<p>仅仅能创建进程还不够，还要能执行各种程序，<code>execve(const char *path, char *argv[], char *envp[])</code>系统调用就完成了这个功能。总体来说，它在不改变当前进程拥有资源的前提下，“替换”当前进程为<code>path</code>，并且调用<code>main(argc, argv, envp)</code>执行。除了地址空间被完全重建，很多进程拥有的操作系统相关状态都不发生改变：</p>
+<ol>
+<li>进程号(pid)不变；</li>
+<li>文件描述符照用；</li>
+<li>进程当前目录不变；</li>
+<li>访问权限不变；</li>
+<li>附属终端不变；</li>
+<li>信号掩码不变；</li>
+<li>……</li>
+</ol>
+<p>最后，使用<code>_exit()</code>结束进程的一生。注意<code>exit()</code>和<code>_exit()</code>是不同的，前者是libc提供的函数，而后者是操作系统提供的系统调用。在libc库中会执行一些额外的操作，例如执行<code>atexit()</code>注册的call backs，以及清空<code>printf</code>的缓冲区。课堂上已经讲过一个有趣的<a href="../static/wiki/os/2019/demos/exit-demo.c">例子</a>了。</p>
+<p>从状态机的视角理解fork, execve和exit就容易了：</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/fork-exec-exit.png" width="500px" /></center></p>
+<p>把进程看作是一个<math>(M, R)</math>的状态机，fork就是将这个状态机复制一模一样的一份，仅仅是<code>fork()</code>的返回值不同。注意到x86使用EAX寄存器保存返回值，因此实际上只需要复制完全相同的<math>(M, R)</math>，然后将父/子进程的EAX分别置为pid/0即可。同理我们可以理解<code>execve()</code>是把当前状态机“重置”成程序新开始运行的状态；<code>exit()</code>则是把状态机从系统中删除。</p>
+<div class="fenced fenced-green">
+<h4 id="spawnpath-argv-envp">为什么不用<code>spawn(path, argv, envp);</code>创建进程？</h4>
+<p>这似乎不是创建进程最直接的方式——如果我们有一个<code>CreateProcess</code>/<code>spawn</code>函数，它能根据指定的<code>argv</code>来执行程序，不就完了吗？的确，这是一种可行的解决方案，提出这个方案的主要原因也是避免<code>fork</code>产生地址空间复制带来的开销。不过<code>fork</code>也有一些比较明显的额外好处：</p>
+<ul>
+<li>借助现代处理器硬件的帮助，fork可以在非常低的代价下完成。</li>
+<li><code>fork</code>实现了程序中间结果的完美共享(同样借助现代处理器的支持，不会付出很多额外代价)。如果使用CreateProcess，就需要额外的协议和API来完成这样的共享。一个例子是Android虚拟机——并不是每个App启动都会从零开始启动一个虚拟机，每个ART虚拟机只是一个“父亲”虚拟机的<code>fork</code>。所以Android App启动卡，系统不背锅应用背锅。</li>
+<li><code>fork</code>默认父子进程共享文件描述符，这个默认行为在绝大部分时候都是我们想要的。如果你有额外的需求(如父子进程通过管道通信)，在<code>fork</code>之前准备好管道，然后在子进程中处理即可。</li>
+</ul>
+</div>
+<p>总体来说，<code>fork</code>/<code>exec</code>的设计主要是为了UNIX Shell服务的——如果我们的程序也和Shell有所相似，例如会调用多个程序，并把输入串联起来，使用这组API就会觉得很舒适。我们将在sperf lab中实际使用一下这些API(包括管道)。</p>
+<p>当然，从今天的角度，<code>fork</code>所能做的事情已经大大超乎它被设计时的想象。首先，<code>fork</code>使用虚拟存储机制的页面保护实现copy-on-write (复制时仅把地址空间标记成只读，写操作发生时导致缺页并复制一页)，因此<code>fork</code>的实际的开销是非常之小的。当我们能近乎免费得到一个进程的“快照”时，我们就能做很多有趣的hacking，例如：</p>
+<ul>
+<li>从快照开始开展测试；</li>
+<li>利用快照实现多版本程序的同时运行；</li>
+<li>将快照作为检查点，在程序崩溃时从快照恢复执行。</li>
+</ul>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

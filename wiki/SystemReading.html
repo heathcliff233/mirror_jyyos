@@ -1,0 +1,150 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>阅读材料</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">阅读材料</h1>
+<blockquote>
+<p>如果你有读过觉得非常好，值得进入推荐列表，请告诉 jyy！如果你有不同意见，例如强烈反对推荐，也请联系 jyy!</p>
+</blockquote>
+<div class="fenced fenced-blue">
+<h4 id="_2">关于读书和入门</h4>
+<p>作为一个过来人，jyy的建议是<font color="red">多读书</font>：</p>
+<ul>
+<li>计算机系统中的很多知识是<font color="red">关联</font>的，因此你对体系结构、编译器、软件工程等领域的理解都会加深对操作系统的理解；反之也一样。认识通常是 “螺旋式上升” 的；</li>
+<li>计算机系统不是纸上谈兵，因此学习很多<font color="red">技术</font>是非常重要的，例如如何使用 Linux 系统调用编程、如何使用正则表达式、如何使用 profiler 等等。技术类书籍是掌握这些实践的很好切入点；</li>
+<li>每一本书的作者都有他们独到的视角 (某些为了凑数编教材而编教材的除外)。因此也许某个作者的思维方式就特别适合你，读起来就会很轻松。</li>
+</ul>
+<p>当然我们已经尽量为你选择了一些经过了 (一定) 考验的好书。</p>
+</div>
+<h2 id="_3">计算机系统基础</h2>
+<ul>
+<li>[教科书] 袁春风、余子濠. 计算机系统基础 (第二版). 机械工业出版社.</li>
+<li>[参考书/CSAPP] Randal E. Bryant and David R. O'Hallaron. <em>Computer Systems: A Programmer's Perspective</em> (3rd Edition). Pearson, 2017. (作为手册查阅)</li>
+</ul>
+<h3 id="unixlinux">UNIX/Linux基础</h3>
+<ul>
+<li>Harley Hahn. <em><a href="http://www.harley.com/books/sg3.html">Harley Hahn's Guide to Unix and Linux</a></em>. McGraw-Hill Higher Education, 2008.</li>
+<li>Jlevy Hollowa. <a href="https://github.com/jlevy/the-art-of-command-line">The Art of Command Line</a>, 2017. (<a href="TAOCL.html">本地镜像</a>)</li>
+</ul>
+<h3 id="_4">编程</h3>
+<ul>
+<li>Brian W. Kernighan and Dennis M. Ritchie. <em>The C programming language</em> (2nd Edition). Prentice Hall, 1998.</li>
+<li><a href="https://wiki.sei.cmu.edu/confluence/display/c/SEI+CERT+C+Coding+Standard">The CERT C Coding Standard: Rules for Developing Safe, Reliable, and Secure Systems</a>. Software Engineering Institute of Carnegie Mellon University, 2016.</li>
+<li>Sandeep. S. <em><a href="http://www.ibiblio.org/gferg/ldp/GCC-Inline-Assembly-HOWTO.html">GCC-Inline-Assembly-HOWTO</a></em>, 2003.</li>
+<li>W. Richard Stevens and Stephen A. Rago. <em><a href="http://www.apuebook.com/apue3e.html">Advanced Programming in the UNIX® Environment</a></em> (3rd Edition). Addison-Wesley, 2013.</li>
+<li>Jeffrey E.F. Friedl. <em>Mastering Regular Expressions</em> (3rd Edition). O'Reilly, 2006.</li>
+</ul>
+<hr />
+<h2 id="_5">操作系统</h2>
+<ul>
+<li>[教科书/OSTEP] Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau. <em><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">Operating Systems: Three Easy Pieces</a></em>. Arpaci-Dusseau Books, 2015.</li>
+</ul>
+<p><center><img alt="" src="../static/wiki/os/2019/img/ostep-fun.jpg" /></p>
+<p>(感谢 2017 级同学的投稿)
+</center></p>
+<h3 id="_6">操作系统设计与实现</h3>
+<ul>
+<li>John R. Levine. <em><a href="https://linker.iecc.com">Linkers and Loaders</a></em>. Morgan-Kauffman, 1999.</li>
+<li>Robert Love. <em>Linux Kernel Development: A Thorough Guide to the Design and Implementation of the Linux Kernel</em> (3rd Edition). Addison-Wesley, 2010.</li>
+<li>Marshall Kirk McKusick, Keith Bostic, Michael J. Karels, and John S. Quarterman. <em><a href="https://www.freebsd.org/doc/en/books/design-44bsd/book.html">The Design and Implementation of the 4.4BSD Operating System</a></em>. Addison-Wesley Longman, 1996.</li>
+</ul>
+<h3 id="_7">开源操作系统实现</h3>
+<ul>
+<li><a href="https://pdos.csail.mit.edu/6.828/2018/xv6.html">xv6</a>，十分精简优美的UNIX实现</li>
+<li><a href="https://sel4.systems">seL4</a>，在抽象层上构建安全的微内核操作系统内核</li>
+<li><a href="https://fuchsia.googlesource.com">Fuchsia</a>，Google下一代微内核操作系统，基于Zircon微内核</li>
+<li><a href="https://www.kernel.org">Linux Kernel</a>，巨无霸项目</li>
+<li><a href="https://source.android.com">Android Open Source Project (AOSP)</a>，完整的Android系统栈 (系统工具、运行库、应用……)</li>
+</ul>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Reading Sessions</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="reading-sessions">Reading Sessions</h1>
+<div class="fenced fenced-red">
+<h4 id="reading-sessions-policy">Reading Sessions: Policy</h4>
+<p>每个选课的同学需要在每个主题 (EMSE/SEP/FM/STA/SME) 第一次课前一天晚 23:59:59 前提交 slides。未按时提交者将扣除 30% 分数。</p>
+<p><strong>所有截止日期以服务器时间为准</strong>，大家请不要拖到最后一秒钟。</p>
+</div>
+<p>在一次 reading session 课 (<span class="box box-red">R</span>) 中，会报告 4 篇论文。报告人在课堂现场<a href="GSER2019_Roll.html">随机抽取</a>。</p>
+<p>每个报告的时间是 17 分钟 (报告时间) + 3 分钟 (听众 Q/A) 时间。报告时间会严格把控，超过时间的报告将被立即终止；可以使用讲台上的电脑，也可使用自己的电脑，教室的投影比例为 4:3，使用 VGA 接口。报告完成后，session chair (在场的老师) 将会对报告进行点评。我们希望每一个报告人都能把论文的问题、核心贡献和最精彩的地方呈现给所有听众。</p>
+<div class="fenced fenced-blue">
+<h4 id="_1">关注内容，而非形式</h4>
+<p>每个同学都需要再这门课程中准备 5 个报告 (虽然被抽到的概率随机)，因此很可能你准备的报告并不会被展示出来。实际上，我们希望的是让大家思考，如果你来报告这篇论文，你会把什么样重要的 messages 传递给听众。这是帮助你更好理解论文的一个途径。为了减轻大家的负担，我们建议你花更多的时间在决定取舍哪些要讲的内容、表达的方式、逻辑等，但形式可以从简——Slides 的修饰、图片等可以从简，例如以下行为都是鼓励的：</p>
+<ol>
+<li>使用 PowerPoint 的默认模板或 markdown (就像本网站上的课件) 等简单工具；</li>
+<li>避免复杂的装饰；</li>
+<li>如果希望展示图片，可以在白纸上画好后拍照直接粘贴在 slides 当中。</li>
+</ol>
+<p>虽然形式从简，但你依然应当对你的 slides 负责，例如组织好逻辑、消除 typo 和语法错误等。</p>
+</div>
+<p><center markdown="1">
+<img alt="" src="../static/wiki/os/2019/img/fault-error-failure.png" width="600px" /></p>
+<p>(草图的例子，解释了 fault, error 和 failure)
+</center></p>
+<p>由于时间有限，你<strong>不可能覆盖论文中的所有细节</strong>。强行提高报告的节奏 (用极快的语速读完论文)，只会让听众无法 follow，从而导致整个报告的失败。你需要做出合理地<strong>取舍</strong>，把那些不重要 (即你预期听众能够自行理解的部分) 直接删除，只关注论文中和研究问题、研究贡献最相关的内容。</p>
+<p>也许你阅读的论文中包含大量的公式，但你的 slides 中可以一个公式都不出现，而是以例子的方式阐明论文的观点。形式化是把问题讲清楚的一种方式，适合书面阅读，但人类的短时记忆通常很短——如果你讲两个定义，讲第二个的时候，你应该预期听众已经忘记第一个了。所以最好的方式就是不要下任何定义，总是以最通俗的方式解释论文中的 insights。</p>
+<div class="fenced fenced-blue">
+<h4 id="ne">形式从简 <math>\ne</math> 从论文中复制粘贴</h4>
+<p>在 slides 中出现以下内容都是绝对禁止的：</p>
+<ul>
+<li>大段的定义、难以解释的公式。理想情况下，报告不应该包含任何符号定义；</li>
+<li>直接粘贴的实验结果。请概括地表达实验取得的<strong>效果</strong>，例如“证明了 XXX 是可以在合理的代价下实现的”、“找到了之前从未发现的 XXX” 等而不仅仅是数据。</li>
+</ul>
+</div>
+<p>最后，在准备你的报告时，请注意逻辑的连贯——你并不是 “宣读论文”，而是以自己的角度 <em>present</em> 这一篇论文，使听众产生一定的共鸣或是激发听众的想法。如果你还不能找到报告的感觉，请看看 top conference 的那些报告是如何做的，并甄选出其中好的那些学习。另一个好的判定方法是你假设你把你的报告讲给 (有竞赛背景的) 高中生，或是大一大二刚刚学过程序设计，仅有一些基本概念的学生，他们能从你的报告中学到什么？一个理想的报告，是任何听众都能找到他们想要的东西——当然这是一个更高的要求。大家也可以搜索互联网，网上有大量关于如何 present 论文的有益建议。</p>
+<p>格式/style 上的建议：</p>
+<ul>
+<li>中文或英文皆可；</li>
+<li>字号足够大，例如 PowerPoint 保证最小的字号不小于 18 号；</li>
+<li>在每一页脚添加页码，方便 session chairs 点评。</li>
+</ul>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

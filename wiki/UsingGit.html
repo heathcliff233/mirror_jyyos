@@ -1,0 +1,688 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Git Best Practices (转载)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="git-best-practices">Git Best Practices (转载)</h1>
+<h2 id="copyright">Copyright</h2>
+<p>Copyright ⓒ 2012 Seth Robertson</p>
+<p>Creative Commons Attribution-ShareAlike 2.5 Generic (CC BY-SA 2.5)</p>
+<p>http://creativecommons.org/licenses/by-sa/2.5/</p>
+<p>I would appreciate changes being sent back to me.</p>
+<hr />
+<p>This is a fairly common question, and there isn't a One True Answer,
+but still, this represents a consensus from #git</p>
+<div class="fenced fenced-red">
+<h4 id="tl-dr">TL; DR</h4>
+<p>全文很长，因此把最重要的部分放到了最前面：什么是<strong>不该做</strong>的。尤其是第一条：不要提交任何可以被<strong>生成</strong>的文件——<code>.o</code>, <code>.class</code>, <code>.pdf</code>, <code>.swp</code>, ...</p>
+</div>
+<h2 id="dont">Don't</h2>
+<p>In this list of things to <em>not</em> do, it is important to remember that
+there are legitimate reasons to do all of these.  However, you should
+not attempt any of these things without understanding the potential
+negative effects of each and why they might be in a best practices
+"Don't" list.</p>
+<p><span style="color: red"><em>DO NOT</em></span></p>
+<ul>
+<li><span style="color: red">commit anything which can be regenerated from other things than were committed</span>.</li>
+<li>
+<p><span style="color: red">commit configuration files</span></p>
+<p>Specifically configuration files which might change from
+environment to environment or for any reasons. See <a href="https://gist.github.com/1423106">Information
+about local versions of configuration
+files</a></p>
+</li>
+<li>
+<p>use git-grafts</p>
+<p>This is deprecated in favor of git-replace.</p>
+</li>
+<li>
+<p>use git-replace</p>
+<p>But don't use git-replace either.</p>
+</li>
+<li>
+<p>rewrite public history</p>
+<p>See section about this topic</p>
+</li>
+<li>
+<p>change where a tag points</p>
+<p>This is another way to rewrite public history.</p>
+</li>
+<li>
+<p>use git-filter-branch</p>
+<p>Still another way to rewrite public history.</p>
+</li>
+<li>
+<p>use clone --shared or --reference</p>
+<p>This can lead to problems for non-normal git actions, or if the
+other repository is deleted/moved.  See <a href="http://jk.gs/gitworkflows.html">git-clone manual
+page</a>.</p>
+</li>
+<li>
+<p>use reset (--hard || -merge) without committing/stashing</p>
+<p>This can often overwrite the working directory without hope of
+recourse.</p>
+</li>
+<li>
+<p>use checkout in file mode</p>
+<p>This will overwrite some (or potentially all with .) of the
+working directory without hope of recourse.</p>
+</li>
+<li>
+<p>use <code>git clean</code> without previously running with "-n" first</p>
+<p>This will delete untracked files without hope of recourse.</p>
+</li>
+<li>
+<p>prune the reflog</p>
+<p>This is removing your safety belt.</p>
+</li>
+<li>
+<p>expire "now"</p>
+<p>This is cutting your safety belt.</p>
+</li>
+<li>
+<p>use git as a backup tool</p>
+<p>Yes people have done it successfully, but usually with lots of
+scripts around it and with some toothing pains.  Git was not
+written as a dedicated backup tool, and such tools do exist.</p>
+</li>
+<li>
+<p>use git as a web deployment tool</p>
+<p>Yes it can be done in a sufficiently simple/non-critical
+environment with something like
+http://toroid.org/ams/git-website-howto to help.  However, this
+does not give you atomic updates, synchronized db updates, or
+other accouterments of an industrial deployment system.</p>
+</li>
+<li>
+<p>commit large binary files (when possible)</p>
+<p>Large is currently relative to the amount of free RAM you have.
+Remember that not everyone may be using the same memory
+configuration you are.</p>
+<p>Consider using <a href="http://git-annex.branchable.com/">Git annex</a> or
+<a href="https://github.com/schacon/git-media">Git media</a></p>
+</li>
+<li>
+<p>create very large repositories (when possible)</p>
+<p>Git can be slow in the face of large repositories. There are
+git-config options which can help. <code>pack.threads=1;
+pack.deltaCacheSize=1; pack.windowMemory=512m;
+core.packedGitWindowSize=16m; core.packedGitLimit=128m.</code> Other
+likely ones exist.</p>
+</li>
+</ul>
+<h2 id="read-about-git">Read about git</h2>
+<p>Knowing where to look is half the battle.  I strongly urge everyone to
+read (and support) the Pro Git book.  The other resources are highly
+recommended by various people as well.</p>
+<ul>
+<li><a href="http://progit.org/book/">Pro Git</a></li>
+<li><a href="http://eagain.net/articles/git-for-computer-scientists/">Git for Computer Scientists</a></li>
+<li><a href="http://ftp.newartisans.com/pub/git.from.bottom.up.pdf">Git from the Bottom Up</a></li>
+<li><a href="http://www.webdesignerdepot.com/2009/03/intro-to-git-for-web-designers/">Git for Web Designers</a></li>
+<li><a href="http://git-scm.com/documentation">Other resources</a></li>
+<li><a href="http://git.wiki.kernel.org/">Git wiki</a></li>
+</ul>
+<h2 id="commit-early-and-often">Commit early and often</h2>
+<p>Git only takes full responsibility for your data when you commit.  If
+you fail to commit and then do something poorly thought out, you can
+run into trouble.  Additionally, having periodic checkpoints means
+that you can understand how you broke something.</p>
+<p>People resist this out of some sense that this is ugly, limits
+<code>git-bisect</code>ion functionality, is confusing to observers, and might
+lead to accusations of stupidity.  Well, I'm here to tell you that
+resisting this is ignorant.  <em>Commit Early And Often</em>.  If, after you
+are done, you want to pretend to the outside world that your work
+sprung complete from your mind into the repository in utter perfection
+with each concept fully thought out and divided into individual
+concept-commits, well git supports that: see Sausage Making below.
+However, don't let tomorrow's beauty stop you from performing
+continuous commits today.</p>
+<p>Personally, I commit early and often and then let the sausage making
+be seen by all except in the most formal of circumstances.  Just look
+at the history of this gist!</p>
+<h2 id="dont-panic">Don't panic</h2>
+<p>As long as you have committed your work (or in many cases even added
+it with <code>git add</code>) your work will not be lost for at least two weeks
+unless you really work at it (run commands which manually purge it).</p>
+<p>When attempting to find your lost commits, first make <em>sure</em> you will
+not lose any current work.  You should commit or stash your current
+work before performing any recovery efforts which might destroy your
+current work.  After finding the commits you can reset, rebase,
+cherry-pick, merge, or otherwise do what is necessary to get the
+commit history and work tree you desire.</p>
+<p>There are three places where "lost" changes can be hiding. They might be
+in the reflog (<code>git log -g</code>), they might be in lost&amp;found (<code>git fsck
+--unreachable</code>), or they might have been stashed (<code>git stash list</code>).</p>
+<ul>
+<li>
+<p>reflog</p>
+<p>The reflog is where you should look first and by default.  It
+shows you each commit which modified the git repository.  You can
+use it to find the commit name (SHA-1) of the state of the
+repository before (and after) you typed that command.  While you
+are free to go through the reflog manually, you can also visualize
+the repository using the following command (Look for dots without
+children and without green labels):</p>
+<p><code>gitk --all --date-order $(git log -g --pretty=%H)</code></p>
+</li>
+<li>
+<p>Lost and found</p>
+<p>Commits or other git data which are no longer reachable though any
+reference name (branch, tag, etc) are called "dangling" and may be
+found using fsck.  There are legitimate reasons why objects may be
+dangling through standard actions and normally over 99% of them are
+entirely uninteresting for this reason.</p>
+<ul>
+<li>
+<p>Dangling Commit</p>
+<p>These are the most likely candidates for finding lost data. A
+dangling commit is a commit no longer reachable by any branch or
+tag. This can happen due to resets and rebases and are
+normal. <code>git show SHA</code> will let you inspect them.</p>
+<p>The following command helps you visualize these dangling
+commits. Look for dots without children and without green labels.</p>
+<p><code>gitk --all --date-order <math>(git fsck --no-reflog | grep "dangling commit" | awk '{print </math>3;}')</code></p>
+</li>
+<li>
+<p>Dangling Blob</p>
+<p>A dangling blob is a file which was not attached to a commit. This
+is often caused by <code>git add</code>s which were superceded before commit
+or merge conflicts. Inspect these files with</p>
+<p><code>git show SHA</code></p>
+</li>
+<li>
+<p>Dangling Tree</p>
+<p>A dangling tree is a directory tree of files that was not attached
+to a commit. These are rarely interesting, and often caused by
+merge conflicts. Inspect these files with <code>git ls-tree -r SHA</code></p>
+</li>
+</ul>
+</li>
+<li>
+<p>Stashes</p>
+<p>Finally, you may have stashed the data instead of committing it and
+then forgotten about it.  You can use the <code>git stash list</code> command
+or inspect them visually using:</p>
+<p><code>gitk --all --date-order <math>(git stash list | awk -F: '{print </math>1};')</code></p>
+</li>
+<li>
+<p>Misplaced</p>
+<p>Another option is that your commit is not lost.  Perhaps the
+commit was just made on a different branch from what you remember.
+Using <code>git log -Sfoo --all</code> and <code>gitk --all --date-order</code> to try
+and hunt for your commits on known branches.</p>
+</li>
+<li>
+<p>Look elsewhere</p>
+<p>Finally, you should check your backups, testing copies, ask the other
+people who have a copy of the repo, and look in other repos.</p>
+</li>
+</ul>
+<h2 id="backups">Backups</h2>
+<p>Everyone always recommends taking backups as best practice, and I am
+going to do the same.  However, you already may have a highly
+redundant distributed ad-hoc backup system in place!  This is because
+essentially every clone is a backup.  In many cases, you may want to
+use a clone for git experiments to perfect your method before trying
+it for real (this is most useful for <code>git filter-branch</code> and similar
+commands where your goal is to permanently destroy history without
+recourse—if you mess it up you may not have recourse). Still, perhaps
+you want a more formal system.</p>
+<p>Traditional backups are still appropriate.  A normal tarball, cp,
+rsync, zip, rar or similar backup copy will be a perfectly fine
+backup.  As long as the underlying filesystem doesn't reorder git I/O
+dramatically, there is not a long time delay between the scanning of
+the directory and the retrieval of the files, the resulting copy of
+.git should be consistent under almost all circumstances.  Of course,
+if you have a backup from in the middle of a git operation, you might
+need to do some recovery.  The data should all be present though.
+When performing git experiments involving the working directory, a
+copy instead of a clone may be more appropriate.</p>
+<p>However, if you want a "pure git" solution, something like, which clones
+everything in a directory of repos, this may be what you need:</p>
+<pre class="codehilite"><code class="language-shell">cd /src/backupgit
+ls -F . | grep / &gt; /tmp/.gitmissing1
+ssh -n git.example.com ls -F /src/git/. | grep / &gt; /tmp/.gitmissing2
+diff /tmp/.gitmissing1 /tmp/.gitmissing2 | egrep '^&gt;' |
+  while read x f; do
+    git clone --bare --mirror ssh://git.example.com/src/git/$$f $$f
+  done
+rm -f /tmp/.gitmissing1 /tmp/.gitmissing2
+for f in */.; do (cd $$f; echo $$f; git fetch); done</code></pre>
+
+
+<h2 id="dont-change-published-history">Don't change published history</h2>
+<p>Once you <code>git push</code> (or in theory someone pulls from your repo, but
+people who pull from a working repo often deserve what they) your
+changes to the authoritative upstream repository or otherwise make the
+commits or tags publicly visible, you should ideally consider those
+commits etched in diamond for all eternity.  If you later find out
+that you messed up, make new commits which fix the problems (possibly
+by revert, possibly by patching, etc).</p>
+<p>Yes, of course git allows you to rewrite public history, but it is
+problematic for everyone and and thus it is just not best practice to
+do so.</p>
+<h2 id="choose-a-workflow">Choose a workflow</h2>
+<p>Some people have called git a tool to create a SCM workflow instead of
+an SCM tool.  There is some truth to this.</p>
+<h3 id="branch-workflows">Branch workflows</h3>
+<p>Answering the following questions helps you choose a branch workflow:</p>
+<ul>
+<li>Where do important phases of development occur?</li>
+<li>How can you identify (and backport) groups of related change?</li>
+<li>What happens when emergency patches are required?</li>
+</ul>
+<p>See the following references for more information on branch
+workflows.</p>
+<ul>
+<li><a href="http://progit.org/book/ch3-4.html">Pro Git branching models</a></li>
+<li>
+<p><a href="http://nvie.com/posts/a-successful-git-branching-model/">Git-flow branching model</a></p>
+<p>With <a href="https://github.com/nvie/gitflow">the associated gitflow tool</a></p>
+</li>
+<li>
+<p><a href="http://jk.gs/gitworkflows.html">Gitworkflows man page</a></p>
+</li>
+<li><a href="http://reinh.com/blog/2009/03/02/a-git-workflow-for-agile-teams.html">A Git Workflow for Agile Teams</a></li>
+<li><a href="http://stackoverflow.com/questions/2621610/what-git-branching-models-actually-work">What git branching models actually work</a></li>
+<li><a href="http://blogs.remobjects.com/blogs/mh/2011/08/25/p2940">Our New Git Branching Model</a></li>
+</ul>
+<p>However, also understand that everyone already has an implicit
+private branch due to their cloned repository: they can do work
+locally do a <code>git pull --rebase</code> when they are done, perform final
+testing, and then push their work out.  If you run into a
+situation where you might need the benefits of a feature branch
+before you are done, you can even retroactively commit&amp;branch then
+optionally reset your primary branch back to @{u}.  Once you push
+you lose that ability.</p>
+<p>Some people have been very successful with just master and
+<math>RELEASE branches (</math>RELEASE branch for QA and polishing, master
+for features, specific to each released version.)  Other people
+have been very successful with many feature branches, integration
+branches, QA, and release branches.  The faster the release cycle
+and the more experimental the changes, the more branches will be
+useful—continuous releases or large refactoring project seem to
+suggest larger numbers of branches (note the number of branches is
+the tail, not the dog: more branches will not make you release
+faster).</p>
+<p>Oh, and decide branch naming conventions.  Don't be afraid of / in
+the branch name when appropriate.</p>
+<h3 id="distributed-workflows">Distributed workflows</h3>
+<p>Answering the following questions helps you choose a distributed
+workflow:</p>
+<ul>
+<li>Who is allowed to publish to the master repository?</li>
+<li>What is the process between a developer finishing coding and the code being released to the end-user?</li>
+<li>Are there distinct groups which work on distinct sections of the codebase and only integrate at epochs?  (Outsourcing)</li>
+<li>Is everyone inside the same administrative domain?</li>
+</ul>
+<p>See the following references for more information on distributed
+workflows.</p>
+<ul>
+<li><a href="http://progit.org/book/ch5-1.html">Pro Git distributed models</a></li>
+<li><a href="http://jk.gs/gitworkflows.html">Gitworkflows man page</a></li>
+</ul>
+<p>Cathedrals (traditional corporate development models) often want
+to have (or to pretend to have) the one true centralized
+repository.  Bazaars (linux, and the Github-promoted workflow)
+often want to have many repositories with some method to notify a
+higher authority that you have work to integrate (pull requests).</p>
+<p>However, even if you go for, say, a traditional corporate
+centralized development model, don't forbid self-organized teams
+to create their own repositories for their own tactical reasons.
+Even having to fill out a justification form is probably too
+cumbersome.</p>
+<h3 id="release-workflow">Release workflow</h3>
+<p>Deciding on your release workflow (how to get the code to the
+customer) is another important area to decide on.  I will not
+touch on this much, but it can have an effect on how you use git.
+Obviously branching and distributed workflows might affect this,
+but less obviously, it may affect how and when you perform
+tagging.</p>
+<p>At first glance, it is a no-brainer.  When you release something you
+tag something.  However, tags should be treated as immutable once you
+push.  Well, that only makes sense, you might think to yourself.
+Consider this.  Five minutes after everyone has signed off on the 2.0
+release, it has been tagged and pushed, but before any customer has
+seen the resulting product someone comes running in "OMFG, the foobar
+is broken when you frobnoz the baz."  What do you do?  Do you skip
+release 2.0 and tag 2.0.1?  Do you do a take-back and go to every repo
+of every developer and delete the 2.0 tag?</p>
+<p>Two ideas for your consideration.  Instead of a release tag, use a
+release branch (and then stop committing to that branch after
+release, disabling write access to it in gitolite or something).
+Another idea, use an internal tag name which is not directly
+derived from the version number which marketing wishes to declare
+to the outside world.  Both are problematic in practice, but less
+so than pure marketing-version tags.</p>
+<h3 id="security-model">Security model</h3>
+<p>You might ask why security is not a top level item and is near the
+end of the workflow section.  Well that is because in an ideal
+world your security should support your workflow not be an
+impediment to it.</p>
+<p>For instance, did you decide certain branches should only have
+certain people being allowed to access it?  Did you decide that
+certain repositories should only have certain people able to
+access/write to them?</p>
+<p>While git allows users to set up many different types of access
+control, access methods, and the like; the best for most
+deployments might be to set up a centralized git master repository
+with a gitolite manager to provide fine grained access control
+with ssh based authentication and encryption.</p>
+<p>Of course, security is more than access control.  It is also
+assurance that what you release is what was written by the people
+it should be written by, and what was tested.  Git provides you
+this for free, but certain formal users may wish to use signed
+tags.  Watch for signed pushes in a future version of git.</p>
+<h2 id="dividing-work-into-repositories">Dividing work into repositories</h2>
+<p>Repositories sometimes get used to store things that they should not,
+simply because they were there.  Try to avoid doing so.</p>
+<ul>
+<li>
+<p>One conceptual group per repository.</p>
+<p>Does this mean one per product, program, library, class?  Only you
+can say.  However, dividing stuff up later is annoying and leads
+to rewriting public history or duplicative or missing history.
+Dividing it up correctly beforehand is much better.</p>
+</li>
+<li>
+<p>Read access control is at the repo level</p>
+<p>If someone has access to a repository, they have access to the
+entire repo, all branches, all history, everything.  If you need
+to compartmentalize read access, separate the compartments into
+different repositories.</p>
+</li>
+<li>
+<p>Separate repositories for files which might be needed by multiple projects</p>
+<p>This promotes sharing and code reuse, and is highly recommended.</p>
+</li>
+<li>
+<p>Separate repositories for large binary files</p>
+<p>Git doesn't handle large binary files ideally yet and large
+repositories can be slow.  If you must commit them, separating
+them out into their own repository can make things more efficient.</p>
+</li>
+<li>
+<p>Separate repositories for planned continual history rewrites</p>
+<p>You will note that I have already recommended against rewriting
+public history.  Well, there are times when doing that just makes
+sense.  One example might be a cache of pre-built binaries so that
+most people don't need to rebuild them.  Yet older versions of
+this cache (or at least older versions not at tag boundaries) may
+be entirely useless and so you want to pretend they never happened
+to save space.  You can rebase, filter, or squash these unwanted
+commits away, but this is rewriting history and can cause problem.
+So if you really must do so, isolate these files into a repository
+so that at least everything else will not be affected.</p>
+</li>
+<li>
+<p>Group concepts into a superproject</p>
+<p>Once you have divided, now you need to conquer. You can assemble
+multiple individual repositories into a superproject to group all
+of the concepts together to create your unified work.</p>
+<p>There are two main methods of doing this.</p>
+<ul>
+<li>
+<p>git-submodules</p>
+<p>Git submodules is the native git approach which provides a
+strong binding between the superproject repository and the
+subproject repositories for every commit.  This leads to a
+baroque and annoying process for updating the subproject.
+However, if you do not control the subproject (solvable by
+"forking") or like to perform blame-based history archeology
+where you want to find out the absolute correspondence between
+the different projects at every commit, it is very useful.</p>
+</li>
+<li>
+<p>gitslave</p>
+<p><a href="http://gitslave.sf.net">gitslave</a> is a useful tool to add a
+subsidiary git repositories to a git superproject when you
+control and develop on the subprojects at more or less the
+same time as the superproject, and furthermore when you
+typically want to tag, branch, push, pull, etc all
+repositories at the same time.  There is no strict
+correspondence between superproject and subproject
+repositories except at tag boundaries (though if you need to
+look back into history you can usually guess pretty well and
+in any case this is rarely needed).</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="useful-commit-messages">Useful commit messages</h2>
+<p>Creating insightful and descriptive commit messages is one of the best
+things you can do for others who use the repository.  It lets people
+quickly understand changes without having to read code.  When doing
+history archeology to answer some question, good commit messages
+likewise become very important.</p>
+<p>The normal git rule of using the first line to provide a short (72
+character) summary of the change is also very good.  Looking at the
+output of <code>gitk</code> or <code>git log --oneline</code> might help you understand why.</p>
+<p>While this touches with the next topic of integration with external
+tools, including bug/issue/request tracking numbers in your commit
+messages provides a great deal of associated information to people
+trying to understand what is going on.</p>
+<h2 id="integration-with-external-tools">Integration with external tools</h2>
+<ul>
+<li>Web views</li>
+</ul>
+<p>This is pretty standard stuff, but still a best practice.  Setting up
+a tool like gitweb (or cgit or whatever) to allow URL reference to
+commits (among other visualization interfaces it provides) gives
+people a great way to refer to commits in email and conversations.  If
+someone can click on a link vs having to fire up git and pull down the
+latest changes and start up some visualization tool they are much more
+likely to help you.</p>
+<ul>
+<li>Bug tracking</li>
+</ul>
+<p>Industry best practice suggests that you should have a bug tracking
+system.  Hopefully you do.  Well, I'm hear to tell you that
+integrating your bug tracking system with git makes the two systems
+one thousand times more effective.  Specifically, come up with a
+standard for tagging commits with bug numbers (eg. "Bug 1234: Adjust
+the frobnoz down by .5") and then have a receive hook on the upstream
+repo which automatically appends that commit information to the
+ticket. If you really love your developers, develop syntax which lets
+them close the ticket as part of the commit message (eg. "Bug 1235r:
+Adjust the frobnoz up by .25").</p>
+<p>The easier a system is for people to use, the more likely they will
+use it.  Being able to see the context which caused the commit to
+happen (or contrary-wise, being able to find the commit which solved a
+problem) is incredibly useful.  When you send out your commit
+announcements, make sure to hyperlink the bug tracker in the commit
+message, and likewise in the tracker message, hyperlink to the web
+view of the commit.</p>
+<p>Notes: some commits can apply to multiple bugs.  Generate a standard
+and code to handle this standard. Also, if you do hour tracking, you
+may want a syntax to handle that.  (eg. "Bug 12346w/5: Bug 12347rw/3:
+Adjust the frobnoz up by .3")</p>
+<ul>
+<li>IRC/chat rooms</li>
+</ul>
+<p>This is not a global best practice, but for certain sized
+organizations may be very useful.  Specifically, to have a chat room
+(IRC) to discuss issues and problems, and to have a robot in that chat
+room to provide assistance.  When someone talks about Bug 1234,
+provide a hyperlink to that ticket.  When someone pushes some commits,
+announce those commits.  All sorts of things are possible, but there
+is a fine line between usefulness and overwhelming noise.</p>
+<h2 id="keeping-up-to-date">Keeping up to date</h2>
+<p>This section has some overlap with workflow.  Exactly how and when you
+update your branches and repositories is very much associated with the
+desired workflow.  Also I will note that not everyone agrees with
+these ideas (but they should!)</p>
+<ul>
+<li>Pulling with --rebase</li>
+</ul>
+<p>Whenever I pull, under most circumstances I <code>git pull --rebase</code>. This
+is because I like to see a linear history (my commit came after all
+commits that were pushed before it, instead of being developed in
+parallel).  It makes history visualization much simpler and <code>git
+bisect</code> easier to see and understand.</p>
+<p>Some people argue against this because the non-final commits may lose
+whatever testing those non-final commits might have had since the
+deltas would be applied to a new base.  This in turn might make
+git-bisect's job harder since some commits might refer to broken
+trees, but really this is only relevant to people who want to hide the
+sausage making.  Of course to really hide the sausage making you
+should still rebase (and test the intermediate commits, if any).</p>
+<ul>
+<li>Rebasing (when possible)</li>
+</ul>
+<p>Whenever I have a private branch which I want to update, I use rebase
+(for the same reasons as above).  History is clean and simple.
+However, if you share this branch with other people, rebasing is
+rewriting public history and should/must be avoided.  You may only
+rebase commits that no-one else has seen (which is why <code>git pull
+--rebase</code> is safe).</p>
+<ul>
+<li>Merging without speeding</li>
+</ul>
+<p><code>git merge</code> has the concept of fast-forwarding, or realizing that the
+code you are trying to merge in is identical to the result of the code
+after the merge.  Thus instead of doing work, creating new commits,
+etc, git simply changes the branch pointers (fast forwards them) and
+calls it good.</p>
+<p>This is good when doing <code>git pull</code> but not so good when doing <code>git
+merge</code> with a non-@{u} (upstream) branch.  The reason this is not good
+is because it loses information.  Specifically it loses track of which
+branch is the first parent and which is not.  If you don't ever want
+to look back into history, then it does not matter.  However, if you
+might want to say "which branch was this commit originally committed
+onto," if you use fast-forwarding that question is impossible to
+answer since git will pick one branch or the other (the first parent
+or second parent) as the one which both branches activities were
+performed on and the other (original) parent's branch will be
+anonymous.  There are typically worse things in the world, but you
+lose information that is not recoverable in any other way by a
+repository observer and in my book that is bad.  Use <code>git merge
+--no-ff</code></p>
+<h2 id="periodic-maintenance">Periodic maintenance</h2>
+<ul>
+<li>Clean up your git repro every so often.</li>
+<li>Check your stash for forgotten work (<code>git stash list</code>)</li>
+</ul>
+<h2 id="experiment">Experiment!</h2>
+<p>When you have an idea or are not sure what something does, try it out!
+Ideally try it out in a clone or copy so that recovery is trivial.
+While you can normally completely recover from any git experiment
+involving data which has been fully committed, perhaps you have not
+committed yet or perhaps you are not sure whether something falls in
+the category of "trying hard" to destroy history.</p>
+<h2 id="sausage-making">Sausage Making</h2>
+<p>Some people like to hide the sausage making, or in other words pretend
+to the outside world that their commits sprung full-formed in utter
+perfection into their git repository.  Certain large public projects
+demand this, but that is not necessarily a good reason for you to
+demand this as well.</p>
+<p>What is a good reason is if you feel you may be cherry-picking commits
+a lot (though this too if often a sign of bad workflow).  Having one
+or a small number of commits to pick instead of one here, one there,
+and half of this other one make your problem much much harder later
+(and typically will lead to merge conflicts when the doner branch is
+finally merged in).</p>
+<p>Another good reason is to ensure each commit compiles (important for
+git-bisect), represents a different easily understood concept
+(important for archeology).</p>
+<p><code>git rebase -i</code>, <code>git add -p</code>, and <code>git reset -p</code> can fix commits up
+in post-production by splitting different concepts, merging fixes to
+older commits, etc. See also <a href="http://repo.or.cz/w/topgit.git">TopGit</a>
+and <a href="http://www.procode.org/stgit/">StGit</a>.</p>
+<h2 id="thanks">Thanks</h2>
+<p>Thanks to the experts on #git for feedback and ideas.</p>
+<h2 id="comments">Comments</h2>
+<p>Comments and improvements welcome.</p>
+<p>Add them below, or discuss with SethRobertson (and others) on #git</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

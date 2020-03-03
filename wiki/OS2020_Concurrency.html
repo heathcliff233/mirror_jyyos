@@ -1,0 +1,445 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>共享内存多线程</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">共享内存多线程</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a> 第 25-27 章。</p>
+<p>请大家动手尝试 <a href="../static/wiki/os/2020/demos/threads.h">threads.h</a>，运行并理解以下程序：</p>
+<ul>
+<li><a href="../static/wiki/os/2020/demos/hello-mt.c">hello-mt.c</a>；</li>
+<li><a href="../static/wiki/os/2020/demos/stack-probe.c">stack-probe.c</a>，有兴趣的同学可以看一下 thread-local 变量是如何用指令实现的。</li>
+</ul>
+<p>然后，建议大家花一点时间写一个共享内存上的小程序，例如启动 8 个线程，将 <math class="inline-math">2,\ldots, n</math> 之间的素数存储到一个数组里 (就用最简单的 <math class="inline-math">O(\sqrt n)</math> 的算法；也不要去理会什么原子指令、线程同步)。这不会花去多少时间，你会体会到把任务均匀地分配给线程并不那么容易；以及你的素数表可能有些轻微的错误。阅读课程讲义去理解为什么会发生这些问题。</p>
+</div></div></div>
+
+<p>关于并发多线程的概念性内容，在此不再赘述，请大家阅读教科书。</p>
+<h2 id="_2">迷你线程库</h2>
+<p>我们对 POSIX 线程做了一定的封装，这样可以更方便地写一些 (单文件的) 小程序，实际体验一下多线程编程。代码参考 <a href="../static/wiki/os/2020/demos/threads.h"><code>threads.h</code></a>，它只有两个 API：</p>
+<pre class="codehilite"><code class="language-c">void create(void *fn);   // 创建一个线程立即执行，入口代码为 void fn(int tid);
+void join(void (*fn)()); // 等待所有线程执行结束后，调用 fn</code></pre>
+
+
+<h3 id="threadsh"><code>threads.h</code> 的实现</h3>
+<p>线程的主要数据结构是</p>
+<pre class="codehilite"><code class="language-c">struct thread {
+  int id;               // 从 1 开始的线程号
+  pthread_t thread;     // pthreads 线程号
+  void (*entry)(int);   // 线程的入口函数
+  struct thread *next;  // 链表
+};</code></pre>
+
+
+<p>线程创建非常简单，分配一个 <code>struct thread</code> 对象，并插入链表头部，然后使用 <code>pthread_create</code> 创建一个 POSIX 线程 (请 RTFM)。如果系统中有多个处理器，线程允许被调度在不同的处理器上并行执行。</p>
+<pre class="codehilite"><code class="language-c">void create(void *fn) {
+  struct thread *cur = (struct thread *)malloc(sizeof(struct thread));
+  assert(cur);
+  cur-&gt;id    = threads ? threads-&gt;id + 1 : 1;
+  cur-&gt;next  = threads;
+  cur-&gt;entry = (void (*)(int))fn;
+  threads    = cur;
+  pthread_create(&cur-&gt;thread, NULL, entry_all, cur);
+}</code></pre>
+
+
+<p>注意到 <code>pthread_create</code> 创建线程需要传入函数的入口地址，函数原型：</p>
+<pre class="codehilite"><code class="language-c">void *func(void *arg);</code></pre>
+
+
+<p>即允许给线程传递一个 <code>void *</code> 参数，并允许线程返回一个指针。但我们的线程库支持的线程函数原型稍有不同：</p>
+<pre class="codehilite"><code class="language-c">void func(void tid);</code></pre>
+
+
+<p>为了用 ptheads 实现我们的 <code>create</code>，我们定义了 wrapper function，作为所有 POSIX 线程统一的入口，它会得到相应的 thread object，然后调用其中的 entry function。</p>
+<pre class="codehilite"><code class="language-c">static inline void *entry_all(void *arg) {
+  struct thread *thread = (struct thread *)arg;
+  thread-&gt;entry(thread-&gt;id);
+  return NULL;
+}</code></pre>
+
+
+<p>在 <code>main</code> 函数返回后，调用 <code>join_all</code>，其中对所有线程调用 <code>pthread_join</code> 等待完成，最后调用注册的回调函数 (callback)。下面的代码里使用了非标准的 <code>__attribute__</code>，libc 为我们提供了 portable 的实现 <code>atexit</code>。</p>
+<pre class="codehilite"><code class="language-c">void join(void (*fn)()) {
+  join_fn = fn;
+}
+
+__attribute__((destructor)) void join_all() {
+  for (struct thread *next; threads; threads = next) {
+    pthread_join(threads-&gt;thread, NULL);
+    next = threads-&gt;next;
+    free(threads);
+  }
+  join_fn ? join_fn() : (void)0;
+}</code></pre>
+
+
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="atexit3">思考题：<code>atexit(3)</code></h4>
+<p>我们已经在第一次代码课和本次课介绍了注册在 main 函数结束之后执行的 callback。请大家查看 <code>atexit</code> 函数的手册，编写一个小程序使用 <code>atexit</code>。一个额外的问题：</p>
+<ul>
+<li><p>如果 <code>main</code> 函数执行期间发生了非法操作，例如执行非法的 pointer dereference:</p>
+<pre class="codehilite"><code class="language-c">*(int *)NULL = 0;</code></pre>
+
+
+<p><code>atexit</code> 注册的 callback 是否还会被运行？这符合你的预期吗？</p>
+</li>
+</ul>
+</div></div></div>
+
+<p>迷你线程库封装了 fork-join model 的线程，就像 “fork (叉子)” 一样创建出多个执行路径，最后等待它们执行完毕后汇聚在一起。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/fork-join.png" width="300px"></img></p>
+<h3 id="_3">多线程编程</h3>
+<p>有了迷你线程库，我们很容易创建多个共享内存的线程 (线程拥有独立的寄存器和堆栈)。</p>
+<pre class="codehilite"><code class="language-c">#include &lt;threads.h&gt;
+
+void f() {
+  static int x = 0;
+  printf("Hello from thread #%d\n", x++);
+  while (1); // make sure we're not just sequentially calling f()
+}
+
+int main() {
+  for (int i = 0; i &lt; 1000; i++) {
+    create(f);
+  }
+  join(NULL);
+}</code></pre>
+
+
+<p>上述程序帮助我们确认：</p>
+<ul>
+<li><code>x</code> 的确是共享的，不同的线程打印出了不同的数字；</li>
+<li>线程的确是并发/并行的，否则按顺序调用 <code>f()</code> 将会进入死循环。</li>
+</ul>
+<p>此外，创建线程的代价相对较低，在系统里创建数千个线程也不是问题，一旦有 CPU 空闲，线程就能开始执行，因此线程可以用来并发地处理大量在 I/O 设备上有延迟的请求。网络上的 Denial of Service 攻击通常都是由分布在各地的很多机器 (bot-net)、每个机器启动大量线程发起的。如没有特定的防御，服务器将会立即被大量的数据冲垮。</p>
+<h2 id="_4">并发编程的难题</h2>
+<p>多个线程共享内存，因此对共享变量的访问就会形成 “竞争” (races)，例如以下这个例子是两个线程求 <math class="inline-math">1+1+\ldots+1</math> (<math class="inline-math">2n</math> 个 <math class="inline-math">1</math>)：</p>
+<pre class="codehilite"><code class="language-c">#define n 100000000
+long sum = 0;
+void do_sum() {
+  for (int i = 0; i &lt; n; i++) sum++;
+}
+void print() {
+  printf("sum = %ld\n", sum);
+}
+int main() {
+  create(do_sum);
+  create(do_sum);
+  join(print);
+}</code></pre>
+
+
+<p>执行结果：</p>
+<ul>
+<li><code>gcc -O0</code> (8.726s) sum = 1054212206</li>
+<li><code>gcc -O1</code> (0.388s) sum = 1000000000</li>
+<li><code>gcc -O2</code> (0.002s) sum = 2000000000</li>
+</ul>
+<h3 id="_5">操作系统：原子性的丧失</h3>
+<p><code>gcc -O0</code> 的结果告诉我们：看似 <code>sum++</code> 是一条语句，但实际执行的时候，它并不是一条 “原子” 不可分割的语句，而是更像如下三条语句，且随时肯能被打断：</p>
+<pre class="codehilite"><code class="language-c">tmp = sum;
+tmp += 1;
+sum = tmp;</code></pre>
+
+
+<p>操作系统中可以同时载入多个进程 (线程)，多个线程可以在不同的处理器上并行执行。即便没有多个处理器，线程运行了一段时间之后，也可能在中途被中断，操作系统可能会调度另一个线程执行：</p>
+<pre class="codehilite"><code class="language-c">// sum = 10
+(thread1)    (thread2)
+tmp = sum  // 10
+             tmp = sum // 10
+tmp += 1   // 11
+sum = tmp  // 11
+tmp = sum  // 11
+tmp += 1   // 12
+             tmp += 1  // 11
+sum = tmp  // 12
+             sum = tmp // sum = 11</code></pre>
+
+
+<p>也就是说，出现了程序 “前进几步”，又被 “后退” 的情况：<strong>在共享内存中，语句的执行并不是原子 (atomic) 的</strong>。</p>
+<p>而 <code>-O1</code> 和 <code>-O2</code> 的执行结果又告诉我们：你也许并不知道编译器实际会把你的程序编译成什么。在 <code>-O1</code> 时，<code>gcc</code> 用 <code>rax</code>寄存器表示了 <code>sum</code> 并在循环结束后才一次性写入，因此最终写入了 <code>n</code>； 而 <code>-O2</code> 干脆把整个循环优化成了 <code>sum += n</code>：</p>
+<pre class="codehilite"><code class="language-c">void do_sum() {
+  long tmp = sum;
+  if (is_O1) {
+    for (int i = 0; i &lt; n; i++) ;
+  }
+  if (is_O2) {
+  }
+  tmp += n;
+  sum = tmp;
+}</code></pre>
+
+
+<p>由于 <code>-O1</code> 优化时 <code>read(sum)</code> 和 <code>write(sum)</code> 的间隔很长，因此数值几乎总是被覆盖；而 <code>-O2</code> 时 <code>read(sum)</code> 和 <code>write(sum)</code> 几乎紧接着发生，因此得到了看似正确的结果，但理论上仍有极小的出错概率：<strong>在共享内存中，语句的执行并不严格按照编写的顺序发生</strong>。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">实现原子性</h4>
+<p>计算机系统为我们提供了各种同步机制实现并发控制。最典型的就是互斥锁 lock 和 unlock：</p>
+<pre class="codehilite"><code class="language-c">lock(&lk);
+// 临界区, critical section
+unlock(&lk);</code></pre>
+
+
+<p>能实现 “临界区” 的保护——<code>lock(&lk)</code> 一旦返回，其他任何线程都不能获得 <code>lk</code>，直到执行 <code>unlock(&lk)</code> 为止。同步是操作系统课程中的重要内容。</p>
+<p>另外值得一提的是，大部分库函数都是线程安全 (看起来是原子) 的 (如 <code>printf</code>)，你不必担心多个线程破坏 <code>printf</code> 的输出。你可以查看 <code>printf</code> 的 man page 来确认这一点。</p>
+</div></div></div>
+
+<h3 id="_6">编译器：顺序的丧失</h3>
+<p>编译器只考虑程序在一个线程 (处理器) 上执行的<strong>顺序语义</strong>——如果假设每一个内存访问都可能读到来自其他线程的值、并且这个值是有用的话，几乎就没有编译优化的空间了。经过了几十年的发展，编译优化 (以及静态程序分析) 已经是一个相当成熟、深刻的领域。在这里，我们用一个简化的模型来揭示一下编译优化做了什么，即考虑一个顺序程序只做读内存、写内存和局部本地的计算。</p>
+<pre class="codehilite"><code class="language-text">    [1] t1 = R(x)
+ -&gt;     t1 = t1 + 1
+ -&gt; [2] W(x, t1)
+ -&gt; [3] t2 = R(x)
+ -&gt;     t2 = t2 * 2
+ -&gt; [4] W(x, t2)
+ -&gt; [5] t2 = R(y)</code></pre>
+
+
+<p>首先考虑 <code>[2] -&gt; [3]</code>。容易发现，我们读出的变量，恰好是刚才写入的变量，即对于顺序程序，在 <code>[3]</code> 结束时，我们能证明 $t_2=t_1$。换句话说，我们可以把读操作删除，改写成一个本地的计算：</p>
+<pre class="codehilite"><code class="language-text">    [1] t1 = R(x)
+ -&gt;     t1 = t1 + 1
+ -&gt; [2] W(x, t1)
+ -&gt;     t1 = t1 * 2
+ -&gt; [4] W(x, t1)
+ -&gt; [5] t2 = R(y)</code></pre>
+
+
+<p>再考虑 <code>[2] -&gt; [4]</code>，连续的两次对 <code>x</code> 的写操作，后一次会覆盖前一次的数值。从顺序执行程序的意义上，把 <code>[2]</code> 删除也不会有任何影响：</p>
+<pre class="codehilite"><code class="language-text">    [1] t1 = R(x)
+ -&gt;     t1 = t1 + 1
+ -&gt;     t1 = t1 * 2
+ -&gt; [4] W(x, t1)
+ -&gt; [5] t2 = R(y)</code></pre>
+
+
+<p>此外，如果 <code>x</code> 和 <code>y</code> 不是同一个变量 (实际的情况可能复杂一些，例如 <code>x</code> 和 <code>y</code> 可能是由 pointer dereference 得到的，判定它们是否是同一个变量属于 “指针分析” 这一难题)，编译器可能出于性能的考虑，交换 <code>[5]</code> 和 <code>[4]</code>，得到在处理器意义上可能运行得更快的代码：</p>
+<pre class="codehilite"><code class="language-text">    [1] t1 = R(x)
+ -&gt; [5] t2 = R(y) // 使内存访问提前，减少 cache miss 对后续指令的影响
+ -&gt;     t1 = t1 + 1
+ -&gt;     t1 = t1 * 2
+ -&gt; [4] W(x, t1)</code></pre>
+
+
+<p>可见，一小段代码已经被优化得完全面目全非了——之前的求和函数不同优化的结果都是合理的，以下都是求和函数在顺序意义上等价的表示：</p>
+<pre class="codehilite"><code class="language-c">// 不优化的时候几乎是一个 “忠于 C 代码” 的直接翻译。
+void f_O0() {
+  for (int i = 0; i &lt; N; i++) {
+    int t = R(sum);
+    t++;
+    W(sum, t);
+  }
+}</code></pre>
+
+
+<p>启动 O1 后，<code>sum</code> 的求和被提出了循环——循环内除了第一次读和最后一次写 <code>sum</code>，都是冗余的，因此第一次读和最后一次写被移动到了循环外面，其他读写都被删除。删除后，<math>n</math> 个加一也被合并成一个加 <math>n</math>：</p>
+<pre class="codehilite"><code class="language-c">void f_O1() {
+  int t = R(sum);
+  for (int i = 0; i &lt; N; i++) ;
+  t += N;
+  W(sum, t);
+}</code></pre>
+
+
+<p>但有趣的是，在 O1 优化下，循环变量 <code>i</code> 并没有被优化，-O1 不会 “删除” 程序中的任何一个定义的变量，这样既得到优化的结果，又不至于使调试太困难。我们看到输出 <math>n</math> 的原因是在 <code>R(sum)</code> 和 <code>W(sum)</code> 之间有了一个很长时间的空循环，好像：</p>
+<pre class="codehilite"><code class="language-c">void f() {
+  int t = R(sum);
+  delay(some_milliseconds);
+  t += N;
+  W(sum, t);
+}</code></pre>
+
+
+<p>因为 delay 的存在，两个线程的 <code>R(sum)</code> 几乎总是先发生，并同时读到 <code>0</code>，在 <code>W(sum)</code> 时，同时写入 <math>n</math>。</p>
+<p>在 O2 优化下，求和的循环被彻底删除了，被优化成了 “最优” 的代码，一次读内存、一次加法、一次写内存。</p>
+<pre class="codehilite"><code class="language-c">void f_O2() {
+  int t = R(sum);
+  t += N;
+  W(sum, t);
+}
+// 一条指令： addq $n, 0x20073d(%rip) # &lt;sum&gt;</code></pre>
+
+
+<p>此时，<code>f_O2</code> 的执行时间非常短，它们并发的可能性也极低 (但理论上仍可能不正确，且在实际的处理器中能够观测到，因为 add 指令在处理器上的实现并不是原子的)，所以我们看到了貌似正确的结果。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">实现顺序控制</h4>
+<p>作为一个系统编程语言，C语言当然为我们提供了相应的设施。一方便可以用<a href="https://en.cppreference.com/w/c/language/volatile"><code>volatile</code>关键字</a>；你能区分以下定义的区别吗：</p>
+<pre class="codehilite"><code class="language-c">volatile char *p;
+char * volatile p;
+volatile char * volatile p;</code></pre>
+
+
+<p>以及，更轻量级的 memory barrier，通过一条空的汇编指令，但假设这条汇编指令会修改任意内存 (clobber memory) 实现：</p>
+<pre class="codehilite"><code class="language-c">#define barrier() asm volatile ("":::"memory")</code></pre>
+
+
+<p>可以阻止优化跨越边界：</p>
+<pre class="codehilite"><code class="language-c">void foo() {
+  x++;
+  barrier();
+  x++;
+}</code></pre>
+
+
+<p>会生成两条独立的 <code>add</code> 指令。</p>
+</div></div></div>
+
+<h3 id="_7">处理器：可见性的丧失</h3>
+<p>一个更让人费解的例子是：</p>
+<pre class="codehilite"><code class="language-c">int volatile x = 0, y = 0;
+void thread1() {
+  [1] x = 1;   // write(x)
+  [2] ty = y;  // read(y)
+}
+void thread2() {
+  [3] y = 1;   // write(y)
+  [4] tx = x;  // read(x)
+}</code></pre>
+
+
+<p>这个程序太简单了，就是写一个变量，读另一个变量嘛 (最后输出 (tx, ty) 的值)。把语句看作指令 (实际上也正是如此编译成指令的) 有以下执行顺序：</p>
+<ul>
+<li>[1] → [2] → [3] → [4], 最后将得到 (0, 1)</li>
+<li>[3] → [4] → [1] → [2], 最后将得到 (1, 0)</li>
+<li>[1] → [3] → [4] → [2], 最后将得到 (1, 1)</li>
+<li>[1] → [3] → [2] → [4], 最后将得到 (1, 1)</li>
+<li>...</li>
+</ul>
+<p>无论如何，第一个执行的指令总是 (1) 或 (2)，因此……什么？在实际执行的时候，我压根就没看到过 (1, 1)，但是却看到了 (0, 0)？看不到 (1, 1) 还可以接受：这两条指令在 0.000000001s 就执行完了，没来得及切换，但看到 (0, 0) 似乎有些过分了？</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">思考题 (难)：编写怎样的代码重现这个实验？</h4>
+<p>让 <code>thread1</code> 和 <code>thread2</code> 近乎同时开始执行不是一件很容易的事情。如果你连续调用</p>
+<pre class="codehilite"><code class="language-c">create(thread1);
+create(thread2);</code></pre>
+
+
+<p>它们几乎总是先后执行。等到大家学完并发部分，应该能写出重现这个实验结果的代码。</p>
+</div></div></div>
+
+<p>实际上，不仅是编译器可能会改变指令执行的顺序，处理器也会，这会引起处理器之间内存读写<strong>可见性</strong>的问题。假设一个线程按如下顺序执行指令：</p>
+<pre class="codehilite"><code class="language-assembly">movl $1, x(%rip)    // write(x)
+movl y(%rip), %eax  // read(x)</code></pre>
+
+
+<p>考虑到内存相对于处理器是非常慢的设备，为了加速内存的访问，现代计算机系统都利用了局部性，在处理器上增加了缓存。因为缓存的速度非常快，无法做到多处理器之间的共享，所以现代多处理器系统里，每个处理器都有自己的缓存 (实际情况会更复杂一些，例如每个处理器有独立的 L1 cache，处理器之间则共享 L2 和 L3)：</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/smp-with-cache.jpg" width="400px"></img></center></p>
+<p>而 cache miss 则是现代处理器性能损失的一大问题：</p>
+<pre class="codehilite"><code class="language-assembly">movl $1, x(%rip)    // cache miss
+                    // 巨长无比的等待
+movl y(%rip), %eax  // read(x)</code></pre>
+
+
+<p>所以，现代处理器在 cache miss 的时候，不会坐以待毙 (悄悄进入节能模式等待缓存数据)，而是立即转去执行下一条指令 (不带停的，乱序执行)，甚至上述两条指令，可以在同一个时钟周期开始执行 (多发射)！只要指令之间没有数据依赖关系、分支预测准确，无论是否有 cache miss，处理器都能保持不断开始执行新的指令，cache miss 也不会降低处理器的吞吐量。这就是现代处理器单核心性能增长的终极来源——利用指令级的并行。</p>
+<p>但乱序执行带来的麻烦是，可能导致 read/write 的顺序发生变化，从而造成在当前处理器上 “已经发生的写操作在其他处理器不可见”。在刚才的例子里，因为 write 发生了 cache miss，内存访问发生的顺序则是</p>
+<pre class="codehilite"><code class="language-assembly">movl y(%rip), %eax
+movl $1, x(%rip)</code></pre>
+
+
+<p>只要 x 和 y 是不同的变量，从顺序程序的角度，这个顺序调换是没有任何问题的；但对于多处理器来说，就会导致上述例子中那种难以理解的程序执行结果。这导致了程序的执行是 “不可串行化” 的——程序的并发执行结果不等于任何一个指令顺序执行的排序。并发程序执行的行为由<a href="https://en.wikipedia.org/wiki/Memory_model_(programming)">内存模型 (memory model)</a> 定义。这个问题的详细探讨 超出了本课程讨论的范围，我们只需知道这种现象存在即可：<strong>在多个线程共享内存时，并发程序行为的准确建模是十分困难的</strong>。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">实现处理器间的可见性</h4>
+<p>硬件为我们提供了指令 (例如 x86 的 “路障” 指令 <code>SFENCE, LFENCE, MFENCE</code>) 来调控乱序执行处理器上内存访问的行为。此外，处理器还提供了同步指令 (例如 x86 的 lock prefix)，使一条有不止一个内存访问的指令能够原子地完成，例如</p>
+<pre class="codehilite"><code class="language-text">lock addq $1, x(%rip)</code></pre>
+
+
+<p>可以实现原子的 <code>x++</code>。同步指令同时保证了多处理器之间的可见性。同步指令是操作系统实现线程同步的基础，之后我们会详细深入地介绍。</p>
+</div></div></div>
+
+<h3 id="_8">结束语</h3>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="jb">顺序、原子性、可见性都丧失了，我们还编个 JB？</h4>
+<p>这就是为什么 <a href="https://www.usenix.org/events/osdi10/tech/full_papers/Xiong.pdf">Ad hoc synchronization considered harmful</a>。为了解决这个问题，计算机系统为我们提供了同时保证顺序、原子性、可见性的同步操作——互斥锁、条件变量、信号量、事务内存……帮助程序员写出正确性容易保证的代码、实现并发控制。</p>
+<p>我们将在之后详细介绍这些内容。</p>
+
+</div></div></div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

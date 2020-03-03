@@ -1,0 +1,251 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>L0: 直接运行在硬件上的小游戏(amgame)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="l0-amgame">L0: 直接运行在硬件上的小游戏(amgame)</h1>
+<div class="fenced fenced-red">
+<h4 id="_1">截止日期</h4>
+<p>Soft Deadline: 3月24日23:59:59。</p>
+<p>需要提交以学号命名的.pdf格式实验报告。除非特殊情况，实验报告<strong>不建议超过2页A4纸</strong>。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的bug等。</p>
+<p>如果你的qemu在<code>-accel tcg</code>上报错，可以去掉这个运行选项。</p>
+</div>
+<h3 id="_2">收到的作业</h3>
+<table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+
+<div class="fenced fenced-green">
+<h4 id="_3">引子：如何为“裸机”编程？</h4>
+<p>对于初学者来说，实现操作系统最大的困难就在于，“操作系统就是个C程序”这件事在细节上实在难以理解。因此“写个操作系统”好像一直都是个朝圣一般的事情，在知乎上也被很多人吹过。</p>
+<p>但退一步说，一旦理解“操作系统就是个C程序”，写操作系统也就一点也不神秘了，我们的C程序从<code>main</code>开始按照我们写的代码运行，我们编写硬件相关的代码管理中断、I/O、虚拟存储……仅此而已。</p>
+<p>这个实验就用实际行动告诉大家：真的可以在硬件上运行C程序。不信？写个小游戏试试，它就是操作系统的原型——你甚至可以很容易地把它改造成一个“批处理”操作系统。</p>
+</div>
+<h2 id="_4">背景</h2>
+<p>因此你总是想去找点资料，比如《Orange's OS》，就会发现这个书大部分时间都不在讲操作系统，而是在讲与操作系统毫无关系的什么GDT是什么，IDT是什么，TSS是什么……当年学《计算机系统基础》的时候被迫读过手册，但过了点时间以后，好像也忘记得差不多了。在花了很多时间把这些概念搞清楚以后，还没开始施展拳脚写真正的操作系统，书就结束了。当然更多的人是直接倒在了前面：无论讲解得多么好，都不可能在短时间内让你彻底理清x86手册。x86就是x86。</p>
+<p>为什么大家会遇到这样的困难呢？虽然教科书上说了一万遍“<strong>机制与策略分离</strong>”，但在“写个操作系统”方面，机制和策略却没有很好地被分开。对着x86讲操作系统实在是没有必要：操作系统，说白了就一个C程序，我为什么非要去理解GDT, IDT, TSS？<strong>x86的确提供了足够的机制用来实现操作系统，但这不代表它提供了初学者实现操作系统的最佳机制</strong>。尤其是ISA通常都是硬件设计者兼顾上层软件需求和物理硬件实现难度时做出各种权衡得来的，我们的确没必要这样嘛。所以Top2的T大就做了个不错的选择：uCore系统运行在MIPS32上，这个体系结构学起来简单多了，没有什么GDT，有非常优雅的MMU。最近他们在大动干戈把系统移植到RISC-V上。</p>
+<p>操作系统实验到底该做什么呢？为了把“操作系统就是个C程序”的理念贯彻到底，我们设计一个硬件抽象层(hardware abstraction layer)，在这个抽象层上能实现现代操作系统，同时这个抽象层也很容易在各个硬件上实现。</p>
+<p>第一个实验里我们就熟悉一下这个抽象层，顺便复习一下计算机硬件，编写一个小游戏。之后在体系结构实验中，你自己实现了MIPS或RISC-V的CPU，你写的游戏就可以<strong>不经过任何修改</strong>在你的CPU上运行起来，很酷不是吗？</p>
+<h2 id="abstractmachine">AbstractMachine</h2>
+<p>请阅读<a href="AM.html">AbstractMachine文档</a>。之后你会在编程的过程中不断熟悉它，所以你需要仔细阅读它的代码，我们主要关注参考实现：QEMU模拟的x86系统，但AbstractMachine可以实现在更多的CPU上：MIPS, RISC-V, 甚至是NEMU模拟器。</p>
+<p>我们在C程序中调用AbstractMachine API就能实现操作系统，就正如我们在应用程序里调用操作系统API一样。这体现了计算机系统设计与实现的<strong>抽象</strong>，底层系统提供<strong>机制</strong> (mechanism)，上层系统利用这些机制实现<strong>策略</strong> (policy)。</p>
+<h2 id="_5">实验描述</h2>
+<div class="fenced fenced-blue">
+<h4 id="_6">获取实验代码</h4>
+<p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
+<p>在你获得os-workbench之后，执行</p>
+<pre class="codehilite"><code>git pull origin L0</code></pre>
+
+
+<p>将Lab0所需的带代码(abstract-machine)和更新后的<code>amgame/Makefile</code>拉去到本地。在<code>amgame/</code>执行<code>make</code>即可编译；<code>make run</code>即可执行：</p>
+<ul>
+<li>不必配置<code>AM_HOME</code>，Makefile中已经进行了指定；</li>
+<li>Makefile指定了<code>ARCH=x86-qemu</code>；</li>
+<li><code>make run</code>会启动一个两个处理器的虚拟机运行。</li>
+</ul>
+</div>
+<div class="fenced fenced-red">
+<h4 id="_7">实验提交</h4>
+<p>在<code>amgame/</code>执行<code>make submit</code>提交。需要提交以学号命名的pdf实验报告。</p>
+</div>
+<p>编写一个直接运行在AbstractMachine上(仅仅启用IOE扩展，不启用其他扩展)小游戏：</p>
+<ul>
+<li>完成klib的实现(你们已经实现过了，因此复制过来即可)。klib里已经实现了访问I/O设备的API，阅读它们的实现，以及x86-qemu中的代码。</li>
+<li>兼容很简单的处理器：即小游戏运行中只调用TRM和IOE API，而不使用其他API，且游戏使用的内存(代码、静态数据、堆区总和不超过1MB)——这样大家的游戏就可以在各个CPU上广为流传下去啦！从下一个实验开始我们将开启多处理器之旅。</li>
+<li>你可以做任何小游戏，哪怕只有几个像素点在屏幕上乱动也可以(就可以获得全部正确性分数，哪怕有bug)，只要满足：(1) 有肉眼可辨认的图形输出；(2) 能使用键盘与游戏交互。</li>
+<li>你的游戏应当是可以在多个硬件体系结构之间移植的。</li>
+</ul>
+<div class="fenced fenced-red">
+<h4 id="_8">编写可移植的代码</h4>
+<p>你需要兼容以下情况：</p>
+<ul>
+<li>适配不同的屏幕大小。不同的体系结构中，屏幕大小可能是320x200、640x480、800x600等，你的游戏最好能在所有分辨率下都获得不错的体验。</li>
+<li>32/64bit，因此你应当使用<code>intptr_t</code>或<code>uintptr_t</code>来保存指针数值。</li>
+<li>大/小端，因此你不能把不同大小的指针类型强制转换。</li>
+</ul>
+<p>我们会在native (64bit Linux)和x86-qemu (32bit)两个环境下运行你的游戏，你的游戏必须在两个环境下都能正确编译并运行良好。</p>
+</div>
+<p>AbstractMachine的项目中自带了两个游戏：打字游戏和LiteNES，大家可以参考它们的代码。</p>
+<div class="fenced fenced-green">
+<h4 id="_9">考虑游戏性能</h4>
+<p>你的游戏可能运行在频率仅有10MHz的自制处理器上。因此，如果你希望你的游戏能在未来你自己写的处理器上流畅运行，减少每一帧的运算量和图形绘制就显得比较重要了。你可以计算出一个时钟周期大致允许运行的代码量(假设绘制一个像素也需要若干条指令)，相应设计游戏的逻辑。</p>
+<p>我们认为优秀的游戏会被收录到游戏池中，永久保存下来！</p>
+</div>
+<h2 id="_10">实验指南</h2>
+<p>参考<a href="AM.html">AbstractMachine文档</a>和项目中附带的代码，学习如何在AM上编程。</p>
+<h3 id="abstractmachine_1">AbstractMachine上的程序</h3>
+<p>建立一个在AbstractMachine上的项目，我们首先需要配置<code>AM_HOME</code>和<code>ARCH</code>环境变量。如果你第一次使用Linux，这会是一个比较痛苦的过程——你需要学习很多shell有关的知识、修改<code>.bashrc</code>脚本等等……刚开始你可能会碰到挫折，不过不要慌，慢慢就会好起来的。</p>
+<p>我们可以参考AM项目里的Hello World程序。它由一个.c文件和一个Makefile组成：</p>
+<pre class="codehilite"><code class="language-c">#include &lt;am.h&gt;
+
+void print(const char *s) {
+  for (; *s; s ++) {
+    _putc(*s);
+  }
+}
+int main() {
+  print(&quot;Hello World from &quot; __ISA__ &quot; program!\n&quot;);
+  return 0;
+}</code></pre>
+
+
+<p>真的就是一个C程序耶，而且这个程序可以直接在裸机上运行。Makefile也非常简单：</p>
+<pre class="codehilite"><code class="language-Makefile">NAME := hello
+SRCS := hello.c
+include $(AM_HOME)/Makefile.app</code></pre>
+
+
+<p>看来大部分事情AM都帮我们搞定了，可以直接在裸机上编写C程序。现在我们来编译运行它。在终端中执行</p>
+<pre class="codehilite"><code>make ARCH=x86-qemu</code></pre>
+
+
+<p>会自动完成编译，而执行</p>
+<pre class="codehilite"><code>make ARCH=x86-qemu run</code></pre>
+
+
+<p>可以看到QEMU启动，并在QEMU的调试终端上打印出“Hello World from x86 program”。就这么简单，我们就实现了为x86硬件编程！</p>
+<div class="fenced fenced-green">
+<h4 id="__isa__">思考题：<code>__ISA__</code></h4>
+<p>这个宏不是C标准里定义的，那么是谁定义的？当我们设置不同的<code>ARCH</code>，就会生成不同硬件的代码和镜像。想知道这是怎么办到的，当然需要自己动手啦！</p>
+<p>UNIX世界早就给我们提供了足够的工具来搞定这些日常琐事：</p>
+<pre class="codehilite"><code class="language-bash">find . -type f | xargs grep -ne __ISA__</code></pre>
+
+
+<p>(请RTFM理解这个命令的含义)。我们能定位到Makefile.compile中的一行代码，然后就豁然开朗了。</p>
+</div>
+<h3 id="_11">实现游戏之前：实现库函数</h3>
+<p>将你们在《计算机系统基础》课程中实现的klib复制到你们的repo (<code>abstract-machine/</code>)中。</p>
+<p>如果没有实现过？那你最好实现一下。</p>
+<h3 id="_12">实现游戏：简单的任务</h3>
+<p>游戏不过是个死循环：</p>
+<pre class="codehilite"><code class="language-c">next_frame = 0;
+while (1) {
+  while (uptime() &lt; next_frame) ; // 等待一帧的到来
+  while ((key = readkey()) != _KEY_NONE) {
+    kbd_event(key);         // 处理键盘事件
+  }
+  game_progress();          // 处理一帧游戏逻辑，更新物体的位置等
+  screen_update();          // 重新绘制屏幕
+  next_frame += 1000 / FPS; // 计算下一帧的时间
+}</code></pre>
+
+
+<p>大家见过的LiteNES和仙剑奇侠传，都是这样的循环。</p>
+<p>再比如(你想实现一个简单的)弹球游戏，你只需要维护弹球的坐标<math>x,y</math>和两个方向的速度<math>v_x, v_y</math>，然后每一帧更新即可。配上碰撞检测，那就是个很酷的弹球啦！</p>
+<div class="fenced fenced-red">
+<h4 id="_13">不要使用浮点数</h4>
+<p>在x86-qemu里用是没问题的，但如果你想在你的MIPS32里实现IEEE754，我保证你会想吐血的。</p>
+</div>
+<h2 id="_14">小游戏与操作系统</h2>
+<p>一个小游戏的复杂程度，也许已经可以和简单的批处理操作系统相比了。批处理系统管理很多jobs，类似游戏也可以看成是一个大循环：</p>
+<pre class="codehilite"><code class="language-c">while (1) {
+  Job *job = get_job();
+  if (job) {
+    load(job);
+  }
+}</code></pre>
+
+
+<p>我们不妨可以假设“批处理”系统是这样工作的：</p>
+<ol>
+<li>批处理系统执行的命令由键盘输入，因此<code>get_job()</code>就是从键盘读取按键并解析成命令，和游戏读取按键类似。</li>
+<li>执行的命令(job)是保存在磁盘上的ELF格式的二进制文件(虽然批处理系统时代还没有ELF)，那么<code>load()</code>函数的功能就和加载AM程序的loader类似，从磁盘中读取ELF头，然后把相应的节加载到内存的正确位置，然后执行</li>
+</ol>
+<pre class="codehilite"><code class="language-c">((void(*)(void))elf_header-&gt;entry)();</code></pre>
+
+
+<p>把控制权交给job，job结束后调用函数返回指令，就会自然返回到大循环中——这样我们可以很容易地把全班同学的游戏做成一个“合集”，批处理系统就是“游戏菜单”，就像NES的合集游戏那样：</p>
+<p><center><img alt="" src="../static/wiki/os/2019/img/64-in-1.png" width="400px" /></center></p>
+<div class="fenced fenced-green">
+<h4 id="_15">开启操作系统之旅</h4>
+<p>现在我们已经学会怎么在“裸机”上编程啦！很简单，真的就是写C程序——我也已经理解应该如何实现批处理操作系统。从下一个实验开始，我们将正式开启多处理器和现代操作系统的旅程。</p>
+</div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,132 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>Notes on Double Blind Review</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="notes-on-double-blind-review">Notes on Double Blind Review</h1>
+<p>(This is a copy of the ICSE'2020 submission guideline.)</p>
+<blockquote>
+<p>Q: Why Double Blind?</p>
+<p>There are many reasons for a submission track to employ a double-blind review process – not the least being the considerable number of requests to do so from the community. For more information on motivations for double-blind reviewing, see Claire Le Goues’s very well argued, referenced and evidenced <a href="https://www.cs.cmu.edu/~clegoues/double-blind.html">blog posting in favor of double-blind review processes for Software Engineering conferences</a>. See also a list of <a href="http://www.robertfeldt.net/advice/double_blind_reviewing/">double-blind resources</a> from Robert Feldt, as well as a more formal study of the subject by Moritz Beller​​ and Alberto Bacchelli​​ (see <a href="https://pure.tudelft.nl/portal/files/17721365/1589a385.pdf">here</a>).</p>
+</blockquote>
+<hr />
+<blockquote>
+<p>Q: How to prepare your paper for double-blind reviewing?</p>
+<p>You must make every reasonable effort to honor the double-blind review process, but you do not need to guarantee that your identity is undiscoverable. The double-blind aspect of the review process is not to set up as an adversarial identity-discovery process. Essentially, the guiding principle should be to maximize the number of people who could plausibly be authors, subject to the constraint that no change is made to any technical details of the work. Therefore, you should ensure that the reviewers are able to read and review your paper without needing to know who any of the authors are. Specifically, this involves at least adhering to the following three points:</p>
+<p>Omit all authors’ names from the title page. Please note that it is not sufficient to simply change the font color to white, as names may appear when highlighted or on some printers; nor is it sufficient to cover the names with a rectangle. Also, please make sure that no identifying information is stored in the properties metadata of your submitted pdf. There are many ways to check this, for example from linux: <code>$ pdfinfo paper.pdf</code> or from Adobe Acrobat select File/Properties tab.</p>
+<p>Refer to your own work in the third person. You should not change the names of your own tools, approaches or systems, since this would clearly compromise the review process; it would also violate the constraint that “no change is made to any technical details of the work”. Instead, refer to the authorship or provenance of tools, approaches or systems in the third person, so that it is credible that another author could have written your paper. If for any reason it is completely impossible to reference your prior work in the third person, then you will need to provide a blinded reference and send a copy of the original paper to the chairs. However, in most cases we expect you to reference your own work in the third person.</p>
+<p>Do not rely on supplementary material (your web site, your github repository, a youTube channel, a companion technical report or thesis) in the paper or in the rebuttal submitted during the clarification period. We allow supplementary material to be uploaded in the submission system, but it is your responsibility to make sure it does not include identifying information. If you choose to upload supplementary material (either through the submission site or as a link), and your material includes identifying information, then your submission could be desk rejected. Furthermore, please keep in mind that reviewers are not obligated to read supplementary material.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p>Q: I previously published an earlier version of this work in a venue that doesn’t have double-blind. What should I do about acknowledging that previous work?</p>
+<p>A: If the work you are submitting for review has previously been published in a non-peer-reviewed venue (e.g., arXiv.org, or a departmental tech report), there is no need to cite it, because work that has not been refereed is not truly part of the scientific literature.</p>
+<p>If the previous work is published in a peer-reviewed venue, then it should be cited, but in the third person so that it is not revealed that the cited work and the submitted paper share one or more authors.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p>Q: Our submission makes use of work from a PhD or master’s thesis, dissertation, or report which has been published. Citing the dissertation might compromise anonymity. What should we do?</p>
+<p>A: It’s perfectly OK to publish work arising from a PhD or master’s degree, and there’s no need to cite it in an ICSE submission that is undergoing double-blind review because prior dissertation publication does not compromise novelty. In the final post-review, camera ready version of the paper, please do cite the dissertation to acknowledge its contribution, but in any submission to an ICSE track employing a double-blind review process, please refrain from citing the dissertation, to increase anonymity.</p>
+<p>You need not worry whether or not the dissertation has appeared. Your job is to ensure that your submission is readable and reviewable, without the reviewers needing to know the identities of the submission’s authors. You do not need to make it impossible for the reviewers to discover the authors’ identifies. The referees will be trying hard not to discover the authors’ identity, so they will likely not be searching the web to check whether there is a dissertation related to this work.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p>Q: What if we want to cite some unpublished work of our own (as motivation for example)</p>
+<p>A: If the unpublished paper is an earlier version of the paper you want to submit to ICSE and is currently under review, then you have to wait until your earlier version is through its review process before you can build on it with further submissions (this would be considered double-submission and violates ACM plagiarism policy and procedures). Otherwise, if the unpublished work is not an earlier version of the proposed ICSE submission, then you should simply make it available on a website, for example, and cite it in the third person to preserve anonymity, as you are doing with others of your works.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p>Q: Can I disseminate non-blinded version of my submitted work by discussing it with colleagues, giving talks, publishing it at ArXiV, etc.?</p>
+<p>A: You can discuss and present your work that is under submission at small meetings (e.g., job talks, visits to research labs, a Dagstuhl or Shonan meeting), but you should avoid broadly advertising it in a way that reaches the reviewers even if they are not searching for it. For example, you are allowed to put your submission on your home page and present your work at small professional meetings. However, you should not discuss your work with members of the program committee, publicize your work on mailing lists or media that are widely shared and can reach the program committee, or post your work on ArXiV or a similar site just before or after submitting to the conference.</p>
+</blockquote>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
