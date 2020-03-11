@@ -1,6 +1,809 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>[C2] 硬件眼中的操作系统</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="c2">[C2] 硬件眼中的操作系统</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>之前我们我们了解到</p>
+<ul>
+<li>程序 = 状态机</li>
+<li>程序眼中的操作系统是 “系统调用” API 的集合</li>
+</ul>
+<p>但依然感到困惑的是</p>
+<ul>
+<li>硬件上如何直接运行一个 C 程序？</li>
+<li>怎样为 bare-metal 的多处理器编程？</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>AbstractMachine 简介</li>
+<li>软件和硬件的桥梁</li>
+<li>操作系统：是个 C 程序</li>
+<li>操作系统：是个状态机</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="abstractmachine">AbstractMachine 简介</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="x">“写个操作系统” 好像很牛 X 的样子……</h2>
+<p>在知乎各种被狂吹……</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/write-os.png" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="x-contd">“写个操作系统” 好像很牛 X 的样子 (cont'd)</h2>
+<p>讲道理，作为 hobby project 来说，很不错了</p>
+<ul>
+<li>10 年前自己 xjbg 的内核跑起来的时候的确感觉很惊奇</li>
+<li>浇盆冷水：但作为专业人士，根本不算什么 (trivial)<ul>
+<li>“业余高手” vs. “职业选手”</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>「护球像梅西，射门像贝利」的金山区齐达内，满怀期待地去和儿童预备队比赛，结果被灌了 20 多球</p>
+<p>韩寒：“被小学生支配的恐惧，而我也曾对那种力量，一无所知。”</p>
+<ul>
+<li>小学生 (100) vs. 职业选手 (3)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/football.jpg" width="400px"></img></p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">什么是专业人士？</h2>
+<blockquote>
+<p>你们在大学里是接受专业训练的。</p>
+</blockquote>
+<p>专业人士有正确的 “专业世界观” (和专业知识的积累和磨练有关)</p>
+<ul>
+<li>驾驭复杂系统的能力<ul>
+<li>做什么是正确的</li>
+<li>如何找到相关的部分<ul>
+<li>在 Linux Kernel 中找出和自己相关的代码；在 Intel 手册中找到需要的部分并正确理解；找到正确的工具</li>
+</ul>
+</li>
+<li>在没有工具的时候，怎么自己造世界上最好的工具 (research)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>专业训练：例子</p>
+<ul>
+<li>写 x86 模拟器的时候，不知道哪条指令错了，怎么办？ (difftest)<ul>
+<li>mips32-nemu 成功启动 Linux Kernel</li>
+</ul>
+</li>
+<li>做操作系统内核实验的时候，如果遇到神秘 CPU Reset，怎么办？ (???)<ul>
+<li>《操作系统》课上完成的专业训练</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">如何通往专业之路？</h2>
+<p>❌ 踩坑 (自学成才)</p>
+<ul>
+<li>我 2009 年学《操作系统》的时候，根本没有 toolchain 可言<ul>
+<li>迷之 8086 汇编，迷之 VirtualBox</li>
+</ul>
+</li>
+<li>全靠 trial-and-error</li>
+<li>只会 <code>printf</code> 调试</li>
+</ul>
+<hr></hr>
+<p>✅ 建立在前人经验的基础上</p>
+<ul>
+<li>顶级研究论文 (OSDI, SOSP, ATC, EuroSys, ...)</li>
+<li>久经考验的经典教学材料 (xv6, OSTEP, CSAPP, ...)</li>
+<li>海量的开源工具 (GNU 系列, qemu, gdb, ...) </li>
+<li>第三方资料，慎用 (tutorials, osdev wiki, ...)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">新手：迈出第一步</h2>
+<p>写操作系统的最大困难：“<span class="red">下不了手</span>”</p>
+<ul>
+<li>大家都说 “操作系统是 C 程序”</li>
+<li>但我只会按一个键编译运行<ul>
+<li>C 语言程序怎么运行在机器上？</li>
+<li>C 语言程序运行起来以后，什么能做、什么不能做？</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>“写一个操作系统” 对新手最困难的部分，恰恰和操作系统没什么关系</p>
+<ul>
+<li>硬件提供的复杂机制<ul>
+<li>GDT, IDT, TSS, ... 但这些概念并非必须掌握</li>
+</ul>
+</li>
+<li>虚拟机上的程序很难调试<ul>
+<li>汇编使用不熟练</li>
+<li>编程基础不太牢靠</li>
+<li>工具使用不熟练</li>
+<li>缺少好用的工具</li>
+</ul>
+</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="abstractmachine">AbstractMachine: 《操作系统》课程的折中</h2>
+<p><img alt="" class="float-right" src="../static/wiki/ics/2018/slides/img/projectn.jpg" width="200px"></img></p>
+<p>C 语言的运行时环境 + <a href="../static/wiki/os/2020/demos/am.h">15 个 C API</a>，足够实现操作系统</p>
+<ul>
+<li>与硬件无关，只和 “虚存”、“上下文管理” 等概念相关<ul>
+<li>失去了少量 “乐趣” (但仍然直接在机器上编程)</li>
+<li>让大家更多地关注操作系统本身</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>例子：AbstractMachine 上的代码</p>
+<ul>
+<li><a href="../static/wiki/os/2020/demos/hello-am.c">hello-am.c</a></li>
+<li><a href="../static/wiki/os/2020/demos/thread-os.c">thread-os.c</a>: 立即得到一个 “多线程操作系统”<ul>
+<li>一次编写，可以编译/运行在不同平台上 (Project-N)<ul>
+<li>虚拟机/模拟器: x86_64 (qemu), x86 (qemu), x86 (nemu)</li>
+<li>真实硬件 (自制 CPU): mips32-npc, ...</li>
+<li>作为 Linux 本地进程运行 (native)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="c">什么是 “C 语言的运行环境”？</h2>
+<ul>
+<li>将 C 语言代码编译/链接成 ELF 目标文件的命令<ul>
+<li>Makefile, ld script, ...</li>
+</ul>
+</li>
+<li>二进制文件在 bare-metal 上运行必要的其他部件<ul>
+<li>AM API 的实现</li>
+<li>ELF 文件的加载器 (代码、编译/链接脚本)</li>
+</ul>
+</li>
+<li>生成系统镜像文件的脚本</li>
+<li>平台相关的启动脚本<ul>
+<li>启动虚拟机执行</li>
+<li>将镜像写入开发板并启动</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>主要使用的工具：gcc 和 <a href="https://www.gnu.org/software/binutils/">GNU binutils</a>: a collection of binary tools</p>
+<ul>
+<li>ld (链接器), as (汇编器)</li>
+<li>ar (静态库打包), objcopy (目标文件解析)</li>
+<li>其他大家会用到的工具: nm, strings, size, objdump, readelf, ...</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">硬件和软件的桥梁</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bare-metal">Bare-Metal 与程序员的约定</h2>
+<p>为了让计算机能<span class="red">运行任何我们的程序</span>，一定存在一些软件/硬件的约定</p>
+<ul>
+<li><p>CPU reset 后，处理器处于某个确定的状态</p>
+<ul>
+<li>PC 指针一般指向一段 memory-mapped ROM<ul>
+<li>ROM 存储了厂商提供的 firmware (固件)</li>
+</ul>
+</li>
+<li>处理器的大部分特性处于关闭状态<ul>
+<li>缓存、虚拟存储、……</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Firmware</p>
+<ul>
+<li>将用户数据加载到内存<ul>
+<li>例如存储介质上的第二级 loader</li>
+<li>或者直接加载操作系统 (嵌入式系统)</li>
+</ul>
+</li>
+<li><a href="https://www.denx.de/wiki/U-Boot">U-Boot</a>: the universal boot loader</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="x86-family-cpu-reset">x86 Family: CPU Reset 行为</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/intel-tfm.png" width="500px"></img></p>
+<p>CPU Reset (<a href="https://software.intel.com/en-us/articles/intel-sdm">Intel® 64 and IA-32 Architectures Software Developer’s Manual</a>, Volume 3A/3B)</p>
+<ul>
+<li>寄存器会有初始状态<ul>
+<li><code>EIP = 0x0000fff0</code></li>
+<li><code>CR0 = 0x60000010</code><ul>
+<li>16-bit 模式</li>
+</ul>
+</li>
+<li><code>EFLAGS = 0x00000002</code><ul>
+<li>interrupt disabled</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>TFM (5,000 页 by 2019)<ul>
+<li>最需要的 Volume 3A 只有 468 页 (理解 AbstractMachine 代码所需的全部)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="cpu-reset">CPU Reset 之后：发生了什么？</h2>
+<p>在《计算机系统基础》中学过，整个计算机系统也是一个状态机</p>
+<ul>
+<li>从 PC (<code>CS:IP</code>) 指针处取指令、译码、执行……</li>
+<li>从 firmware 开始执行<ul>
+<li><code>ffff0</code> 通常是一条向 firmware 跳转的 jmp 指令</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><img alt="" class="float-right" src="../static/wiki/am/img/bios-firmware.png" width="400px"></img></p>
+<p>Firmware: <a href="https://www.zhihu.com/question/21672895">BIOS vs. UEFI</a></p>
+<ul>
+<li>都是主板/主板上外插设备的软件抽象<ul>
+<li>支持系统管理程序运行</li>
+</ul>
+</li>
+<li>Legacy BIOS (Basic I/O System)</li>
+<li>UEFI (Unified Extensible Firmware Interface)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="legacy-bios">Legacy BIOS: 约定</h2>
+<p>Firmware 必须提供机制，将用户数据载入内存</p>
+<ul>
+<li>Legacy BIOS 把<span class="red">引导盘</span>的第一个扇区 (主引导扇区, MBR) <span class="red">加载到内存</span>的 <code>7c00</code> 位置<ul>
+<li>处理器处于 16-bit 模式</li>
+<li>规定 <code>CS:IP = 0x7c00</code>, <code>(R[CS] &lt;&lt; 4) | R[IP] == 0x7c00</code><ul>
+<li>可能性1：<code>CS = 0x07c0, IP = 0</code></li>
+<li>可能性2：<code>CS = 0, IP = 0x7c00</code></li>
+</ul>
+</li>
+<li>其他没有任何约束</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">能不能看一下代码？</h2>
+<blockquote>
+<p><span class="float-right">——Linus Torvalds</span>Talk is cheap. Show me the code. </p>
+</blockquote>
+<div class="fragment">
+<hr></hr>
+<blockquote>
+<p>事实：开源世界有一切的代码</p>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/qemu.jpg" width="250px"></img></p>
+<p>QEMU: 世界上应用最广泛的开源虚拟机</p>
+<ul>
+<li>传奇黑客、天才程序员 <a href="https://www.zhihu.com/question/28388113">Fabrice Bellard</a> 的杰作<ul>
+<li>Android Virtual Device, VirtualBox, ...</li>
+</ul>
+</li>
+<li><a href="https://www.usenix.org/legacy/publications/library/proceedings/usenix05/tech/freenix/full_papers/bellard/bellard.pdf">QEMU, A fast and portable dynamic translator</a> (USENIX ATC'05)</li>
+</ul>
+<hr></hr>
+<p><a href="https://www.seabios.org/SeaBIOS">SeaBIOS</a>: QEMU (x86) 的默认 firmware</p>
+<ul>
+<li>SeaBIOS 会被编译成一个 ELF 二进制文件<pre class="codehilite"><code class="language-text">bios.bin.elf-1.9.0: ELF 32-bit LSB executable, Intel 80386,
+version 1 (SYSV), statically linked, stripped</code></pre>
+
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="qemu-firmware">调试 QEMU: 确认 Firmware 的行为</h2>
+<blockquote>
+<p>“Firmware 会加载启动盘第一个扇区到 <code>0x7c00</code> 内存位置”</p>
+</blockquote>
+<ul>
+<li>能否亲眼确认一下？</li>
+</ul>
+<hr></hr>
+<p>调试 QEMU 模拟器: <a href="../static/wiki/os/2020/demos/run-qemu.sh">run-qemu.sh</a></p>
+<ul>
+<li>查看 CPU Reset 后的寄存器<ul>
+<li><code>info registers</code></li>
+</ul>
+</li>
+<li>查看 <code>0x7c00</code> 内存的加载<ul>
+<li><code>watch *0x7c00</code></li>
+<li>查看加载磁盘的指令 <code>x/i ($cs * 16 + $rip)</code></li>
+<li>打印内存 <code>x/16xb 0x7c00</code></li>
+</ul>
+</li>
+<li>进入 <code>0x7c00</code> 代码的执行<ul>
+<li><code>b *0x7c00</code>, <code>c</code> (撒花)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="firmware-1998">小插曲：Firmware 的病毒 (1998)</h2>
+<p>Firmware 通常是只读的 (当然……)</p>
+<ul>
+<li>Intel 430TX (Pentium) 芯片组允许<span class="red">写入 Flash ROM</span><ul>
+<li>只要向 Flash BIOS 写入特定序列，Flash ROM 就变为可写<ul>
+<li>留给 firmware 更新的通道</li>
+</ul>
+</li>
+<li>要得到这个序列其实并不困难<ul>
+<li>似乎文档里就有，还可以解析 BIOS 的更新程序</li>
+<li>Boom…… (CPU RESET 之后就……了)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>CIH 的作者陈盈豪被逮捕，但并未被定罪</p>
+<blockquote>
+<p>提起這段過往，這名昔日的網路小子帶著些許不堪回首的心情說：「怪自己當時太著迷寫電腦程式，想試試各家防毒軟體的本事，不料造成這麼大的風波。」他接著回憶，「那時到了刑事局，以為這輩子完了，腦筋一片空白，不斷發抖。」</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统镜像</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="x86-64">x86-64: 磁盘上的 “操作系统”</h2>
+<p>由 <code>arch/x86_64-qemu.mk</code> 创建</p>
+<ul>
+<li>MBR: 512 字节 bootloader (由 BIOS 加载)</li>
+<li>mainargs: <code>main</code> 函数的参数<ul>
+<li>AbstractMachine 程序入口: <code>int main(const char *args);</code></li>
+</ul>
+</li>
+<li>ELF32/64 文件: 操作系统的代码和数据</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/am-disk-img.png" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">系统启动之前：镜像生成的全过程</h2>
+<p>让我们观察 AbstractMachine 程序的编译过程：</p>
+<pre class="codehilite"><code class="language-bash">make -nB \
+  | grep -ve '^\(\#\|echo\|mkdir\|make\)' \
+  | sed "s#$AM_HOME#\$AM_HOME#g" \
+  | sed "s#$PWD#.#g" \
+  | vim -</code></pre>
+
+<ul>
+<li>Command line tricks<ul>
+<li><code>make -nB</code> (RTFM)</li>
+<li>grep: 文本过滤，省略了一些干扰项<ul>
+<li>echo (提示信息)</li>
+<li>mkdir (目录建立)</li>
+<li>make (sub-goals)</li>
+</ul>
+</li>
+<li>sed: 让输出更易读<ul>
+<li>将绝对路径替换成相对路径</li>
+</ul>
+</li>
+<li>vim: 更舒适的编辑/查看体验</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">工具的重要性</h2>
+<blockquote>
+<p>如果使用 “土办法”，你很可能被淹没在 Makefile 中</p>
+<ul>
+<li>读懂 Makefile 需要 STFW, RTFM，大量的精力</li>
+<li>虽然花点时间读是值得的，但很可能读了很久都没读到重要的地方</li>
+</ul>
+</blockquote>
+<hr></hr>
+<p>花一点时间想 “应该怎么做”</p>
+<ul>
+<li>花几分钟创建一个小工具：“AbstractMachine 构建理解工具”<ul>
+<li>UNIX Philosophy: keep it simple, stupid</li>
+<li>everything is a file; write things to work together using text interface</li>
+</ul>
+</li>
+<li><em>Get out of your comfort zone</em></li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">代码讲解</h2>
+<p>想要看得更清楚一些？</p>
+<ul>
+<li><code>:%s/ /\r  /g</code><ul>
+<li>每一个命令就像 “一句话”</li>
+<li>静下心来理解它就好</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>编译</p>
+<ul>
+<li><code>-std=gnu11</code>, <code>m64</code>, <code>-mno-sse</code>, ...</li>
+<li>注意 <code>-I</code> (include path) 和 <code>-D</code> (宏定义)</li>
+</ul>
+<p>链接</p>
+<ul>
+<li><code>-melf_x86_64</code>, <code>-N</code>, <code>-Ttext-segment=0x00100000</code></li>
+<li>链接了 C 代码对应的 <code>.o</code> 和库 (<code>am-x86_64-qemu.a</code>, <code>klib-x86_64-qemu.a</code>)</li>
+</ul>
+<p>加载</p>
+<ul>
+<li><code>$AM_HOME/am/src/x86/qemu/boot/mbr</code> 是被 firmware 加载的 512 字节</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="c">操作系统：是个 C 程序</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="thread-osc"><code>thread-os.c</code></h2>
+<blockquote>
+<p>AbstractMachine 上的程序，的确就是个 C 程序 (ELF64 二进制文件)</p>
+<ul>
+<li>我们的代码从 <code>main</code> 开始执行。但执行 <code>main</code> 之前发生了什么？</li>
+<li>让我们调试它吧！</li>
+</ul>
+</blockquote>
+<pre class="codehilite"><code class="language-c">#include &lt;am.h&gt;
+#include &lt;klib.h&gt;
+
+...
+
+int main() {
+  _ioe_init();
+  _cte_init(on_interrupt);
+
+  for (int i = 0; i &lt; LENGTH(tasks); i++) {
+    Task *task    = &tasks[i];
+    _Area stack   = (_Area) { &task-&gt;context + 1, task + 1 };
+    task-&gt;context = _kcontext(stack, func, (void *)task-&gt;name);
+    task-&gt;next    = &tasks[(i + 1) % LENGTH(tasks)];
+  }
+  _intr_write(1);
+  _yield();
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1-boot-loader">(1) 启动加载器 (Boot Loader)</h2>
+<p>我们在小得惊人的 512 字节里放下了</p>
+<ul>
+<li>16-bit → 32-bit</li>
+<li>ELF32/64 的加载器<ul>
+<li>按照约定的磁盘镜像格式加载</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>代码讲解：</p>
+<ul>
+<li><code>am/src/x86/qemu/boot/start.S</code><ul>
+<li>系统中所有 CPU Reset 代码都会跳转到这里</li>
+</ul>
+</li>
+<li><code>am/src/x86/qemu/boot/main.c</code><ul>
+<li>第一个 CPU 会执行加载；所有 CPU 都执行一个永不返回的跳转</li>
+</ul>
+</li>
+</ul>
+<pre class="codehilite"><code class="language-c">if (elf32-&gt;e_machine == EM_X86_64) {
+  ((void(*)())(uint32_t)elf64-&gt;e_entry)();
+} else {
+  ((void(*)())(uint32_t)elf32-&gt;e_entry)();
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2-elf-start64s">(2) ELF 文件开始执行: <code>start64.S</code></h2>
+<p>指令从默认的入口符号 <code>_start</code> 开始执行</p>
+<ul>
+<li>代码位于 <code>start64.S</code> (切换到 64-bit 模式)<ul>
+<li>设置 GDT, PML4, EFER.LME</li>
+<li><code>ljmp</code> 跳转到 64-bit 代码执行 (<code>_start64</code>)</li>
+<li>设置好段寄存器后，跳转到 C 代码 <code>_start_c</code> 执行</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="3-c-trmc">(3) C 代码开始执行: <code>trm.c</code></h2>
+<p>巨多无比难以理解的代码</p>
+<ul>
+<li>完成硬件的初始化</li>
+<li>没关系……不用知道它们是什么，只要知道它们是 RTFM/STFW 来得就行</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void _start_c(char *args) {
+  if (boot_record()-&gt;is_ap) {
+    __am_othercpu_entry();
+  } else {
+    __am_bootcpu_init();
+    stack_switch_call(stack_top(&CPU-&gt;stack), call_main, (uintptr_t)args);
+  }
+}</code></pre>
+
+
+<p>完成初始化后，执行一次堆栈切换调用，跳转到 <code>call_main</code> (wrapper) 执行</p>
+<ul>
+<li><span class="red">这个技巧大家在 M2 中会用到！</span></li>
+</ul>
+<pre class="codehilite"><code class="language-c">static void call_main(const char *args) {
+  _halt(main(args));
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="4">(4) 操作系统：开始执行</h2>
+<p><code>main</code> 在被调用时：</p>
+<ul>
+<li>静态代码、数据均可用；剩余可用物理内存区间为 <code>_heap</code></li>
+<li>中断处于关闭状态 (<code>FL_IF</code> cleared)</li>
+<li>有 8 KiB 的初始堆栈 (位于 <code>struct cpu_local</code> 中)</li>
+<li>“操作系统” 就开始执行了</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="5-abstractmachine-apis">(5) 更多的 AbstractMachine APIs</h2>
+<p>例子：多处理器扩展 (MPE)</p>
+<pre class="codehilite"><code class="language-c">// 启动多个处理器，所有处理器都从 `entry` 开始执行
+int _mpe_init(void (*entry)());
+
+// 系统中处理器的数量
+int _ncpu();
+
+// 当前处理器的编号 (0, 1, 2, ...)
+int _cpu();
+
+// 唯一的原子指令
+intptr_t _atomic_xchg(volatile intptr_t *addr, intptr_t newval);</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="mpe-api">MPE API: 实现</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/lapic.png" width="550px"></img></p>
+<p>M: 多处理器信息找 LAPIC</p>
+<ul>
+<li>LAPIC 是 per-core 的，主要用于管理当前处理器的中断</li>
+<li>扫描 <code>0xf0000-0xffffff</code> 内存，获取多处理器/LAPIC 信息</li>
+</ul>
+<pre class="codehilite"><code class="language-c">int _mpe_init(void (*entry)());
+
+int _ncpu() { return __am_ncpu; }
+int _cpu()  { return __am_lapic[8] &gt;&gt; 24; }
+intptr_t _atomic_xchg(volatile intptr_t *addr, intptr_t newval) {
+  intptr_t result;
+  asm volatile ("lock xchg %0, %1"
+    : "+m"(*addr), "=a"(result) : "1"(newval) : "cc");
+  return result;
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多处理器启动</h2>
+<p>使用 LAPIC 的 IPI (inter-processor interrupt) 机制唤醒其他处理器</p>
+<ul>
+<li>能够指定一个启动的地址<ul>
+<li>在我们的实现里，<code>0x7000</code> (<code>boot_record</code>)</li>
+<li>会先在 <code>0x7000</code> 写入一小段代码 <code>0x000bfde9</code> (<code>jmp (0x7c00)</code>)</li>
+<li><code>_halt</code> 时会写入 <code>0x0000feeb</code> (<code>jmp .</code>) 停止系统中的其他处理器</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>启动后，再次执行 MBR 代码</p>
+<ul>
+<li>但 <code>boot_record-&gt;is_ap == 1</code></li>
+<li>不执行加载，直接跳转到 ELF 的 entry</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统：是个状态机</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="abstractmachine-c">AbstractMachine 上的 C 程序</h2>
+<p>刚才我们全程都在调试代码 (指令序列)……</p>
+<ul>
+<li><p>如果运行在 AbstractMachine 上的 C 程序不调用任何扩展 APIs</p>
+<ul>
+<li>它就是一个<span class="red">普通的 C 程序</span> (和操作系统上的应用程序无异)</li>
+<li>唯二的 “系统调用”: <code>_putc</code> 和 <code>_halt</code></li>
+<li>和之前讲解的 “程序 = 状态机” 完全一致</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>把 AbstractMachine API 看成是系统调用/对 “状态机” 含义的修正</p>
+<ul>
+<li>IOE (输入/输出): <code>_io_read</code>, <code>_io_write</code>，同系统调用</li>
+<li>CTE (中断/异常): 允许处理器异步保存上下文、跳转到中断处理程序</li>
+<li>VME (虚拟存储): 允许创建低权限的执行环境</li>
+<li>MPE (多处理器): 允许创建多个共享内存的并行执行流</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>两个视角的融合：状态机的 “模拟”</p>
+<ul>
+<li>应用视角<ul>
+<li>程序 = 状态机</li>
+<li>操作系统 = 系统调用</li>
+</ul>
+</li>
+<li>硬件视角<ul>
+<li>操作系统 = 状态机</li>
+<li>Abstract Machine API (指令) = 系统调用</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题：</p>
+<ul>
+<li>查看、理解 amgame (x86-64, x86 和 native) 的编译过程</li>
+<li>使用 gdb 调试 amgame (x86-64, x86 和 native)<ul>
+<li>它们的行为有什么不同？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

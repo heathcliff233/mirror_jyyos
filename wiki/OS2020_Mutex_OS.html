@@ -1,0 +1,390 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>并发控制 (2): 操作系统中的互斥</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="2">并发控制 (2): 操作系统中的互斥</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a> 第 28 章。课后小练习：</p>
+<ul>
+<li>编译运行 <a href="../static/wiki/os/2020/demos/thread-os-mp.c">thread-os-mp.c</a> 并理解它的原理</li>
+<li>下载 <a href="https://github.com/mit-pdos/xv6-public">xv6 (i386) 的代码</a>，观看视频回放，调试自旋锁 (<code>spinlock.c</code>)，理解：<ul>
+<li>调用 pushcli/popcli 前后处理器的状态 (<code>eflags</code>)</li>
+<li>自旋的过程</li>
+<li>spinlock 中存储的调试信息和 <code>getcallerpcs</code> 的原理</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+
+<h2 id="_1">计算机系统 = 状态机</h2>
+<p>在<a href="OS2020_Automata.html">程序的状态机模型及其应用</a>中，我们把操作系统上运行的程序看成是状态机：</p>
+<blockquote>
+<p>在课堂上，我们反复演示 (和强调) 并发程序的多个线程拥有独立的寄存器、堆栈 (但不同线程的堆栈位于同一个地址空间中，我们已经在课堂上展示过)，共享代码和数据。并发程序中有一份共享的内存，但每个线程都有独立的寄存器。因此假设系统中有 <math class="inline-math">n</math> 个线程，那么状态看起来就是：</p>
+<p><span class="center"><math class="inline-math">(M, R_1, R_2, \ldots, R_n)</math></span></p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/concurrent-state.png" width="700px"></img></p>
+</blockquote>
+<p>而实际上，计算机系统本身也可以看成状态机。这个概念对学习过《计算机系统基础》的同学来说应该一点也不陌生——我们的计算机完全可以看成是一个数字电路，类似于大家在《数字逻辑电路》课程中学习/实验过的 “计数器”，而在《计算机系统基础》实验中，我们编写了一个 “数字电路模拟器”。</p>
+<h3 id="_2">系统寄存器</h3>
+<p>使用 QEMU 模拟器的 monitor，我们可以查看 x86 处理器上所有寄存器的状态——注意很多寄存器在进程的角度是不可见的，有些部分即便进程可见，但不能修改 (例如进程执行 <code>cli</code> 指令试图清除 <code>%eflags</code> 中的 <code>FL_IF</code> 将会导致 segmentation fault)。</p>
+<p>接下来，我们用一组选项启动 QEMU:</p>
+<ul>
+<li><code>-nographic</code> 不启动图形界面 (所以做操作系统实验其实并不需要任何图形界面……)</li>
+<li><code>-S</code> 使 QEMU 在 CPU Reset 之后暂停不再执行指令</li>
+</ul>
+<p>然后，我们按 [某个快捷键] 进入 monitor (请 RTFM/STFW，这个特性对大家非常有用，所以强迫大家读一下手册)，执行 monitor 命令 <code>info registers</code>:</p>
+<pre class="codehilite"><code class="language-text">(qemu) info registers 
+EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000663
+ESI=00000000 EDI=00000000 EBP=00000000 ESP=00000000
+EIP=0000fff0 EFL=00000002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
+ES =0000 00000000 0000ffff 00009300
+CS =f000 ffff0000 0000ffff 00009b00
+SS =0000 00000000 0000ffff 00009300
+DS =0000 00000000 0000ffff 00009300
+FS =0000 00000000 0000ffff 00009300
+GS =0000 00000000 0000ffff 00009300
+LDT=0000 00000000 0000ffff 00008200
+TR =0000 00000000 0000ffff 00008b00
+GDT=     00000000 0000ffff
+IDT=     00000000 0000ffff
+CR0=60000010 CR2=00000000 CR3=00000000 CR4=00000000
+DR0=0000000000000000 DR1=0000000000000000 DR2=0000000000000000 DR3=0000000000000000 
+DR6=00000000ffff0ff0 DR7=0000000000000400
+EFER=0000000000000000
+FCW=037f FSW=0000 [ST=0] FTW=00 MXCSR=00001f80
+FPR0=0000000000000000 0000 FPR1=0000000000000000 0000
+FPR2=0000000000000000 0000 FPR3=0000000000000000 0000
+FPR4=0000000000000000 0000 FPR5=0000000000000000 0000
+FPR6=0000000000000000 0000 FPR7=0000000000000000 0000
+XMM00=00000000000000000000000000000000 XMM01=00000000000000000000000000000000
+XMM02=00000000000000000000000000000000 XMM03=00000000000000000000000000000000
+XMM04=00000000000000000000000000000000 XMM05=00000000000000000000000000000000
+XMM06=00000000000000000000000000000000 XMM07=00000000000000000000000000000000</code></pre>
+
+
+<p>此时系统处于 16-bit 模式 (<code>CR0 = 60000010</code>)，并且能看到 32-bit 模式下的一些寄存器。寄存器的初始值已按照手册的要求初始化 (例如 <code>CS:IP = 0xffff0</code>)。这就是 QEMU 眼中 “计算机系统” 除了内存部分以外的状态。如果我们调试进入 64-bit 模式以后的代码，QEMU 可见的寄存器也发生了变化：</p>
+<pre class="codehilite"><code class="language-text">RAX=00000000000048af RBX=0000000000103520 RCX=0000000000000001 RDX=00000000000003f8
+RSI=0000000000000001 RDI=0000000000000000 RBP=0000000000103527 RSP=0000000000106f30
+R8 =0000000000000000 R9 =0000000000000000 R10=0000000000000000 R11=0000000000000000
+R12=0000000000000000 R13=0000000000000000 R14=0000000000000000 R15=0000000000000000
+RIP=00000000001001d0 RFL=00000283 [--S---C] CPL=0 II=0 A20=1 SMM=0 HLT=0
+ES =0000 0000000000000000 00000000 00000000
+CS =0008 0000000000000000 00000000 00209a00 DPL=0 CS64 [-R-]
+SS =0000 0000000000000000 ffffffff 00c09300 DPL=0 DS   [-WA]
+DS =0000 0000000000000000 00000000 00000000
+FS =0000 0000000000000000 00000000 00000000
+GS =0000 0000000000000000 00000000 00000000
+LDT=0000 0000000000000000 0000ffff 00008200 DPL=0 LDT
+TR =0028 0000000000108060 00000067 00408900 DPL=0 TSS64-avl
+GDT=     0000000000108028 00000038
+IDT=     0000000000106fc0 00001000
+CR0=80000011 CR2=0000000000000000 CR3=0000000000001000 CR4=00000020
+DR0=0000000000000000 DR1=0000000000000000 DR2=0000000000000000 DR3=0000000000000000 
+DR6=00000000ffff0ff0 DR7=0000000000000400
+EFER=0000000000000500
+FCW=037f FSW=0000 [ST=0] FTW=00 MXCSR=00001f80
+FPR0=0000000000000000 0000 FPR1=0000000000000000 0000
+FPR2=0000000000000000 0000 FPR3=0000000000000000 0000
+FPR4=0000000000000000 0000 FPR5=0000000000000000 0000
+FPR6=0000000000000000 0000 FPR7=0000000000000000 0000
+XMM00=00000000000000000000000000000000 XMM01=00000000000000000000000000000000
+XMM02=00000000000000000000000000000000 XMM03=00000000000000000000000000000000
+XMM04=00000000000000000000000000000000 XMM05=00000000000000000000000000000000
+XMM06=00000000000000000000000000000000 XMM07=00000000000000000000000000000000
+XMM08=00000000000000000000000000000000 XMM09=00000000000000000000000000000000
+XMM10=00000000000000000000000000000000 XMM11=00000000000000000000000000000000
+XMM12=00000000000000000000000000000000 XMM13=00000000000000000000000000000000
+XMM14=00000000000000000000000000000000 XMM15=00000000000000000000000000000000</code></pre>
+
+
+<p>大家不必理解它们的含义，只需知道系统寄存器比 gdb 调试进程时可见的寄存器少得多——操作系统上的进程无权访问其中相当的一部分。假设当前计算机系统的状态是 <math class="inline-math">(M, SR)</math> (<math class="inline-math">SR</math> 是系统中所有的寄存器)。对于一个单处理器系统，它的行为就是按照手册取指令 → 译码 → 执行 → 写回寄存器/内存的状态，得到指令执行完成后的状态 <math class="inline-math">(M', SR')</math>，如此往复——计算机系统就可以看成是一个状态机。</p>
+<h3 id="_3">多处理器系统</h3>
+<p>和操作系统进程中的线程一样，计算机系统可以有多个共享内存的处理器，每个处理器都有一份独立的寄存器现场 (包括刚才看到的所有寄存器现场！)。系统中的处理器可以并行执行，也如同进程中的线程一样。从状态机的角度，某一时刻系统的状态处于 <math class="inline-math">(M, SR_1, SR_2, \ldots, SR_n)</math>，那么我们可以 “选择一个处理器” <math class="inline-math">i</math> 执行，即把当前的计算机系统看成是 <math class="inline-math">(M, SR_i)</math>，执行一条指令得到 <math class="inline-math">(M', SR_i')</math>，将此时系统的状态更新为</p>
+<p><span class="center"><math class="inline-math">(M, SR_1, SR_2, \ldots, SR_i', SR_{i+1}, \ldots, SR_n)</math>。</span></p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="simultaneous-multi-threading-smt">Simultaneous Multi-Threading (SMT)</h4>
+<p>在我们能购买到的处理器中，经常能见到核心数与线程数不同，例如 24C/48T 的处理器。此时的 “线程” 主要就是指寄存器现场。24C/48T 的处理器将有 48 份独立的寄存器 (和相应的代码执行电路)，但诸如运算器、L1 缓存等，都只有 24 份。</p>
+<p>在运算器/缓存对一个寄存器现场来说显得有些富余时，让两个线程 (寄存器现场) 共享它们就有意义了——在同一个核心上的两个线程中，其中一个发生 cache miss 时，另一个线程依然可以继续使用核心中的资源执行。因此，在操作系统看来，48 个线程就像是 48 个逻辑处理器，因此在 <code>/proc/cpuinfo</code> 中，24C/48T 的处理器将看到 48 个逻辑 CPU。</p>
+<p>在为多处理器吞吐量优化的场景下，一个物理核心可能拥有更多数量的线程。例如 IBM Power 8 使用了 12 核心 96 线程的设计 (每个核心 8 线程，每个核心有 16 个指令执行流水线)。</p>
+</div></div></div>
+
+<h3 id="_4">随时可能到达的中断</h3>
+<p>与操作系统上的进程不同，计算机系统是系统中所有中断的管理者 (操作系统上的进程无法直接看到中断)。在 x86-64 系统上，当 <code>%rflags</code> 的 <code>FL_IF</code> bit 为 1 时，处理器在外部中断到来后，会执行以下 (简化的) 流程：</p>
+<ul>
+<li>如果运行在 ring 3，切换到 TSS 中预设的堆栈地址 (<code>%ss, %rsp</code>)；</li>
+<li>将中断前的若干寄存器保存到堆栈上：<code>%ss, %rsp, %cs, %rip, %rflags</code>；</li>
+<li>跳转到 IDT 中指定的入口地址执行。</li>
+</ul>
+<p>AbstractMachine 对中断的底层行为进行了封装，在中断到来后会寄存器现场 (<code>_Context</code>) 到堆栈上，最后调用注册的 callback。你可以考虑阅读 <a href="AM.html">AbstractMachine 文档</a>。</p>
+<p>在用状态机模型分析直接运行在计算机硬件上的程序 (例如操作系统) 时要格外小心，因为多处理器系统的状态机模型上，状态机的每一步都有很大的不确定性：</p>
+<ul>
+<li>可以选择系统中任意一个处理器执行一条指令；</li>
+<li>任意一个处理器在中断打开时都可以响应系统中的中断。</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/notes/img/real-fsm.png" width="400px"></img></p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">用调试器理解状态机模型</h4>
+<p>在课堂上，我们介绍过使用 gdb 的 <code>set scheduler-locking on</code> 可以在暂停其他线程执行的前提下进行单步调试。在此情形下调试 xv6，并使用 QEMU monitor 查看单步执行前后系统寄存器的值，能使你更好地理解 (和适应) “计算机系统是状态机” 的概念。</p>
+</div></div></div>
+
+<h2 id="_5">操作系统中的互斥</h2>
+<p>带着刚才我们对 “计算机系统是状态机” 的理解，实现操作系统上互斥的主要难题在于系统中可能发生中断——在 <a href="../static/wiki/os/2020/demos/thread-os-mp.c">thread-os-mp.c</a> 中我们已经看到，操作系统会在中断的驱动下在线程之间切换执行。</p>
+<p>我们不妨简化一下问题，从单处理器开始，试着解决操作系统中的互斥问题。</p>
+<h3 id="stop-the-world">单处理器：Stop the World</h3>
+<p>为了实现互斥，我们不妨考虑简单一点的情况——我们只有一个处理器。这时候没有多处理器造成的不确定性，一既然罪魁祸首是中断驱动的上下文切换，不如我们直接关中断了事——关闭中断以后，就不可能再发生上下文切换，整个处理器就和当前执行的线程绑定了 (当然，如果线程死循环，操作系统也直接卡死了。大家可以参考 xv6 的 panic: 处理器在关闭中断后就进入死循环)：</p>
+<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
+  cli();
+}
+void unlock(lock_t *lk) {
+  sti();
+}</code></pre>
+
+
+<p>没错，关闭中断就相当于单处理器上的 stop the world，实际上，在老旧的操作系统书上，关中断就是实现互斥的基本方法 (而不是原子指令)。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">思考题：何时开中断？</h4>
+<pre class="codehilite"><code class="language-text">lock(&lk1);
+lock(&lk2);
+unlock(&lk2); // 1
+unlock(&lk1); // 2</code></pre>
+
+
+<p>在什么时候开中断？答案稍后揭晓。</p>
+</div></div></div>
+
+<h3 id="stop-the-world_1">多处理器：Stop the World + 自旋</h3>
+<p>我们把关中断和自旋结合起来，就能得到多处理器系统适用的方案了：</p>
+<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
+  cli();
+  while (atomic_xchg(&lk-&gt;locked, 1)) ;
+}
+void unlock(lock_t *lk) {
+  atomic_xchg(&lk-&gt;locked, 0);
+  sti();
+}</code></pre>
+
+
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">思考题：操作顺序</h4>
+<p>先 <code>cli</code> 还是先自旋？先释放锁还是先 <code>sti</code>？注意我们必须保证在获得锁期间处理器不会被中断。在 <code>cli()</code> 返回前的任意时刻，处理器都会被中断；在 <code>sti()</code> 后的一瞬间，处理器也可能被中断。</p>
+</div></div></div>
+
+<p>大家不妨考虑一下这个算法的正确性，并用状态机证明，这里的状态并不多——你只需要假设中断会切换到其他线程执行即可 (也可以用状态机来分析应该先关中断还是先自旋)。在世界上只有一把锁的情况下，算法是没问题的。不过现实世界对锁的使用，要稍微考虑复杂一些的情形：</p>
+<pre class="codehilite"><code class="language-c">void case1() {
+  assert((read_eflags() & FL_IF) == 0);
+  lock(&lk):
+  unlock(&lk);
+  assert((read_eflags() & FL_IF) == 0);
+  // 上锁/解锁前后IF标志位不变，不得随意打开中断
+}
+
+void case2() {
+  assert((read_eflags() & FL_IF) != 0); // 初始时中断打开
+  lock(&lk1);
+  lock(&lk2);
+  unlock(&lk2);
+  assert((read_eflags() & FL_IF) == 0); // 持有锁时不得开中断
+  unlock(&lk1);
+  assert((read_eflags() & FL_IF) != 0); // 在释放所有锁后开中断
+}</code></pre>
+
+
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="assertions">善用断言 (assertions)</h4>
+<p>断言描述了<strong>你预期必定会发生的事</strong>，即你对实现应该满足规约 (specification) 的理解。没错，断言就是一句 “废话”。那废话有什么用呢？当然有用了！因为你的代码会有 bug。断言成立的前提是程序符合规约，但通常大家的程序是不可能轻易符合规约的 (笑，因此这些看起来没用的断言，能帮助大家迅速定位到问题所在。</p>
+<p>在并发编程中，这些断言更显得可贵——例如在某个例子里，你只在几条指令的执行过程中错误地 (case 2) 打开了中断。因此，想要暴露这个问题的可能性是微乎其微的，但断言却能帮助你以 100% 的概率捕获这个问题。</p>
+<p>xv6 的 spinlock 实现是这方面的典范。这也是我们强烈推荐 xv6 代码的原因。</p>
+</div></div></div>
+
+<p>为了修复上述两个 case，我们可以把 lock 和 unlock 想象成是入栈和出栈的过程——lock 时，把 eflags 压入堆栈中，然后关闭中断；unlock 时，从栈中恢复出 eflags 的数值。不过这里仍然有一个问题：</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">谁维护这个堆栈？</h4>
+<p>线程 or 锁 or 处理器？分别考虑这三种情况。以及，我们并不需要真正维护一个堆栈——因为第一次 lock 之后，到与之配对的 unlock 之前，中断始终处于关闭状态。</p>
+</div></div></div>
+
+<p>在你把这一切都想清楚以后，欣赏并调试一下 xv6 的 <a href="../static/wiki/os/2020/demos/spinlock-xv6.c">spinlock.c</a> 吧！</p>
+<h3 id="_6">实现能睡眠的互斥锁</h3>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">自旋的缺陷</h4>
+<p>自旋锁虽然保证了多处理器资源不会被完全浪费 (在没有死锁的前提下，至少有一个处理器能一直执行)，但关中断对于长临界区来说是非常糟糕的一件事：</p>
+<ul>
+<li>长时间关中断会导致中断丢失；</li>
+<li>其他处理器上试图获得锁的线程会大量浪费处理器资源自旋；</li>
+<li>互斥中的代码可能需要等待中断 (例如希望互斥访问 I/O 设备的代码)。</li>
+</ul>
+</div></div></div>
+
+<p>因此，我们希望在进入临界区后允许中断和线程切换，但同时不希望处理器在任何时候 “空转”，即消除自旋。进一步想，假如某个线程执行 <code>lock(&lk)</code> 已经获得了锁正在执行，此时另一个线程执行了 <code>lock(&lk)</code> 但需要等待——这个等待预期的时间会比较长，因此与其不停地自旋，我们不如在自旋失败的时候，主动切换到其他线程执行：</p>
+<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
+  while (atomic_xchg(&lk-&gt;locked, 1)) {
+    give_up_time_slice_and_yield(); // 切换    
+  }
+}
+void unlock(lock_t *lk) {
+  atomic_xchg(&lk-&gt;locked, 0);
+}</code></pre>
+
+
+<p>但这还是不够好——如果等待锁的线程很多，轮着调度一遍也要花费很多的开销，我们不如做得彻底一点，给每个线程设置状态：<code>BLOCKED</code> (在等待某个锁，此时不能被调度执行)；<code>RUNNABLE</code> (可被调度执行)。由于决定下一个运行的线程完全是在中断处理函数中完成的，因此我们不妨为每一个线程增加一个 <code>status</code> 变量 (在 <code>Task</code> 中)，然后修改我们的调度程序，就可以让 <code>BLOCKED</code> 的线程不再占用处理器执行：</p>
+<pre class="codehilite"><code class="language-c">typedef union task {
+  struct {
+    int status;
+    const char *name;
+    union task *next;
+    _Context   *context;
+  };
+  uint8_t stack[4096];
+} Task;
+
+...
+
+_Context *on_interrupt(_Event ev, _Context *ctx) {
+  if (!current) {
+    current = &tasks[0];
+  } else {
+    current-&gt;context = ctx;
+  }
+  do {
+    current = current-&gt;next;
+  } while ((current - tasks) % _ncpu() != _cpu() \
+         || current-&gt;status != RUNNING ); // 只调度 RUNNING 状态的线程
+  return current-&gt;context;
+}</code></pre>
+
+
+<p>如此一来，我们就可以实现互斥锁：</p>
+<ul>
+<li>互斥锁由一把自旋锁保护，这大幅简化了我们理解的难度——同一把自旋锁保护的区域满足原子性、顺序和可见性；</li>
+<li>如果在互斥锁上锁时，锁未被占用，则更新锁的状态并直接返回；</li>
+<li>如果在互斥锁上锁时，锁已经被别的线程持有，则把当前线程放到锁的队列中，然后把当前线程标记为不 <code>RUNNABLE</code>。注意此时不能进入临界区执行，因此互斥锁函数不能立即返回。此时执行 <code>_yield()</code> “自陷” (trap) 进入中断处理程序，触发调度器执行；</li>
+<li>在互斥锁释放时，如果有线程在队列中等待，直接唤醒它即可。如果没有线程在等待，把锁恢复到可用的状态。</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void mutex_lock(mutexlock_t *lk) {
+  int acquired = 0;
+  spin_lock(&lk-&gt;spinlock);
+  if (lk-&gt;locked != 0) {
+    enqueue(lk-&gt;wait_list, current);
+    current-&gt;status = BLOCKED;
+  } else {
+    lk-&gt;locked = 1;
+    acquired = 1;
+  }
+  spin_unlock(&lk-&gt;spinlock);
+  if (!acquired) _yield(); // 主动切换到其他线程执行
+}
+
+void mutex_unlock(mutexlock_t *lk) {
+  spin_lock(&lk-&gt;spinlock);
+  if (!empty(lk-&gt;wait_list)) {
+    struct task_t *task = dequeue(lk-&gt;wait_list);
+    task-&gt;status = RUNNABLE; // 唤醒之前睡眠的线程
+  } else {
+    lk-&gt;locked = 0;
+  }
+  spin_unlock(&lk-&gt;spinlock);
+}</code></pre>
+
+
+<p>理解这些算法时，我们不妨再次使用我们反复提到的工具：</p>
+<blockquote>
+<p>把线程想象成人、把共享内存想象成物理世界。</p>
+</blockquote>
+<p>在上述互斥锁的实现中个，如果 lock 调用失败，我们干脆不要自旋了，而是把自己加到一个等待的队列里，等到有人释放锁的时候再唤醒，这就好像是我们的lock/unlock 不再直接粗暴地去 “硬抢” (spin) 这把锁的使用权，而是类似于游泳馆那样的管理方法，现在先假设游泳池同一时间只能容纳一个人。每当同学 (线程) 试图获得锁 (试图进入游泳池) 时，都问管理员 (操作系统) 要手环。此时和管理员交谈的过程由一把自旋锁保护，防止其他同学强势插入打断。如果管理员 (操作系统) 此时有一个手环，就直接把手环给同学 (设置 <code>locked = 1</code>)，并且允许他进入游泳池 (<code>mutex_lock</code> 返回)。否则，线程就需要在管理员处排队 (然后线程睡眠，你可以理解成在队伍里专心致志地玩手机)，直到上一个同学出游泳馆 (<code>mutex_unlock</code>) 的时候把手环交换给管理员，戳一戳在队首的线程 (唤醒它)，队首的同学 (线程) 获得锁。此时如果没有排队的同学，管理员会把手环放到柜子里。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/locker.jpg" width="300px"></img></p>
+<p><span class="center">获得手环，在游泳馆更衣室的同学。互斥锁保证了其他同学不能进入更衣室 (误</span></p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">实现互斥锁</h4>
+<p>沿着这个思路，你不难写出允许中断的互斥锁了。大家会在操作系统实验 (L2) 中再次面对这个问题，因此我们也不解释得更详细了。</p>
+</div></div></div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

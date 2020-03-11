@@ -1,0 +1,635 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>并发数据结构</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">并发数据结构</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>我们已经学习了操作系统上的互斥。</p>
+<p>我们编写的第一个并发程序是 kalloc/kfree</p>
+</blockquote>
+<ul>
+<li>数据结构 (链表)</li>
+<li>并发数据结构 (并发链表)</li>
+<li>并发数据结构设计：用户空间的 malloc/free</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">数据结构 (链表)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">数据结构</h2>
+<blockquote>
+<p>Abstract Data Type (ADT): A mathematical model for data types, where a data type is defined by its behavior semantics from the point of view of a <em>user</em> of the data, specifically in terms of possible values, possible operations on data of this type, and the behavior of these operations.</p>
+<ul>
+<li>ADT 是接口 (描述数据结构上操作的行为)</li>
+<li>ADT 用某个具体的数据结构实现</li>
+</ul>
+</blockquote>
+<hr></hr>
+<p>学过的数据结构</p>
+<ul>
+<li>Array, vector, linked list, (balanced) binary search tree, interval tree, hash table, skip list, ...</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">怎样衡量数据结构的 “好坏”？</h2>
+<p>时间/空间复杂性：没有 “绝对好” 的数据结构</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/big-o-cheatsheet.png" width="900px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">链表：今天的主角</h2>
+<p>(面试题) 实现双向链表操作</p>
+<ul>
+<li>为什么讲链表？——操作系统中非常常用</li>
+</ul>
+<pre class="codehilite"><code class="language-c">typedef struct node {
+  void *ptr;
+  struct node *prev, *next;
+} node_t;
+
+node_t head; // 注意不是指针
+
+void list_init(node_t *head) {
+  head-&gt;prev = head-&gt;next = head;
+}
+
+void list_insert_before(node_t *node, node_t *new) { TODO(); }
+void list_insert_after (node_t *node, node_t *new) { TODO(); }
+void list_remove(node_t *node) { TODO(); }</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1">编程建议 (1): 试试白板 (纸)</h2>
+<p>白板面试：数据结构、算法……</p>
+<ul>
+<li>Phone interview: 在 Google Docs 中写出 bug-free 的代码 (x1)</li>
+<li>Onsite interview: 在白板上写出 bug-free 的代码 (x3)</li>
+<li>在白板上编程必须<span class="red">时刻保持头脑清醒</span><ul>
+<li>时刻理解代码全局和局部的 specification 和实现的途径</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/google-interview.jpg" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2">编程建议 (2): 不言自明、不言自证</h2>
+<pre class="codehilite"><code class="language-c">void list_remove(node_t *node) {
+  // 中文搜索关键字 “双向链表 删除” 第一个回答
+  node-&gt;prev-&gt;next = node-&gt;next;
+  node-&gt;next-&gt;prev = node-&gt;prev;
+}
+
+// -------------------- v.s. --------------------
+
+static inline void list_check(node_t *node) {
+  assert(node == node-&gt;prev-&gt;next); // circular list's offer
+  assert(node == node-&gt;next-&gt;prev);
+}
+
+void list_remove(node_t *node) {
+  node_t *prev = node-&gt;prev;
+  node_t *next = node-&gt;next;
+  assert(prev != next // defensive
+      && node != prev
+      && node != next); // more checks than necessary
+                        // may find bugs in other parts of the system
+  prev-&gt;next = next;
+  next-&gt;prev = prev; // possibly prev == next
+  list_check(prev); list_check(next);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="list-head-from-linux-kernel">List Head (from Linux Kernel)</h2>
+<p><span class="red">嵌入在其他对象 (数据结构)</span> 中的双向循环链表</p>
+<pre class="codehilite"><code class="language-c">struct list_head {
+  struct list_head *next, *prev;
+};</code></pre>
+
+
+<ul>
+<li>插入/删除操作同之前的链表</li>
+<li>思考题：<span class="green">有什么好处？</span></li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/list_head.png" width="500px/"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="list-head">List Head: 嵌入式链表</h2>
+<p>解决了一个对象在多个列表里的问题</p>
+<ul>
+<li>操作系统管理以 “对象” 为单位<ul>
+<li>进程、线程、设备、文件、……</li>
+</ul>
+</li>
+</ul>
+<pre class="codehilite"><code class="language-c">struct task {
+  struct list_head wait_queue; // for mutex
+  struct list_head task_list;  // for procfs
+};</code></pre>
+<div class="fragment">
+<hr></hr>
+<p>内存友好</p>
+<ul>
+<li>“跟着对象走” 减少分配内存的次数 (可能减少内存碎片)</li>
+<li>局部性友好：访问对象里的链表 → 大概率会访问对象里的数据</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="list-head">List Head: 使用</h2>
+<pre class="codehilite"><code class="language-c">struct task {
+  ...
+  struct list_head wait_queue;
+  ...
+};</code></pre>
+
+
+<p>从 <code>struct list_head</code> 到 <code>struct task</code>:</p>
+<pre class="codehilite"><code class="language-c">#define list_entry(ptr, type, member) \
+  ((type *) \
+    ( (char *)(ptr) - (uintptr_t)(&((type *)0)-&gt;member) ) \
+  )
+
+// ptr to struct list_head
+struct task *task = list_entry(ptr, struct task, wait_queue);</code></pre></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h2 id="_1">并发数据结构 (并发链表)</h2></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">并发数据结构</h2>
+<p>允许多个线程 (在不同处理器上) 并发访问数据结构</p>
+<ul>
+<li>数据结构的操作满足可串行化 (serializability)<ul>
+<li>并发访问的<span class="red">结果</span>和某个顺序执行等价</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>巨大的坑：本学期不涉及……</p>
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/taomp.jpg" width="300px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="concurrent-data-structures-made-easy">Concurrent Data Structures Made Easy</h2>
+<p>互斥锁 (自旋锁) 能够帮助我们串行化对数据结构的并发访问</p>
+<ul>
+<li><span class="red">使并发数据结构的所有访问被串行化</span> (不再并发)</li>
+</ul>
+<blockquote>
+<p>Many operating systems utilized a single lock when first transitioningto multiprocessors, including Sun OS and Linux. In the latter, this lockeven had a name, the big kernel lock (BKL).<span class="float-right">——OSTEP</span></p>
+</blockquote>
+<p><span class="center">(推荐大家使用)</span></p>
+<hr></hr>
+<p>即便这样，你们还是很容易弄错</p>
+<ul>
+<li>系统中可能有不止一种类型的锁</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void you_did_it_1() { lock(&a); lock(&a); ... }
+void you_did_it_2() { lock(&a); lock(&b); ... }
+void you_did_it_3() { lock(&b); lock(&a); ... }
+void you_did_it_4() { lock(&a); ... if (...) return; ... unlock(&a); }</code></pre>
+
+<ul>
+<li>并发 bug 时会专门介绍</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="c-raii">轻松一下: C++ RAII</h2>
+<p>RAII: Resource Acquisition Is Initialization</p>
+<ul>
+<li>非常常见的编码规范</li>
+</ul>
+<hr></hr>
+<pre class="codehilite"><code class="language-c++">class HoldLock {
+  pthread_mutex_t *mutex;
+public:
+  HoldLock(pthread_mutex_t *m): mutex(m) {
+    pthread_mutex_lock(mutex);
+  }
+  ~HoldLock() {
+    pthread_mutex_unlock(mutex);
+  }
+}
+void insert(node_t *node, node_t *cur) {
+  HoldLock lk(&list_lock);
+  ...
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="c-raii">轻松一下: C RAII</h2>
+<p>不妨让我们 hack 一下</p>
+<pre class="codehilite"><code class="language-c">#define HoldLock(lk) \
+  for (int __lock_var = (pthread_mutex_lock(lk), 0); \
+           __lock_var &lt; 1; \
+           pthread_mutex_unlock(lk), __lock_var++)
+
+void insert(node_t *node, node_t *cur) {
+  HoldLock(&list_lock) {
+    ...
+    // 此处不能调用break/return等跳出此块
+  }
+}</code></pre></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="mallocfree">malloc/free: 问题分析</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">好奇内存分配是怎么实现的？</h2>
+<p>管理空闲内存的数据结构：</p>
+<ul>
+<li><code>malloc(size)</code> - 返回一个新鲜的对象，内存地址 <code>[x, x+size)</code><ul>
+<li>无法分配时返回 <code>NULL</code></li>
+</ul>
+</li>
+<li><code>free(x)</code> - 无情地和对象 <code>[x, x+size)</code> 分手<ul>
+<li>double-free = undefined behavior</li>
+</ul>
+</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/no-object.gif" width="350px/"></img></span>
+<p><span class="center">(那就new一个吧)</span></p>
+<hr></hr>
+<p>内存分配的场景</p>
+<ul>
+<li>在 AbstractMachine 上 (L1)，你要管理一个固定大小的堆区<ul>
+<li>操作系统内核管理所有物理内存</li>
+</ul>
+</li>
+<li>在操作系统上，可以通过系统调用申请更多的内存</li>
+</ul></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="malloc">操作系统提供给 <code>malloc</code> 的机制</h2>
+<p>本质：<span class="red">分配一段指定大小的额外内存</span> (通常较大，用户进程再继续)</p>
+<ul>
+<li>古代方法 (演示：<a href="../static/wiki/os/2020/demos/brk-demo.c">brk-demo.c</a>)</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void *sbrk(intptr_t increment);</code></pre>
+
+<ul>
+<li>现代方法 (SunOS 4.0, 1989)</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void *mmap(void *addr,    // 建议的分配位置，可为 NULL
+           size_t length, // 大小
+           int port,      // 访问权限 PROT_READ | PROT_WRITE
+           int flags,     // MAP_ANONYMOUS，匿名映射 = 内存分配
+           int fd,        // 不涉及任何文件描述符；-1
+           off_t offset); // 0</code></pre>
+
+
+<hr></hr>
+<p>思考题：<span class="green">glibc 到底采用了哪种系统调用分配内存？</span></p>
+<ul>
+<li>demo: workload + strace<ul>
+<li>我们又用到 strace 了！这门课很常用！</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">数据结构：分析</h2>
+<blockquote>
+<p>不要现在就开始设计，先理解问题！</p>
+</blockquote>
+<p>我们需要维护一个<span class="red">被分配区间的集合</span></p>
+<ul>
+<li><math>[l_0, r_0) \cup [l_1, r_1) \cup \ldots \cup [l_i, r_i) \subseteq [L_0, R_0) \cup [L_1, R_1) \cup \ldots </math><ul>
+<li>互不相交：<math>l_0 < r_0 \le l_1 < r_1 \le \ldots < r_i \le l_{i+1}</math></li>
+<li><math>[L_i, R_i)</math> 是从操作系统获得的内存 (随时可以获得，通常较大)</li>
+</ul>
+</li>
+</ul>
+<p>支持的操作</p>
+<ul>
+<li>malloc: 从已有的 <math>[L_i, R_i)</math> 切出一段 <math>[l, r)</math></li>
+<li>free: 给定 <math>l_i</math>, 删除 <math>[l_i,r_i)</math><ul>
+<li>挑战 1: 怎么通过区间左端点找到右端点？？？</li>
+<li>挑战 2: 设计怎样的数据结构管理区间的集合<ul>
+<li>空闲链表, binary search tree, interval tree, ... ❌</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="mallocfree">实现高效的 malloc/free</h2>
+<blockquote>
+<p><span class="float-right">——D. E. Knuth</span>Premature optimization is the root of all evil.</p>
+</blockquote>
+<p>重要的事情说三遍：</p>
+<ul>
+<li><span class="red">脱离 workload 做优化就是耍流氓</span></li>
+<li><span class="red">脱离 workload 做优化就是耍流氓</span></li>
+<li><span class="red">脱离 workload 做优化就是耍流氓</span><ul>
+<li>在开始考虑性能之前，理解你需要考虑什么样的性能</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="mallocfree">现代 malloc/free 算法</h1>
+<p><br></br>
+<p>(忘记课本上的 free-list 吧……你们是学过数据结构的人！)</p></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="mallocfree">多处理器上 malloc/free 的需求</h2>
+<p><span class="red">并行、并行、再并行</span> (AMD Yes)</p>
+<ul>
+<li>AMD Ryzen Threadripper 3990X: 64C/128T (128 线程并行执行)</li>
+<li>AMD EPYC 7702 (双路): 128C/256T (256 线程并行执行)<ul>
+<li>所有核心同时 malloc，链表肯定成瓶颈</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><span class="red">需要应对复杂的 workloads</span></p>
+<ul>
+<li>非常频繁分配生存期极短的小对象 (几个到几十 bytes)<ul>
+<li>字符串...</li>
+</ul>
+</li>
+<li>较为频繁地分配中等大小的对象 (几百 bytes 到 几 KiB)<ul>
+<li>较大的数组、复杂的对象...</li>
+</ul>
+</li>
+<li>偶尔有极大的内存分配 (MiB 级别)</li>
+</ul>
+<p>那 workload 哪里来呢？</p>
+<ul>
+<li><a href="../static/wiki/os/2020/demos/mtrace.sh">mtrace.sh</a>; 演示: <code>gcc</code>, <code>find /</code>, <code>pstree</code>, ...<ul>
+<li>思考题：<span class="green">怎么得到 Linux Kernel 的 alloc/free 序列？</span> (RTFM/STFW)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="malloc-fast-and-slow"><code>malloc</code>, Fast and Slow</h2>
+<p>设置两套系统：</p>
+<ul>
+<li>fast path 性能极好 (快糙猛)、99% 情况下都 OK、但可能失败</li>
+<li>slow path 不在乎那么快，但把事情仔细做好<ul>
+<li>人类也是这样的系统<ul>
+<li>Daniel Kahneman. <em>Thinking, Fast and Slow</em>. Farrar, Straus and Giroux, 2011.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fast-path">分配: Fast Path</h2>
+<p>Key insight: 对象越小、分配越频繁，越可能是性能瓶颈</p>
+<ul>
+<li><span class="red">大内存分配后要使用，不太可能所有线程都挤着要分配大内存</span><ul>
+<li>在线程本地分配</li>
+<li>使用 bitmap<ul>
+<li>借助 <code>__builtin_ctzl</code> (一条指令解决 64 次 probe)</li>
+<li>可以指令级并行</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/slabs.jpg" width="300px"></img></p>
+<p>slab 分配器</p>
+<ul>
+<li>对每个常见分配大小设置的 per-thread (per-cpu) 分配缓存<ul>
+<li>因为 slab 里每个对象都一样大，object header 都省了</li>
+<li>因为 per-thread，所以只要考虑和 free 的并发<ul>
+<li>可以 lock-free 实现；也可以锁 slab (多处理器的分配依然并行)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="slow-path">分配: Slow Path</h2>
+<p>slab 分配失败：per-thread 的缓存满了</p>
+<ul>
+<li>此时执行一次大内存分配<ul>
+<li>从全局获得一个新的 slab (per-thread 的 slab 用链表连接)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>此时唯一的 slow path: 大内存分配</p>
+<ul>
+<li><span class="red">回归区间的集合</span>：此时浪费一些内存就微不足道了<ul>
+<li>因为不频繁，简单起见，上锁就好了 (有聪明的无锁/细粒度锁实现)</li>
+<li>buddy system (1963): 线段树 (单位: page)</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/interval-tree.jpg" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">释放</h2>
+<p>Slab 释放</p>
+<ul>
+<li>fast path: 设置 bitmap; 如果 slab 里还有其他对象，返回</li>
+<li>slow path: 回收 slab (链表节点删除) → buddy system 释放</li>
+</ul>
+<hr></hr>
+<p>Buddy system 释放</p>
+<ul>
+<li>上锁的数据结构操作 (done)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">小结</h2>
+<p>以上就是所有现代 malloc/free 实现的基础</p>
+<ul>
+<li><p>当然，实际情况会复杂得多，性能也是锱铢必较</p>
+<ul>
+<li><a href="https://sourceware.org/glibc/wiki/MallocInternals">glibc</a>: arena → heap → tcache (thread-local)</li>
+<li><p><a href="https://google.github.io/tcmalloc/design.html">TCMalloc</a>: thread-caching malloc</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/tcmalloc.png" width="800px"></img></p>
+</li>
+<li><p><a href="https://wiki.openjdk.java.net/display/zgc/Main">OpenJDK: ZGC</a>: region based + tlab (thread-local)</p>
+<ul>
+<li>managed memory 允许 object move，因此复杂得多……</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>链表简单也不简单</p>
+<ul>
+<li><code>ListHead</code>、写得好的链表</li>
+</ul>
+<p>抛开 workload 谈优化就是耍流氓</p>
+<ul>
+<li>用好 trace/profiler</li>
+<li>用好 trace/profiler</li>
+<li>用好 trace/profiler</li>
+</ul>
+<p>理解 workload 再设计并发数据结构</p>
+<ul>
+<li>多处理器上的互斥 (串行化) 是瓶颈</li>
+</ul>
+<hr></hr>
+<p>复习题：</p>
+<ul>
+<li>在 L1 中实现 (简化的) slab 分配<ul>
+<li>4 KiB slab + pgalloc/pgfree</li>
+<li>参考实现 ~200 行代码</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

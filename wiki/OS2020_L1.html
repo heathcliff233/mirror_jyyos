@@ -1,6 +1,475 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>500 Internal Server Error</title>
-<h1>Internal Server Error</h1>
-<p>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.</p>
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>L1: 多处理器内核上的物理内存管理 (pmm)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="l1-pmm">L1: 多处理器内核上的物理内存管理 (pmm)</h1>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<p>(讲义更新完毕。暂时 Online Judge 不能提交。我们将会在课堂上讲解内存分配的算法.)</p>
+</div></div></div>
+
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">截止日期</h4>
+<p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
+<pre class="codehilite"><code>git pull origin L1</code></pre>
+
+
+<p>Soft Deadline: 2020 年 4 月 12 日 23:59:59。</p>
+<p>需要提交以学号命名的 .pdf 格式实验报告 (保存在 <code>kernel/</code> 目录下)。除非特殊情况，实验报告<strong>不建议超过 2 页 A4 纸</strong>。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的 bug 等。</p>
+</div></div></div>
+
+<div plugin="submission(course='OS2020', module='L1')"><div class="accordion submission" id="accordionExample">
+
+  <div class="card">
+    <div class="card-header submit-card">
+      <form action="../upload.html" method="post" enctype="multipart/form-data">
+        <div class="form-row align-items-center">
+            <label class="col-form-label">OS2020-L1</label> 提交结果
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+</div></div>
+
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">热身问题：实现操作系统内核，从哪里开始？</h4>
+<p>这次我们真的来写操作系统了，有点小激动嘛！框架代码的目录名也变成了 “kernel”。在《操作系统》课程中，我们遵循的是 “一步一个脚印”，自底向上实现一个基础坚实的操作系统。因此，在内核里实现很酷的 “分时多线程” (即并发运行多个状态机) 之前，我们先做多处理器上的热身练习——物理内存管理，具体完成物理内存的分配和回收。</p>
+<p>物理内存管理是操作系统内核中最重要的基础设施之一，有了物理内存管理，很多代码的书写都变得非常容易。因此值得花一个实验的时间好好研究一下。</p>
+</div></div></div>
+
+<h2 id="1">1. 背景</h2>
+<p>在实现操作系统内核时，我们经常会需要为操作系统中新增的对象分配存储空间。在这些对象不再使用时，我们需要将它们的内存回收。我们在 M2 中调用 <code>co_start</code> 中调用 <code>malloc</code> 为协程分配寄存器现场、堆栈等资源，在 <code>co_wait</code> 时回收；打开一个文件时，需要开辟内存空间保存文件描述符的偏移量等信息。对迷你自制操作系统来说，每种类型的资源都手工分配和释放并不是个大问题，但实现内存的分配和释放能简化操作系统内核中很多地方的代码实现，因此对大家来说依然是值得的。</p>
+<p>在这个实验里，大家会亲手体验大家所熟悉的 malloc/free 应该怎样实现。在多处理器系统中，各个处理器上的代码会<strong>并发</strong>地申请或释放内存。这就给内存分配和释放带来额外的挑战：一方面，我们希望不同处理器能并行、高效地申请内存，不会因为同时申请而发生一个处理器等另一个处理器的情况，且在很短的时间内完成分配；另一方面，这又要求 malloc/free 不能简单粗暴地用一把互斥锁来保护。好准备好了？做不好也得做好了啦。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="managed-memory">Managed Memory</h4>
+<p>很多现代编程语言都运行在自动管理内存的的运行时环境上：Java, Python, Javascript, ...它们的特点是：没有 raw pointer，也没有 API 用于 “释放” 内存。当一个对象从一系列的 root objects (例如栈上的局部变量、全局变量等……) 通过引用关系不可达，它们就会自动被运行时环境回收。这真是程序员的福音——再也没有 use-after-free, double-free 等问题了，memory leak 的可能性也大大降低 (虽然依然可能会有)。</p>
+<p>当然，自动内存管理带来的问题是内存回收是个 highly non-trivial 的问题，至今仍然不能算彻底完美地解决，生产系统依然经常受到垃圾回收 (回收不可达对象) 停顿/降低性能的困扰。由于操作系统的性能至关重要，让垃圾回收占据处理器运行似乎不是个好主意……未必！</p>
+<ul>
+<li>阅读材料：Cody Cutler, M. Frans Kaashoek, and Robert T. Morris. <a href="https://www.usenix.org/conference/osdi18/presentation/cutler">The benefits and costs of writing a POSIX kernel in a high-level language</a>. In <em>Proc. of OSDI</em>, 2018. (硬核/专业人士警告)</li>
+</ul>
+</div></div></div>
+
+<h2 id="2">2. 实验描述</h2>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="1">实验要求 1：实现多处理器安全的内存分配和回收</h4>
+<p>类似于 malloc/free，在 bare-metal 上实现内存分配/回收的函数：</p>
+<pre class="codehilite"><code class="language-c">static void *kalloc(size_t size) {
+  // 内存分配
+}
+
+static void kfree(void *ptr) {
+  // 内存释放
+}</code></pre>
+
+
+</div></div></div>
+
+<p>在 AbstractMachine 启动后，<code>[_heap.start, _heap.end)</code> 都是可用的物理内存 (堆区)，kalloc/kfree 会管理这个区域的内存，类似于 malloc/free。其中：</p>
+<ul>
+<li><p>kalloc(<math class="inline-math">s</math>) 分配 <math class="inline-math">s</math> 字节的内存，返回分配内存的地址。它返回指针 <math class="inline-math">p</math>，保证：</p>
+<ul>
+<li>地址范围 <math>[p,p+s)</math> 位于堆区 (<code>_heap</code>) 中；</li>
+<li>从 kalloc 返回开始，这段内存就可以被使用。除非执行 kfree(<math class="inline-math">p</math>) 释放，否则之后 kalloc 分配的任何内存空间 <math>[p', p'+s')</math> 都不能与 <math>[p, p+s)</math> 重叠；</li>
+<li>对于大小为 <math class="inline-math">s</math> 的内存分配请求，返回的内存地址必须对齐到 <math class="inline-math">2^i</math>，其中 <math class="inline-math">i</math> 是最小的正整数满足 <math class="inline-math">2^i \ge s</math>。例如，4 KiB 的内存分配请求返回的地址必须是 4,096 的整数倍 (页面边界)。分配 17 字节内存返回的内存必须是 32 的整数倍；</li>
+<li>在你的分配算法不能找到足够的内存可以分配时，返回 <code>NULL</code> (<code>0</code>)；<ul>
+<li>受分配算法的局限，可能系统中仍然有空闲的内存，但形成了碎片的内存，或是你的算法不能找到它从而分配失败。这是允许的；但在系统内存压力很小的时候依然频繁分配失败，可能导致 hard test failure。</li>
+</ul>
+</li>
+<li>由于我们在自制的操作系统内核中使用，你可以假设内存分配大小的上限是 4 KiB，这相当大程度上简化了实现的难度，而且不会对之后操作系统内核的实现带来困扰；</li>
+<li>不必初始化返回的内存，当然，对返回内存清零也许是个不错的主意。</li>
+</ul>
+</li>
+<li><p>kfree(<math class="inline-math">p</math>) 用于回收一个过去已被分配过的内存地址 <math>[p, p+s)</math>。kfree(<math class="inline-math">p</math>) 之后 <math>[p, p+s)</math> 中的全部或部分可以被再次分配。</p>
+</li>
+<li>允许多处理器并行地调用 kalloc/kfree：<ul>
+<li>不同的处理器可能同时执行 kalloc 分配大小不同的内存；</li>
+<li>不同的处理器可能同时执行 kfree 释放内存；</li>
+<li>在一个处理器分配的内存，可能在另一个处理器上释放；但我们保证我们的测试代码中不存在数据竞争；</li>
+<li>在 kalloc/kfree 实现正确的前提下，尽可能使不同处理器上的内存分配能够并行。如果你代码的性能过低 (例如用全局的锁保护空闲链表，并用遍历链表的方式寻找可用的内存)，可能会导致 hard test failure。</li>
+</ul>
+</li>
+</ul>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="2-abstractmachine-klib">实验要求 2 (非强制完成)：实现 AbstractMachine 中 klib 中缺失的函数</h4>
+<p>在 Lab0 中，我们已经提出了这个实验要求。从现在开始，我们正式建议大家实现 klib 里缺失的函数——没有 printf, sprintf 等函数，你根本就是在用汇编语言写操作系统，你不会 survive 到最后的。</p>
+<ul>
+<li>我们不会检查大家的 klib 实现，但请大家不要抄袭——虽然互联网上有很多代码，但自己写一遍依然是掌握这些库函数原理的最好方式。</li>
+<li>学期中我们将会上线自动 Git 记录检查工具，并在我们检测到潜在的异常行为时报告。如果你的确是独立完成的，请忽略看到的警告。</li>
+</ul>
+</div></div></div>
+
+<h2 id="3">3. 正确性标准</h2>
+<h3 id="31">3.1 测试用例说明</h3>
+<p>从这个实验开始，正确性将变得非常重要——如果你的 kalloc/kfree 不正确，之后的实验可以说是难以为继了。为了帮助大家为后续的实验打下良好的基础，我们会使用来自类似于真实操作系统系统内核的 workload (多处理器) 来测试大家的程序。系统/workload 的一些假设：</p>
+<ul>
+<li>不超过 8 个处理器、不少于 64 MiB 内存的堆区；</li>
+<li>大量、频繁的小内存分配/释放；其中绝大部分不超过 128 字节；</li>
+<li>较为频繁的，以物理页面大小为单位的分配/释放 (4 KiB)；</li>
+<li>分配的内存大小不会超过 4 KiB，这帮助大家极大地简化了问题。</li>
+</ul>
+<p>我们预期你的 kalloc/kfree 具有足够的 robustness，足以承载操作系统内核的实现:</p>
+<ol>
+<li><p>Safety: 我们预期你的 kalloc/kfree 实现是正确的。一旦以下情况发生，将被立即被 Online Judge 判定为错误：</p>
+<ul>
+<li>虚拟机重启、crash、测试代码中的 assert fail 等 (通常由 undefined behavior 触发，例如数据竞争)</li>
+<li>kalloc 的返回值不满足 API 规约，例如分配的内存不位于堆区、错误的内存对齐等</li>
+<li>kalloc 返回一段尚未被 kfree 的内存</li>
+</ul>
+</li>
+<li><p>Liveness: 我们还需要系统有一定的 liveness，即系统中有充足剩余内存时，内存分配不应过于频繁的频繁失败。这是为了防止你为了 safety 进行一些 “投机取巧”：对所有 kalloc 都返回 <code>NULL</code>，safety trivially 被满足。</p>
+<ul>
+<li>liveness 并不是一个 “硬性” 的要求。在合理的 workload 上，你程序的表现只要不比一个 (实现得非常一般) 的 baseline 差太多 (你依然允许在某些你认为无法满足的 kalloc 上返回 <code>NULL</code>)，就会被判定为正确</li>
+</ul>
+</li>
+</ol>
+<p>与 L0 类似，我们会链接我们 klib 的参考实现，因此你不必担心你的 klib 有些许问题；但你要保持 klib 库函数的行为与 libc 一致。注意 native 会链接系统本地的 glibc (而非 klib)。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="hard-test">Hard Test 很难？</h4>
+<p>如果你觉得能力实在有限，未必一定要搞定所有的 test cases。例如，如果你实在感到困难，可以考虑不实现 kfree:</p>
+<pre class="codehilite"><code class="language-c">static void kfree(void *ptr) {}</code></pre>
+
+
+<p>这样 kalloc 的实现就非常简单了——简单到只需要维护一个指针即可，依然能确保有 easy tests 通过，按时提交可以获得 35% 的得分 (实现得稍稍更好一些，就可以获得更多的分数)。我们不严格禁止这样的实现，而且你会发现，如果内存充足，你之后编写的操作系统依然是可以运行的 (只是运行一段时间以后，就会 out of memory 无法再运行下去，会影响后续实验测试用例的得分)。</p>
+</div></div></div>
+
+<h3 id="32-online-judge">3.2 Online Judge 运行测试代码的方式</h3>
+<p>我们会替换 <code>framework/main.c</code> 的代码，但保持的 <code>src/</code> 目录下的文件不变。因此，你自己的测试用例 (在 <code>os_run()</code> 中) 可以不必修改。测试时，我们会改变 <code>_mpe_init</code> 的入口 (不再从 <code>os-&gt;run</code> 开始执行，而是直接运行测试的 workload)。因此你必须在 <code>os-&gt;init()</code> 中完成所有必要的初始化，例如调用 <code>pmm-&gt;init()</code>。</p>
+<p>以下是一个我们测试代码的例子，它会不断生成随机的 kalloc/kfree 请求 (你可以假设我们的生成器总是生成合法的请求，例如不会发生 double-free 等)，并且检查 kalloc/kfree 返回结果的合法性；当检测到问题后会 assert fail 退出，然后你可能会得到诸如 “Runtime Error (Exit Early)” 这样的错误信息。</p>
+<pre class="codehilite"><code class="language-c">#include &lt;common.h&gt;
+#include &lt;klib.h&gt;
+
+enum ops { OP_ALLOC = 1, OP_FREE };
+struct op {
+  enum ops type;
+  union {
+    size_t alloc_size;
+    void * free_addr;
+  };
+};
+
+void stress_test() {
+  while (1) {
+    struct op op = random_op();
+    switch (op.type) {
+      case OP_ALLOC:
+        alloc_check(pmm-&gt;alloc(op.alloc_size), op.alloc_size);
+        break;
+      case OP_FREE:
+        free(op.free_addr);
+        break;
+    }
+  }
+}
+
+int main() {
+  os-&gt;init();
+  _mpe_init(stress_test);
+}</code></pre>
+
+
+<h2 id="4">4. 实验指南</h2>
+<p>这个实验给你的完全是“白板”的代码，不包含任何测试。你必须为你自己的代码负责，自己写好测试，自己说服自己你的代码是正确的——迟早有一天大家需要脱离框架，自己写出正确的代码。</p>
+<h3 id="41">4.1 代码组织与运行</h3>
+<p>实验框架代码由三个目录组成：</p>
+<pre class="codehilite"><code class="language-text">.
+├── framework  -&gt; 框架代码；可以修改，但 Online Judge 评测时将被我们替换
+
+│   ├── kernel.h
+│   └── main.c
+├── include    -&gt; 头文件；可以自由修改/创建文件
+│   └── common.h
+├── Makefile
+└── src        -&gt; 源文件；可以自由修改/创建文件
+    ├── os.c
+    └── pmm.c</code></pre>
+
+
+<p>理解框架代码的编译，最好的办法是看 Makefile 啦。在<a href="OS2020_C2.slides.html">代码课 C2</a> 中，我们已经讲解了如何阅读 Makefile。使用 <code>make run</code> 编译运行，你将会看到一个处理器输出 Hello World：</p>
+<pre class="codehilite"><code class="language-text">$ make run ARCH=x86_64-qemu
+# Building kernel [x86_64-qemu] with AM_HOME {...}
+...
+Hello World from CPU #0</code></pre>
+
+
+<p>如果要启动多个处理器，可以为 <code>make run</code> 传递 <code>smp</code> 环境变量，例如 <code>smp=2</code> 代表启动 2 个处理器；<code>smp=4</code> 代表启动 4 个处理器：</p>
+<pre class="codehilite"><code class="language-text">$ make run ARCH=x86_64 smp=4
+...
+Hello World from CPU #1
+Hello World from CPU #2
+Hello World from CPU #3
+Hello World from CPU #0</code></pre>
+
+
+<h3 id="42">4.2 框架代码导读</h3>
+<p>框架代码很短，它的 <code>main</code> 函数首先执行 <code>os</code> 的初始化，然后启动多个处理器，每个处理器都跳转到 <code>os-&gt;run</code> 执行：</p>
+<pre class="codehilite"><code class="language-c">int main() {
+  os-&gt;init();
+  _mpe_init(os-&gt;run);
+  return 1;
+}</code></pre>
+
+
+<p><code>os</code> 是一个操作系统的 “模块”，可以看成是我们用 C 实现的面向对象编程，能增加代码的可读性。整个框架代码中唯一有些难以理解的部分就是模块的声明和定义 (<code>framework/kernel.h</code>)：</p>
+<pre class="codehilite"><code class="language-c">#define MODULE(mod) \
+  typedef struct mod_##mod##_t mod_##mod##_t; \
+  extern mod_##mod##_t *mod; \
+  struct mod_##mod##_t
+
+#define MODULE_DEF(mod) \
+  extern mod_##mod##_t __##mod##_obj; \
+  mod_##mod##_t *mod = &__##mod##_obj; \
+  mod_##mod##_t __##mod##_obj</code></pre>
+
+
+<p>我们用 <code>MODULE</code> 声明一个模块，用 <code>MODULE_DEF</code> 实际定义它。这个宏的视觉效果很差，为了阅读它，你要在大脑里清楚地知道：</p>
+<ol>
+<li>宏是字面替换，<code>MODULE(mod)</code> 中所有的 “<code>mod</code>” 都会被替换掉；</li>
+<li><code>##</code> 是 C 语言用来拼接标识符的机制，<code>sys ## tem</code> 将会得到 <code>system</code>;</li>
+<li>你可以用 <code>gcc -E</code> 查看预编译后的结果。<ul>
+<li>直接对 <code>.c</code> 文件 <code>gcc -E</code> 会导致编译错误 (例如，找不到 <code>common.h</code>)。这是因为我们编译 AbstractMachine 程序代码时，增加了很多编译选项。在代码课中，我们已经展示过 <code>make -nB</code> 可以打印编译命令；</li>
+<li><code>make -nB | grep os\.c</code> 可以快速找到 <code>os.c</code> 的编译命令；它可以直接在终端里执行；</li>
+<li>在编译命令加上 <code>-E</code>，并去掉 <code>-o</code> 选项，就可以看到预编译后的结果。</li>
+</ul>
+</li>
+</ol>
+<p>例如，<code>MODULE(os)</code> 和 <code>MODULE_DEF(os)</code> 的部分分别被宏展开成：</p>
+<pre class="codehilite"><code class="language-c">// MODULE(os) { ... };
+typedef struct mod_os_t mod_os_t;
+extern mod_os_t *os;
+struct mod_os_t {
+  void (*init)();
+  void (*run)();
+};
+
+// MODULE_DEF(os) = { ... };
+extern mod_os_t __os_obj;
+mod_os_t *os = &__os_obj;
+mod_os_t __os_obj = {
+  .init = os_init,
+  .run = os_run,
+};</code></pre>
+
+
+<ul>
+<li>如果你阅读上述代码感到障碍，你可能需要补充：(1) <code>typedef</code> 类型别名定义, (2) <code>extern</code> 关键字, (3) C11 结构体初始化的知识。另外，下划线 <code>_</code> 也可以是标识符的一部分。</li>
+</ul>
+<p>随着实验的进展，你会发现模块机制清晰地勾勒出了操作系统中各个部分以及它们之间的交互，能够帮助大家更好地理解操作系统的实现原理。</p>
+<h3 id="43">4.3 框架代码的执行</h3>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">好消息：实验做出的简化</h4>
+<p>在这个实验中，我们只启动了 AbstractMachine 中的 TRM 和 MPE，因此你不必考虑中断和多处理器同时带来的诸多麻烦 (下一个实验才开始考虑)。你不妨把每个处理器想象成一个线程。</p>
+</div></div></div>
+
+<p>我们的操作系统内核，目前只有两个函数：</p>
+<ul>
+<li><code>os-&gt;init()</code> 完成操作系统所有部分的初始化。<code>os-&gt;init()</code> 运行在系统启动后的第一个处理器上，中断处于关闭状态；此时系统中的其他处理器尚未被启动。因此在 <code>os-&gt;init</code> 的实现中，你完全不必考虑数据竞争等多处理器上的问题。</li>
+<li><code>os-&gt;run()</code> 是所有处理器的入口，在初始化完成后，框架代码调用 <code>_mpe_init(os-&gt;run)</code> 启动所有处理器执行。框架代码中，<code>os-&gt;run</code> 只是打印 Hello World 之后就开始死循环；你之后可以在 <code>os-&gt;run</code> 中添加各种测试代码。</li>
+</ul>
+<h3 id="44-kallockfree">4.4 实现 kalloc/kfree</h3>
+<p>我们的实现主要在 pmm (physical memory management) 模块：</p>
+<pre class="codehilite"><code class="language-c">MODULE(pmm) {
+  void  (*init)();
+  void *(*alloc)(size_t size);
+  void  (*free)(void *ptr);
+};</code></pre>
+
+
+<p>模块包含三个函数指针：</p>
+<ul>
+<li><code>pmm-&gt;init()</code> 初始化 pmm 模块，它应当在多处理器启动前 (<code>os-&gt;init()</code> 中) 调用。你会在这里完成数据结构、锁的初始化等；</li>
+<li><code>pmm-&gt;alloc()</code> 对应实验要求中的 kalloc；</li>
+<li><code>pmm-&gt;free()</code> 对应实验要求中的 kfree。</li>
+</ul>
+<p>框架代码中包含了 “空的” pmm 实现，它对任何内存分配的请求都返回失败，因此它满足 safety，但完全没有 liveness，仿佛堆区的大小为零：</p>
+<pre class="codehilite"><code class="language-c">static void *kalloc(size_t size) { return NULL; }
+static void kfree(void *ptr) { } 
+static void pmm_init() { } 
+MODULE_DEF(pmm) = {
+  .init  = pmm_init,
+  .alloc = kalloc,
+  .free  = kfree,
+};</code></pre>
+
+
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="static">思考题：static 函数</h4>
+<p>为什么 kalloc/kfree/pmm_init 声明成了 <code>static</code>？我把 <code>static</code> 去掉依然可以编译呀？</p>
+<p>这是一个好的编程习惯，在 C 这样缺少 module/package/namespace 机制的编程语言上有效减少意外发生。</p>
+</div></div></div>
+
+<p>我们将在讲解 “并发数据结构” 时讲解 kalloc/free 的算法和实现。你应该阅读：</p>
+<ul>
+<li>教科书第 29 章 (并发数据结构)，学习如何对数据结构进行并发控制；</li>
+<li>教科书第 17 章 (空闲空间管理)，学习如何管理物理内存；</li>
+<li>互联网上的其他资料，例如教科书第 17 章中的参考文献。</li>
+</ul>
+<h3 id="45">4.5 设计测试框架</h3>
+<p>如果不想被 Online Judge 折磨得死去活来，你应当设计一个自己的测试框架。<code>kernel</code> 目录里所有的文件都可以修改；只是我们会在 Online Judge 评测时使用我们的 <code>framework</code> 目录。这给了大家制作测试框架的自由度。</p>
+<p>在尝试各种算法的过程中，你肯定需要不同类型的测试，例如：</p>
+<ul>
+<li>针对数据结构的单元测试；</li>
+<li>最基本的 smoke test，测试单线程版本是否正确；</li>
+<li>基本的并发测试，例如多个处理器并发地分配 (但不回收)；</li>
+<li>针对回收专门设计的测试；</li>
+<li>极端情况下的压力测试 (我们会这么做！)<ul>
+<li>在多个处理器上模拟各种不同类型的内存访问模式<ul>
+<li>频繁的小内存申请；</li>
+<li>频繁的大内存申请；</li>
+<li>混合的内存申请；</li>
+<li>多处理器竞争的申请/释放……</li>
+</ul>
+</li>
+<li>你还需要有个办法验证你的 kalloc/free 是否正确<ul>
+<li>一个可行的方案是，每次分配/释放都用 printf 打印一条记录，然后再写一个小脚本解析记录，确保例如同一段内存没有被分配给两个 kalloc。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>把测试用例都混在一起执行固然可以，但我们也可以用 <code>main</code> 函数的参数，就像 amtest (<code>abstract-machine/tests/am-test.c</code>，我们希望你在测试 klib 的时候，已经运行过这个程序了) 中那样：</p>
+<pre class="codehilite"><code class="language-c">#define IOE ({ _ioe_init();  })
+#define CTE(h) ({ _Context *h(_Event, _Context *); _cte_init(h); })
+#define VME(f1, f2) ({ void *f1(size_t); void f2(void *); _vme_init(f1, f2); })
+#define MPE ({ _mpe_init(entry); })
+
+extern void (*entry)();
+
+#define CASE(id, entry_, ...) \
+  case id: { \
+    void entry_(); \
+    entry = entry_; \
+    __VA_ARGS__; \
+    entry_(); \
+    break; \
+  }
+
+int main(const char *args) {
+  switch (args[0]) {
+    CASE('h', hello);
+    CASE('i', hello_intr, IOE, CTE(simple_trap));
+    CASE('d', devscan, IOE);
+    ...
+  }
+  return 0;
+}</code></pre>
+
+
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">有用的提示</h4>
+<ol>
+<li><p>使用 native 测试</p>
+<ul>
+<li>native 比虚拟机运行得更快、更容易暴露并发的问题，还有一个实现正确的 libc——甚至这个 libc 的 printf 是满足线程安全性的，你不需要为它额外加锁。</li>
+</ul>
+</li>
+<li><p>警惕并发</p>
+<ul>
+<li>很可能你的顺序测试完全通过，但多处理器跑起来就挂了。不要慌，多加点 printf logs，慢慢诊断可能的问题。然后你可能会惊奇地发现，也许加了一个 printf，错误就不见了。此时的建议是调整 workloads、增加延迟等保证 bug 的稳定再现，然后再进行诊断。</li>
+<li>如果你希望实现各种 fancy 的算法，不妨从一把大锁保护 kalloc/free 开始。这是个不错的主意——这样你一开始就只需要关注单线程 kalloc/free 的正确性。当你需要性能的时候，再逐步把锁拆开。</li>
+</ul>
+</li>
+</ol>
+</div></div></div>
+
+<h3 id="46">4.6 性能调优</h3>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="workload">抛开 workload 谈优化，就是耍流氓</h4>
+<p><em>Premature optimization is the root of all evil.</em> —— D. E. Knuth</p>
+<p>要考虑好你优化的场景，否则一切都是空谈。</p>
+</div></div></div>
+
+<p>你需要选取适当的 workload 进行调优，并且理解你程序的性能瓶颈在哪里。这时候，靠 “猜” 和随机修改程序以获得性能提升的方式是不专业的表现。理解程序性能的最好方法是使用正确的工具：profiler。当然，这个实验对性能的要求并不高，大家体验一下即可。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

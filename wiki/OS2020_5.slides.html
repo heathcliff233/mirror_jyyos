@@ -1,0 +1,686 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>并发控制 (2)：操作系统中的互斥</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="2">并发控制 (2)：操作系统中的互斥</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>从硬件的视角，操作系统是个 C 程序 (状态机)</p>
+<ul>
+<li>它模拟了各个进程的状态机，使它们看起来并发/并行执行</li>
+</ul>
+<p>如果在操作系统上而不是进程上实现互斥，是否有什么不同？</p>
+<ul>
+<li>《操作系统》课悄悄露出了獠牙……</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>操作系统是状态机：复习</li>
+<li>操作系统中的自旋锁</li>
+<li>xv6 自旋锁实现</li>
+<li>操作系统中的互斥锁</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统是状态机</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多处理器上的线程 “操作系统”</h2>
+<p><a href="../static/wiki/os/2020/demos/thread-os.c">thread-os.c</a> 的进化版：<a href="../static/wiki/os/2020/demos/thread-os-mp.c">thread-os-mp.c</a></p>
+<ul>
+<li>每个 CPU 有自己的 <code>struct cpu_local</code><ul>
+<li>包含当前 CPU 上正在运行 task 的指针</li>
+</ul>
+</li>
+<li>每个 task<ul>
+<li>死循环：获得锁 → 打印信息 → 释放锁</li>
+</ul>
+</li>
+</ul>
+<pre class="codehilite"><code class="language-c">while (1) {
+  lock(&biglock);
+  printf("Thread-%s on CPU #%d acquired the lock\n", arg, _cpu());
+  unlock(&biglock);
+  for (int volatile i = 0; i &lt; 100000; i++) ;
+}</code></pre>
+
+<ul>
+<li>程序运行时<ul>
+<li>每个处理器独立执行、独立响应中断</li>
+<li>在中断到来时，保存寄存器现场 (的指针)，切换到下一个 task 执行<ul>
+<li>每个 task 在编号为 <code>tid % _ncpu()</code> 的 CPU 上执行</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">操作系统 = 状态机</h2>
+<p>在硬件眼里</p>
+<ul>
+<li>AbstractMachine 上的程序 (<code>thread-os-mp.c</code>) 就是一个普通的 C 程序<ul>
+<li>由指令序列组成 (编译出的 ELF 文件)</li>
+<li>和操作系统上的应用程序无异</li>
+</ul>
+</li>
+<li>AbstractMachine API = 系统调用<ul>
+<li>唯一不同之处：中断、虚拟存储 (之后讲解) 略微改变了状态机的行为</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><code>thread-os-mp.c</code>: 模拟了 5 个状态机的执行</p>
+<ul>
+<li>效果：看起来 5 个线程在多处理器上并发 (并行) 执行</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统中的自旋锁</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="v1">自旋锁 v1: 上课讲过的版本</h2>
+<pre class="codehilite"><code class="language-c">typedef struct {
+  intptr_t locked;
+} spinlock_t;
+
+void lock(spinlock_t *lk) {
+  while (_atomic_xchg(&lk-&gt;locked, 1));
+}
+
+void unlock(spinlock_t *lk) {
+  _atomic_xchg(&lk-&gt;locked, 0);
+}</code></pre>
+
+
+<p>似乎挺不错的……</p>
+<ul>
+<li><code>make run smp=4</code> 打印出了貌似正确的结果<ul>
+<li>试着把 lock/unlock 去掉，原子性被破坏，能看到 “错位”</li>
+<li><code>_putc</code> 是多处理器安全的，所以并没有毁灭性的后果<ul>
+<li>没有锁保护的 <code>printf</code> 依然是 race-free 的</li>
+<li>锁保护了多个字符打印的原子性</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug-1">Bug #1: ？？？</h2>
+<p>如果我们注释掉</p>
+<pre class="codehilite"><code class="language-c">for (int volatile i = 0; i &lt; 100000; i++) ;</code></pre>
+
+
+<p>应该不会有什么麻烦吧？</p>
+<pre class="codehilite"><code class="language-text">Thread-B on CPU #1 acquired the lock
+Thread-B on CPU #1 acquired the lock
+Thread-B on CPU #1 acquired the lock
+...</code></pre>
+
+
+<ul>
+<li>safety 似乎没有问题</li>
+<li>liveness 似乎也有 (有线程在获得锁)</li>
+<li>fairness 出了很大的问题：一段时间上几乎总是同一个线程获得锁<ul>
+<li>出现奇怪的问题：并发编程的常态</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug-1">Bug #1: 分析</h2>
+<p>“操作系统是状态机”</p>
+<ul>
+<li>把它想象成是进程中的多个线程，过度简化了问题</li>
+<li><span class="red">中断在暗中观察……</span><ul>
+<li>对于持有锁的处理器，中断大概率出现在 <code>printf</code> 中<ul>
+<li>此时 <code>locked == 1</code> (打印的线程持有锁)</li>
+<li>切换到另一个线程自旋</li>
+<li>处理器中的其他线程也在自旋 (<code>locked == 1</code>)</li>
+<li>绕了一圈，还是回到自己……</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug-1">Bug #1: 修复</h2>
+<blockquote>
+<p>获得自旋锁的线程 (处理器) 不应被中断，否则将会导致大量其他线程 CPU 浪费在自旋上</p>
+<ul>
+<li>关闭中断后，处理器上的执行流完全确定<ul>
+<li>如果只有一个处理器，自旋也不需要了</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<hr></hr>
+<p>中断的原子性/顺序</p>
+<ul>
+<li>关闭中断后，操作系统上的程序<ul>
+<li>独占处理器执行</li>
+<li>不会被打断</li>
+</ul>
+</li>
+<li><code>asm volatile</code> 汇编保证编译器不会调换指令顺序</li>
+</ul>
+<p>中断的可见性</p>
+<ul>
+<li>硬件保证中断必定发生在指令边界</li>
+<li>中断前的数据全部写入 (缓存/内存)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug-1-contd">Bug #1: 修复 (cont'd)</h2>
+<blockquote>
+<p>关中断 + 自旋</p>
+<ul>
+<li>在单处理器上，<code>spin_lock</code> 中的 <code>atomic_xchg</code> 永远成功 (假设 lock/unlock 配对)</li>
+</ul>
+</blockquote>
+<pre class="codehilite"><code class="language-c">void spin_lock(spinlock_t &lk) {
+  cli();
+  while (atomic_xchg(&lk-&gt;locked, 1)) ;
+}
+
+void spin_unlock(spinlock_t &lk) {
+  atomic_xchg(&lk-&gt;locked, 0);
+  sti();
+}</code></pre>
+
+
+<p>细节 (为什么？)</p>
+<ul>
+<li>先关中断再自旋</li>
+<li>先释放锁再开中断</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug-2">Bug #2: 中断标志位</h2>
+<p>关中断也许比大家想象得要难一些……</p>
+<pre class="codehilite"><code class="language-c">void foo() {
+  spin_lock(&lock_a);
+  spin_lock(&lock_b);
+  spin_unlock(&lock_b);
+  assert(_intr_read() == 0); // 此时中断应当关闭
+  spin_unlock(&lock_a);
+  assert(_intr_read() == 1); // 此时中断应当打开
+}</code></pre>
+
+
+<pre class="codehilite"><code class="language-c">void foo() {
+  spin_lock(&lock_a);
+  spin_lock(&lock_b);
+  spin_unlock(&lock_b);
+  spin_unlock(&lock_a);
+}
+
+void on_interrupt(_Event *ev, _Context *ctx) {
+  assert(_intr_read() == 0);
+  foo();
+  assert(_intr_read() == 0); // 此时中断应该关闭
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug-2">Bug #2: 修复</h2>
+<p>正确的实现</p>
+<ul>
+<li>在线程第一次 lock 时保存中断状态 (<code>FL_IF</code> in <code>%rflags</code>)、关闭中断<ul>
+<li>此后线程独占 CPU 执行，将不会被切换</li>
+</ul>
+</li>
+<li>在线程最后一次 unlock 时恢复保存的中断状态<ul>
+<li>lock -> <code>pushf</code></li>
+<li>unlock -> <code>popf</code></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>flags 栈应该保存在何处？</p>
+<ul>
+<li>保存在锁里 (<code>struct spinlock_t</code>)？</li>
+<li>保存在线程 (<code>struct task</code>) 里？</li>
+<li>保存在 CPU (<code>struct cpu_local</code>) 里？</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug-3-reentrance">Bug #3: 重入 (Reentrance)</h2>
+<blockquote>
+<p>A standard joke is that a bug can be turned into a feature simply by documenting it (then theoretically no one can complain about it because it’s in the manual), or even by simply declaring it to be good. “That’s not a bug, that’s a feature!” is a common catchphrase.</p>
+</blockquote>
+<pre class="codehilite"><code class="language-c">// It's not a bug, it's a feature!
+lock(&lk);
+lock(&lk);
+printf(...);
+unlock(&lk);
+unlock(&lk);</code></pre>
+
+
+<p><span class="center">(Leave it as a feature!)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">操作系统中的自旋锁：小结</h2>
+<blockquote>
+<p>关中断 + 自旋；用来保护一段较短的临界区</p>
+<ul>
+<li>持有锁期间，线程 (处理器) 不能被中断</li>
+<li>其他等待锁的线程 (处理器) 在关中断的前提下自旋<ul>
+<li><span class="red">“无法等待、必须立即执行否则不能继续” 的场景</span></li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/cpu-joke.jpg.png" width="300px"></img>
+应用</p>
+<ul>
+<li>在少量步数之内结束的并发数据结构操作<ul>
+<li>操作执行不成功，系统剩余部分无法继续运行</li>
+<li>拥堵严重的资源：一核享用，九核围观<ul>
+<li>S. Boyd-Wickizer, et al. An analysis of Linux scalability to many cores. In <em>Proc. of OSDI</em>, 2010.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="xv6">xv6 自旋锁实现</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="xv6">xv6: 世界上最好的教学入门操作系统</h2>
+<blockquote>
+<p>Xv6 is a teaching operating system developed in the summer of 2006 for MIT's operating systems course, 6.828: Operating System Engineering. In 2019, we ported xv6 to RISC-V for a new undergraduate class 6.S081.</p>
+<p>作者: Russ Cox, Frans Kaashoek, Robert Morris</p>
+</blockquote>
+<p>课堂讲解 <a href="https://github.com/mit-pdos/xv6-public">x86 版本</a></p>
+<ul>
+<li>大家更熟悉的指令集</li>
+<li>更容易获得的工具链</li>
+<li>让大家知道什么是<span class="red">真正的专业人士</span><ul>
+<li>每个细节都处理得非常好、值得我们学习</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="xv6-spinlock">xv6 spinlock 实现讲解</h2>
+<p><a href="../static/wiki/os/2020/demos/spinlock-xv6.c">spinlock-xv6.c</a></p>
+<ul>
+<li>per-cpu 数据<ul>
+<li><code>ncli</code> (number of <code>cli</code>s) - 关中断计数</li>
+<li><code>intena</code> (interrupt enabled) - 首次关中断时的 <code>%eflags & FL_IF</code></li>
+</ul>
+</li>
+<li>per-lock 数据<ul>
+<li><code>locked</code> - 锁变量</li>
+<li><code>name</code>, <code>cpu</code>, <code>pcs</code> - 调试信息</li>
+</ul>
+</li>
+</ul>
+<pre class="codehilite"><code class="language-c">struct spinlock {
+  uint locked;       // Is the lock held?
+
+  // For debugging:
+  char *name;        // Name of lock.
+  struct cpu *cpu;   // The cpu holding the lock.
+  uint pcs[10];      // The call stack (an array of program counters)
+                     // that locked the lock.
+};</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="xv6-spinlock">xv6 spinlock: 调试功能</h2>
+<p><span class="red">随处可见的 specification 检查</span> (防御性编程)</p>
+<ul>
+<li>acquire<ul>
+<li>禁止重入: <code>panic_on(holding(lk), "acquire");</code></li>
+</ul>
+</li>
+<li>release<ul>
+<li>必须由持有者释放: <code>panic_on(!holding(lk), "release");</code></li>
+</ul>
+</li>
+<li>popcli<ul>
+<li>持有锁期间中断处于关闭状态: <code>panic_on(readeflags()&FL_IF, "popcli - interruptible");</code></li>
+<li>配对: <code>panic_on(--mycpu()-&gt;ncli &lt; 0, "popcli");</code></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>记录 call stack (提供调试信息)</p>
+<ul>
+<li><code>getcallerpcs(&lk, lk-&gt;pcs);</code><ul>
+<li>代码讲解</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="xv6">调试 xv6</h2>
+<p><code>make qemu-gdb</code></p>
+<ul>
+<li>提供了丰富的基础设施 (<code>.gdbinit</code> 等)</li>
+<li>xv6 的几乎一切都在 Makefile 中</li>
+</ul>
+<hr></hr>
+<p>调试的一些小技巧</p>
+<ul>
+<li>(重要) 没有技巧：<a href="https://sourceware.org/gdb/onlinedocs/gdb/Thread-Stops.html">RTFM</a></li>
+<li><code>set scheduler-locking on</code> 可以使其他处理器 (线程) 不要干扰<ul>
+<li>prevents other threads from preempting the current thread while you are stepping</li>
+</ul>
+</li>
+<li>扩展 gdb: 更好地打印调试信息<ul>
+<li>xv6 提供了 “gdbutil”; 还有 Python API!</li>
+<li>例子：<code>printlock</code></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统中的互斥锁</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">操作系统中的长临界区</h2>
+<blockquote>
+<p>有时候，我们只是有互斥的需求，并不在意等待/被打断</p>
+<ul>
+<li>既不必要也不能使用关中断 + 自旋 (长临界区)<ul>
+<li>自旋锁用于 “无法等待、必须立即执行否则不能继续” 的场景</li>
+<li>获得锁的处理器中断丢失、使其他处理器空转/中断丢失……</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<pre class="codehilite"><code class="language-c">void disk_read(int fd, char *buf, size_t size) {
+  // 系统中只有一个磁盘，因此需要互斥
+  spin_lock(&disk_lock);
+  // 问题 1: 临界区执行时间可能很长
+  send_disk_request();
+  wait_for_interrupt(); // 问题 2: 中断根本无法到达处理器
+  copy_data();
+  spin_unlock(&disk_lock);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">操作系统中的长临界区 (cont'd)</h2>
+<p>互斥锁：需求分析</p>
+<ul>
+<li>持有锁的线程<ul>
+<li>允许处理器响应中断</li>
+<li>允许切换到其他线程执行 <ul>
+<li>访问磁盘的线程不能阻碍系统其他部分执行</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>等待锁的线程<ul>
+<li>不要占用处理器资源自旋</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">一个可行的方法</h2>
+<blockquote>
+<p>Simply yield!</p>
+</blockquote>
+<pre class="codehilite"><code class="language-c">void mutex_lock(spinlock_t *lk) {
+  while (atomic_xchg(&lk-&gt;locked, 1)) {
+    // 在 atomic_xchg 执行的时候，已经有人得到了锁
+    // 因为是长临界区，所以预期要等很久
+    let_another_thread_to_execute(); // 不如让其他线程执行
+    // _yield() on AbstractMachine;
+  }
+}</code></pre>
+
+<ul>
+<li>思考题：此时不关中断是否有问题？</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">一个小优化</h2>
+<blockquote>
+<p>如果等待锁的线程非常非常多，我们需要 “空转一轮” 才能让真正需要运行的线程执行。</p>
+<ul>
+<li>能否干脆暂停这个线程，等有人解锁以后再被调度执行？</li>
+</ul>
+</blockquote>
+<p>线程调度由操作系统控制</p>
+<ul>
+<li>哪个线程可以在哪个 CPU 上执行……</li>
+<li><code>thread-os-mp.c</code>:<ul>
+<li>如果线程在 “yield” 状态，且锁处于占用状态，就不调度该线程</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">不止是小优化！</h2>
+<p>给线程设置状态：<code>BLOCKED</code>: 在等待某个锁；<code>RUNNABLE</code>: 可被调度运行</p>
+<pre class="codehilite"><code class="language-c">void mutex_lock(mutexlock_t *lk) {
+  int acquired = 0;
+  spin_lock(&lk-&gt;spinlock);
+  if (lk-&gt;locked != 0) {
+    enqueue(lk-&gt;wait_list, current);
+    current-&gt;status = BLOCKED;
+  } else {
+    lk-&gt;locked = 1;
+    acquired = 1;
+  }
+  spin_unlock(&lk-&gt;spinlock);
+  if (!acquired) yield(); // 主动切换到其他线程执行
+}
+
+void mutex_unlock(mutexlock_t *lk) {
+  spin_lock(&lk-&gt;spinlock);
+  if (!empty(lk-&gt;wait_list)) {
+    struct task_t *task = dequeue(lk-&gt;wait_list);
+    task-&gt;status = RUNNABLE; // 唤醒之前睡眠的线程
+  } else {
+    lk-&gt;locked = 0;
+  }
+  spin_unlock(&lk-&gt;spinlock);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="l2">直观解释 (在 L2 中实现)</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/locker.jpg" width="300px"></img></p>
+<p>类似于游泳馆的更衣室，增加一个 “管理员”，管理等待进入游泳池的队列</p>
+<ul>
+<li>管理员 (操作系统代码) 有一个手环<ul>
+<li>之后我们将看到不止一个手环的设计</li>
+</ul>
+</li>
+<li>先到的人 (线程)<ul>
+<li>和管理员交谈 (通过自旋锁防止他人打断)<ul>
+<li>成功获得手环</li>
+</ul>
+</li>
+<li>获得手环后进入游泳馆 (线程可被调度执行)</li>
+</ul>
+</li>
+<li>后到的人<ul>
+<li>和管理员交谈 (通过自旋锁防止他人打断)<ul>
+<li>不能进入游泳馆，排队等待 (线程进入队列，不被调度执行)</li>
+</ul>
+</li>
+<li>有人出游泳馆 (解锁) 时交还手环给管理员 (操作系统代码)<ul>
+<li>管理员交给排队的人进入游泳馆</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>操作系统 = 硬件上的 C 程序 = 状态机</p>
+<ul>
+<li>中断赋予了操作系统模拟多个状态机的能力</li>
+</ul>
+<p>操作系统中的互斥</p>
+<ul>
+<li>自旋锁 (spin lock): 关中断 + 自旋</li>
+<li>互斥锁 (mutex lock): 操作系统作为排队系统的 “管理者”</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>用 gdb 调试 xv6 的 spinlock</li>
+<li>阅读 xv6 的 TRICKS 文档，确保你理解 xv6 锁实现的细节</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
