@@ -136,8 +136,7 @@ static inline void list_check(node_t *node) {
 void list_remove(node_t *node) {
   node_t *prev = node-&gt;prev;
   node_t *next = node-&gt;next;
-  assert(prev != next // defensive
-      && node != prev
+  assert(node != prev   // defensive
       && node != next); // more checks than necessary
                         // may find bugs in other parts of the system
   prev-&gt;next = next;
@@ -176,7 +175,7 @@ void list_remove(node_t *node) {
 <hr></hr>
 <p>内存友好</p>
 <ul>
-<li>“跟着对象走” 减少分配内存的次数 (可能减少内存碎片)</li>
+<li>“跟着对象走” 减少分配内存的次数和大小 (可能减少内存碎片)</li>
 <li>局部性友好：访问对象里的链表 → 大概率会访问对象里的数据</li>
 </ul>
 </div></div></div>
@@ -225,7 +224,7 @@ struct task *task = list_entry(ptr, struct task, wait_queue);</code></pre></div>
 <li><span class="red">使并发数据结构的所有访问被串行化</span> (不再并发)</li>
 </ul>
 <blockquote>
-<p>Many operating systems utilized a single lock when first transitioningto multiprocessors, including Sun OS and Linux. In the latter, this lockeven had a name, the big kernel lock (BKL).<span class="float-right">——OSTEP</span></p>
+<p>Many operating systems utilized a single lock when first transitioning to multiprocessors, including Sun OS and Linux. In the latter, this lock even had a name, the big kernel lock (BKL).<span class="float-right">——OSTEP</span></p>
 </blockquote>
 <p><span class="center">(推荐大家使用)</span></p>
 <hr></hr>
@@ -383,9 +382,7 @@ void insert(node_t *node, node_t *cur) {
 
 <section>
 <section>
-<div class="slide-container"><div class="center middle"><h1 id="mallocfree">现代 malloc/free 算法</h1>
-<p><br></br>
-<p>(忘记课本上的 free-list 吧……你们是学过数据结构的人！)</p></p></div></div>
+<div class="slide-container"><div class="center middle"><h1 id="mallocfree">现代 malloc/free 算法</h1></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="mallocfree">多处理器上 malloc/free 的需求</h2>
@@ -438,9 +435,12 @@ void insert(node_t *node, node_t *cur) {
 <ul>
 <li><span class="red">大内存分配后要使用，不太可能所有线程都挤着要分配大内存</span><ul>
 <li>在线程本地分配</li>
-<li>使用 bitmap<ul>
-<li>借助 <code>__builtin_ctzl</code> (一条指令解决 64 次 probe)</li>
-<li>可以指令级并行</li>
+<li>使用简单的数据结构：链表/bitmap<ul>
+<li>链表：借助原子操作</li>
+<li>bitmap: 借助 <code>__builtin_ctzl</code><ul>
+<li>一条指令解决 64 次 probe、享受指令级并行</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -448,7 +448,7 @@ void insert(node_t *node, node_t *cur) {
 </ul>
 <hr></hr>
 <p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/slabs.jpg" width="300px"></img></p>
-<p>slab 分配器</p>
+<p>Slab 分配器 (segregated list)</p>
 <ul>
 <li>对每个常见分配大小设置的 per-thread (per-cpu) 分配缓存<ul>
 <li>因为 slab 里每个对象都一样大，object header 都省了</li>

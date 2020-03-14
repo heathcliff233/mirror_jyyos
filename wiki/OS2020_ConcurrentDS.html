@@ -1,0 +1,252 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>并发数据结构</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">并发数据结构</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a> 第 29 章。课后练习：</p>
+<ul>
+<li>设计合理的 fast/slow path，使用 CPU-local 缓存 + 全局页面分配完成 <a href="OS2020_L1.html">L1 (pmm)</a> 实验</li>
+</ul>
+<p>如果你对实际系统的 malloc/free 有兴趣，可以阅读参考资料：</p>
+<ul>
+<li><a href="https://www.geeksforgeeks.org/operating-system-allocating-kernel-memory-buddy-system-slab-system/">buddy 和 slab</a>;</li>
+<li><a href="https://google.github.io/tcmalloc/">TCMalloc: Thread-Caching Malloc</a>;</li>
+<li><a href="https://sourceware.org/glibc/wiki/MallocInternals">malloc Internals</a>;</li>
+<li><a href="https://www.oracle.com/webfolder/technetwork/tutorials/obe/java/G1GettingStarted/index.html">OpenJDK G1 Garbage Collector</a>。</li>
+</ul>
+</div></div></div>
+
+<p>当我们谈数据结构的时候，其实分成两个部分：</p>
+<ul>
+<li>抽象数据类型 (ADT)，即我们使用数据结构时调用的接口，例如一个整数的集合，支持 <code>insert(x)</code>, <code>delete(x)</code> 和 <code>rank(x)</code> 返回集合中小于等于 <code>x</code> 的元素个数。</li>
+<li>数据存储和操作的实现，例如数据存储在内存中的 layout、操作实现的方法等。</li>
+</ul>
+<p>我们已经学过很多经典的抽象数据类型：栈、队列、集合……；也学习过很多它们的高效实现：数组、链表、红黑树、Fibonacci 堆……，我们不妨就混称为数据结构。我们在描述它们的时候，都使用类似于单处理器计算机执行指令的伪代码；并且我们在分析数据结构的性能时，通常也采用关键的操作数量 (例如比较、赋值等) 衡量它的时间复杂度、用使用的内存大小衡量空间复杂度。</p>
+<h2 id="_2">可串行化的并发数据结构</h2>
+<p>如果我们的多线程并发程序 (操作系统上的多线程程序或者操作系统内核中的线程) 希望访问数据结构，会怎么样呢？通过内存实现的数据结构中的一个操作通常涉及多次内存的访问——大家一定回想起 Peterson 算法在现代多处理器系统上的正确性，立即明白实现功能正确的并发数据结构是很困难的事情。</p>
+<p>就连定义什么是 “正确” 的并发数据结构也并不显然。在这里，我们希望并发数据结构满足 “可串行化” (serializability)，即并发数据结构的一次并发执行上观察到的执行结果 (数据结构在每个线程上执行的操作和操作的返回结果) 能够和某一个顺序程序上对的数据结构的操作等价。可串行化并不是并发数据结构正确的唯一标准——在对性能要求更高的领域 (主要是分布式系统)，甚至可能会允许不可串行化的数据结构。</p>
+<p>做一个好的并发数据结构 (哪怕是个 “简单” 的数据结构) 都不是一件 trivial 的事情，例如<a href="https://www.cs.princeton.edu/~mfreed/docs/cuckoo-eurosys14.pdf">这篇文章</a>里，连硬件的支持都用上了。很酷是不是？因此在直到你对这个问题有了更深入的认识之前，遵循教科书上的建议，用简单的锁来保护你的数据结构：</p>
+<blockquote>
+<p>Many operating systems utilized a single lock when first transitioning to multiprocessors, including Sun OS and Linux. In the latter, this lock even had a name, the big kernel lock (BKL).</p>
+</blockquote>
+<p>实现可串行化的最简单方式就是把所有的访问真正地串行化——记得我们的自旋锁/互斥锁保证了临界区的原子性、顺序、可见性。</p>
+<pre class="codehilite"><code class="language-c">void set_insert(Set *s, int x) {
+  spin_lock(&s-&gt;lock);
+  __set_insert(s, x);
+  spin_unlock(&s-&gt;lock);
+}
+void set_remove(Set *s, int x) {
+  spin_lock(&s-&gt;lock);
+  __set_remove(s, x);
+  spin_unlock(&s-&gt;lock);
+}</code></pre>
+
+
+<p>在大部分时候，这样的处理都是安全且有效的——只要这个数据结构没有被非常频繁地访问。请大家阅读教课书第 29 章 “locked data structures”。</p>
+<h2 id="mallocfree">实现高性能的 malloc/free</h2>
+<p>如果多个处理器上的线程对数据结构的访问非常频繁，此时再使用锁，就会导致 “一核出力，他人围观” 的情况。提高多处理器上并发数据结构性能的关键之一是减少在锁上拥塞 (contention) 的时间——如果宝贵的时间都花在了 spin 上却没有实质的进展，那就是白白浪费了多处理器的计算力了。更糟糕的是，设计不当的算法甚至有可能让 cache line 在处理器之间来回“弹跳”，导致多处理器下的性能甚至低于单处理器。</p>
+<p>在这里，我们介绍如何分析基于系统调用实现 malloc/free 的问题，设计合理的并发数据结构实现它们。malloc/free 大家是 libc 标准库的一部分：</p>
+<pre class="codehilite"><code class="language-c">void *malloc(size_t size);
+void free(void *ptr);</code></pre>
+
+
+<p>请大家阅读手册，温习一下其中的重要细节。</p>
+<h3 id="mallocfree_1">malloc/free: 空闲的内存从哪里来？</h3>
+<p>巧妇难为无米之炊。想要实现 malloc 分配内存，我们必须得要能得到一定数量 “空闲” 的内存才行。内存的分配和释放利用底层系统提供的机制 (通常能够用来分配很大的内存)，实现各种大小、类型对象的分配和释放。具体而言，操作系统为我们提供了 brk 和 mmap 两个系统调用，可以用来申请连续的内存。因为系统调用有一定的开销，因此我们通常一次性问操作系统请求较大的内存，而在进程本地进行中小内存的分配。而在计算机硬件 (我们的实验) 上，操作系统可以直接访问物理内存，因此操作系统直接管理系统中可用的物理内存。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="libc-malloc">思考题：libc 里的 malloc 是怎样使用系统调用的？</h4>
+<p>如果你想知道 libc 里的 malloc/free 是如何使用系统调用的，你可以写一些典型的 workloads:</p>
+<ul>
+<li>大量分配大内存</li>
+<li>大量分配小内存</li>
+<li>混合内存分配</li>
+<li>分配大量内存后全部回收</li>
+<li>……</li>
+</ul>
+<p>编译运行后，使用 strace 工具查看系统调用的序列。如此，你就可以在一定程度上 “逆向工程” 出 libc 分配内存的一些基本策略。在《操作系统》课上动手实践，玩一玩实际的操作系统能增进大家对操作系统的理解。</p>
+</div></div></div>
+
+<h3 id="mallocfree_2">malloc/free: 并发数据结构</h3>
+<p>在一定的抽象层面上对需求进行分析有助于我们更好地理解问题。其实，malloc/free 的本质就是维护一个并发数据结构。一方面，我们能从操作系统 (计算机硬件) 上分配得到较大的内存空间——一段连续、可用的内存，可以看成区间的集合</p>
+<p><span class="center"> <math>M = [L_0, R_0) \cup [L_1, R_1) \cup \ldots \cup [L_m, R_m)</math> </span></p>
+<p>同时，已被分配的内存也可以看成是区间的集合：</p>
+<p><span class="center"> <math>A = [l_0, r_0) \cup [l_1, r_1) \cup \ldots \cup [l_n, r_n) \subseteq M</math> </span></p>
+<p>所谓 malloc(<math class="inline-math">s</math>) 就是给定大小 <math>s</math> 从 <math class="inline-math"> M\setminus A</math> 中找到一个区间 <math>[l, r)</math> 满足 <math>r - l \ge s</math>，更新</p>
+<p><span class="center"> <math>A' = A \cup [l, r) </math> </span></p>
+<p>在找不到时，我们一方面可以向操作系统申请 <math class="inline-math">M</math> 中的内存，也可以返回分配失败；而 free 就是给定一个区间的左端点 <math class="inline-math">l_i</math>，将分配的内存回收：</p>
+<p><span class="center"> <math>A' = A \setminus [l_i, r_i)</math>。</span></p>
+<p>这样看起来 “复杂” 的问题一下就变得干净了。你立即就能反映出一些可能的算法，例如，空闲的空间 <math>M \setminus A</math> 也可以写成是区间的集合；我们可以用链表把这些空闲的区间 (链表的指针可以直接位于区间中) 链接起来 (相当于用链表维护 <math>M \setminus A</math> 中的区间)，分配时遍历链表，找到某个空间不少于 <math class="inline-math">s</math> 的区间，然后更新链表。</p>
+<h3 id="mallocfree_3">malloc/free 的性能</h3>
+<p>基于链表的 malloc/free 能否满足应用程序对内存分配各方面的需求呢？</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="workload">抛开 workload 谈优化就是耍流氓</h4>
+<p>对于同一个集合数据结构来说，99% 读 1% 写；1% 读 99% 写，这两种情况下的算法设计能一样吗？不同的应用场景很可能有不同的需求——甚至有时候总是一个线程写，很多线程读。如果希望调优程序的性能，一定要先了解 workloads。</p>
+<p>这也是为什么很多研究都需要<a href="https://en.wikipedia.org/wiki/Benchmark_(computing)">基准程序</a>，它们代表了各种典型应用场景下的 workloads。“不服跑个分” 对吧？</p>
+</div></div></div>
+
+<p>那怎么从程序的运行或者基准程序得到workloads呢？课堂上我们给了一个很短的脚本，它把程序的 stdout 丢弃，并且把 ltrace 的输出从 stderr 重定向到 stdout。</p>
+<pre class="codehilite"><code class="language-bash">#!/bin/bash
+
+trace() {
+  # ltrace outputs to stderr, so discard stdout
+  # -f: trace threads/sub-processes
+  # -e 'malloc+free-@libc.so*': only trace malloc/free
+  ltrace -f -e 'malloc+free-@libc.so*' $@ &gt; /dev/null
+}
+
+trace $@ 2&gt;&1 # move stderr to stdout</code></pre>
+
+
+<p>它能够输出一个程序 (包含它内部的多个线程) 调用 glibc 中 malloc/free 的序列。你可以观察一下很多 workload 重的应用，它们是如何使用内存的。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="trace-mallocfree">思考题：trace malloc/free够吗？</h4>
+<p>不止一个库函数可能会分配内存，例如 <code>strdup</code>, <code>asprintf</code>... 如何监控所有的内存分配？</p>
+</div></div></div>
+
+<h3 id="_3">并发数据结构设计</h3>
+<p>在理解了 workload 以后，我们可以整理出 malloc/free 的主要矛盾：</p>
+<ul>
+<li>尽量让线程能互不影响地独立分配，否则分配频繁的程序会遇到瓶颈——今天我们已经能买到有 128, 256 甚至更多线程的处理器。</li>
+<li>大内存/小内存的分配频率通常是很不相同的，应当分开考虑。分配一段相对较大的内存，势必需要使用一段时间才能 “回本”，只分配不使用不是典型的应用场景。这也注定了大内存的分配频率会远远小于小内存。</li>
+<li>根据具体情况具体分析——在 C 应用程序、内核、JVM 三个典型的场景里，workloads 又有细微的区别：C 程序的分配不太规律，要避免内存的浪费和碎片；内核中固定大小内存的分配相对比较频繁；JVM 有大量的内存分配，但绝大部分生存周期很短。</li>
+</ul>
+<p>在 malloc/free 算法的设计上，我们使用了计算机系统中常见的一种技术：区分 fast/slow paths。在之前的课程中，我们学习到典型的有 fast/slow path 的系统是计算机硬件中的 memory hierarchy: 基于内存访问的局部性，cache hit 占绝大部分情况，因此处理器可以快速地获得内存里的数据，只在 cache miss 时才去内存取数据。在计算机硬件中，branch prediction, speculative execution 也都是这样的例子。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="thinking-fast-and-slow">Thinking: Fast and Slow</h4>
+<p>有趣的是，人类也是这样的系统：我们有一套快速简单的反应系统能高效地处理日常事务：吃饭、睡觉等简单事务的处理似乎 “并不经过大脑”。与此同时，在我们面临复杂决策、做数学题的时候，又有一套耗能更高、逻辑更严密的推理系统，只有我们觉得问题没法简单解决时，才会调用这套系统。</p>
+<p>当然了，大家在编程的时候最好不要使用 “不经大脑” 的系统——虽然根据我们的经验，很多同学会处于模糊的 “无脑编程” 状态，随便写一些代码，然后再胡乱调试。正确的方式是一边编写，一遍试图理解每一行代码的行为和每一块代码的 specifications——这几乎总是需要大脑的 slow system。</p>
+</div></div></div>
+
+<p>我们试图把内存分配问题分成两种情况：</p>
+<ol>
+<li>(fast/common path) 直接从线程本地立即得到内存，几乎不涉及复杂的同步或锁的争抢。因此 fast path 可以很快执行完成，但有一定的概率失败。</li>
+<li>(slow/uncommon path) 在 fast path 失败时，允许我们付出额外的代价 “纠正” 之前的失败。只要一次纠正的代价均摊到 fast path 上比较小 (哪怕使用全局的锁)，整个系统的性能就依然很高。</li>
+</ol>
+<p>例如，我们不妨把可用的内存分成一个一个的 “页面” (page)，设定一个较为可观的大小，例如 8 KiB, 32 KiB 等。每个线程都拥有一个用于分配的页面；于是，当 malloc 发生时：</p>
+<ol>
+<li><p>(fast path) 首先试图在线程自己拥有的 page 当中进行分配，分配时不妨为这个 page 上锁 (因为可能有来自其他线程并发的 free；系统允许在一个线程分配的内存在另一个线程回收)。虽然上了锁，但不同的线程的 page 是不同的，因此线程依然可以并行地分配内存。</p>
+<ul>
+<li>相对应的 free 时，获得对象对应页面的锁后回收——如果 page 的分配保证对齐到 page 边界，我们可以直接使用 <code>ptr & (PAGESIZE - 1)</code> 获得页面的首地址。</li>
+<li>这里有一个小技巧，我们可以活用 C 语言提供的特性，定义结构体管理页面。这会使你写出更干净清爽的 L1 代码：<pre class="codehilite"><code class="language-c">typedef union page {
+  struct {
+    spinlock_t lock; // 锁，用于串行化分配和并发的 free
+    int obj_cnt;     // 页面中已分配的对象数，减少到 0 时回收页面
+    list_head list;  // 属于同一个线程的页面的链表
+    ...
+  }; // 匿名结构体
+  uint8_t header[HDR_SIZE], data[PAGE_SIZE - HDR_SIZE];
+} __attribute__((packed)) page_t;</code></pre>
+
+
+</li>
+</ul>
+</li>
+<li><p>(slow path 1) 当 fast path 失败时，我们使用全局的锁分配一个新的页面，并在新的页面中分配内存——此时分配总是会成功。当然，分配新的页面意味着线程将会 “拥有” 不止一个 pages。我们可以用合理的数据结构把这些页面维护起来，例如链表。</p>
+</li>
+<li>(slow path 2) 当申请巨大的内存 (例如一个或多个页面大小的内存) 时，我们同样持有全局的锁进行分配。因为大内存的分配总是意味着这些分配的内存需要 “使用”，所以全局的锁在实际中预期应该不会成为严重的性能瓶颈。</li>
+</ol>
+<p>可以说，所有现代的 malloc/free 算法都是基于上述的 fast/slow path 设计的。例如在 <a href="https://google.github.io/tcmalloc/">TCMalloc</a> 中，每个 thread (现在更先进的实现是每个 cpu) 有 88 个常见大小的分配器：</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/notes/img/per-thread-structure.png" width="430px"></img></p>
+<p>分配小内存对象时，我们的 fast path 直接找到比我们待申请对象大一些的 size-class，其中所有的空闲对象组织成单向链表，一条原子指令就能完成分配/回收。当 fast path 无法找到空闲的对象时，进入 slow path 分配一个新的 per-thread (per-cpu) page。</p>
+<p>在 slow path 中，“central free list” 实际是一个多叉的线段树 (radix tree)，能够支持快速地、以 page 为单位的内存分配。因为以 page 为单位，数据结构的开销就被很大程度地均摊了。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/notes/img/pagemap.png" width="640px"></img></p>
+<p>除此之外，TCMalloc 还为每个 class-size 都提供了一个 central free list，进一步增加并行度 (但会浪费一些空间——但在操作系统上的进程里，分配但不访问的页面只是被标记，因此实际引起的代价是低得多的)。在一个工业级的 malloc/free 中，诸如此类的细节数不胜数，例如其他增加 cache/TLB friendliness 的细节。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">为什么都是外国人、外国公司？</h4>
+<p>复杂、高效、可靠的系统很难在小作坊里生产出来，这也是为什么大家一谈及 “国产软件”、“国产芯片”、“国产操作系统”，总是联想到各种骗子公司和流产的国家项目。如果千千万万大学生学习的都是 “小作坊” 式的工作方式，指望少数几个人支撑起中国的系统硬件/软件产业，根本就是天方夜谭。</p>
+<p>现代系统设计有成熟的理论、技术、配套的现代化工具。系统《操作系统》课程作为大家的起点 (虽然我们讲解的都是简化的版本，但基本原理和思想方法和现代软件系统一致)，不再畏惧查阅手册和使用工具，也不再畏惧似乎有些困难的系统编程。</p>
+</div></div></div>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

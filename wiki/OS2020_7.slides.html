@@ -1,6 +1,639 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>500 Internal Server Error</title>
-<h1>Internal Server Error</h1>
-<p>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>并发控制 (3): 同步</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="3">并发控制 (3): 同步</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>我们已经学习了操作系统上的互斥，也学习了如何用互斥锁实现并发数据结构 (malloc/free)。</p>
+<p>互斥能满足所有要求吗？</p>
+</blockquote>
+<ul>
+<li>同步问题<ul>
+<li>生产者-消费者问题</li>
+<li>哲学家吃饭问题</li>
+</ul>
+</li>
+<li>条件变量和信号量</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">同步</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="synchronization">同步 (Synchronization)</h2>
+<p>两个或两个以上随时间变化的量在变化过程中保持一定的相对关系</p>
+<ul>
+<li>iTunes同步 (手机 vs 电脑)</li>
+<li>变速箱同步器 (合并快慢速齿轮)</li>
+<li>同步电机 (转子与磁场速度一致)</li>
+<li>同步电路 (由时钟驱动)</li>
+<li>线程同步 (在某个时间点共同达到一致的状态)</li>
+</ul>
+<hr></hr>
+<p>异步 (Asynchronous) = 不同步</p>
+<ul>
+<li>上述很多例子都有异步版本 (异步电机、异步电路、异步线程)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">并发程序中的同步</h2>
+<blockquote>
+<p>理解并发程序的方法：把线程想象成我们自己。</p>
+</blockquote>
+<p>等待某个汇合点后各自继续行动 (不确定的等待) <span class="float-right"><img src="../static/wiki/os/2019/img/ge.jpg" width="190px/"></img></span>
+<ul>
+<li>NPY：等我洗个头就出门/等我打完这局游戏就来</li>
+<li>舍友：等我写完这段代码就吃饭</li>
+<li>导师：等我出差回来就讨论这个课题</li>
+</ul>
+<hr></hr>
+<p>并发</p>
+<ul>
+<li>两个线程各自完成某件事</li>
+</ul>
+<p>互斥</p>
+<ul>
+<li>上厕所排好队，一个接一个</li>
+</ul>
+<p>同步</p>
+<ul>
+<li>在未来某个约定的时刻，两个线程的执行点互相可知</li>
+<li>通常是先到的线程等待</li>
+</ul></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">同步：更直观的解释</h2>
+<p>同步：“系统中存在一个时刻，两个线程的 <code>sync()</code> 同时返回”</p>
+<ul>
+<li>并发执行是不确定的<ul>
+<li>因此 sync 之后的操作可能有先后</li>
+</ul>
+</li>
+<li>先执行到的人需要等待</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void npy_thread() {
+  play_game(); // 打完这一把
+  sync();
+}
+
+void me_thread() {
+  make_up(); // 洗个头先
+  if (!npy_is_ready()) annoyed = 1;
+  sync();
+  if (annoyed) {
+    complain(); // ~!@*#!%@#%
+  }
+}
+
+// after sync():
+//    both make_up() and play_game() are done</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="join">同步的例子: join</h2>
+<p>这个程序正确吗？</p>
+<ul>
+<li>让我们运行 (调试) 一下吧！</li>
+</ul>
+<pre class="codehilite"><code class="language-c">int done;
+
+void workload() {
+  // workload
+  asm volatile("lock addq $1, %0" :
+               "=m"(done)); // sync(): 顺序、原子、可见
+}
+
+int main() {
+  for (int i = 0; i &lt; nworkers; i++) 
+    create(workload);
+  while (done != nworkers); // sync(): 等到所有 workers 都完成
+  printf("All done\n");
+}</code></pre></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="-">生产者-消费者问题</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="-">生产者-消费者问题</h2>
+<p>并发控制中的最经典问题，<span class="red">能解决 90% 的实际并发问题</span></p>
+<ul>
+<li>生产者 (线程) 生产资源 (一个对象)，生产时间不确定<ul>
+<li>缓冲区里没有空余的空间存放生产的对象时等待</li>
+</ul>
+</li>
+<li>消费者 (线程) 消费资源 (取走一个对象)，消费时间也不确定<ul>
+<li>缓冲区里没有对象可以消费时等待</li>
+</ul>
+</li>
+<li>如何协调它们的生产/消费？</li>
+</ul>
+<hr></hr>
+<pre class="codehilite"><code class="language-c">void consumer_thread() {
+  while (1) {
+    object_t *obj = dequeue(); // spin：队列可能没有元素
+    if (obj) consume(obj);
+  }
+}
+void producer_thread() {
+  while (1) {
+    object_t *obj = produce();
+    while (enqueue(obj) != SUCC); // spin: 队列可能空间不足
+  }
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="-">生产者-消费者：另一种表达</h2>
+<p>(更精简的表达) 有两种线程</p>
+<pre class="codehilite"><code class="language-c">void type1_thread() {
+  while (1) printf("("); // enqueue
+}
+void type2_thread() {
+  while (1) printf(")"); // dequeue
+}</code></pre>
+
+<p>在不受并发控制的前提下，任意的括号序列都是合法的</p>
+<p>但我们需要进行适当的线程同步，使打印的括号序列满足：</p>
+<ul>
+<li>一定是某个合法括号序列的前缀</li>
+<li>括号嵌套的深度不超过 <math>n</math></li>
+<li>例如 <math>n=3</math><ul>
+<li><code>((())())(((</code> 合法</li>
+<li><code>(((())))</code>, <code>(()))</code> 不合法</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">条件变量</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="conditional-variables-cv">Conditional Variables (条件变量, CV)</h2>
+<blockquote>
+<p>条件变量是最符合 “同步” 直觉含义本质的方法。</p>
+<ul>
+<li>当你不会做同步的题目的时候，就用条件变量耍流氓吧！</li>
+</ul>
+</blockquote>
+<p>非常直观的同步方法</p>
+<ul>
+<li>同步的本质：<span class="red">当某个条件满足时，线程执行，否则等待</span><ul>
+<li>洗完头后，npy 打完游戏时继续执行；否则等待</li>
+<li>左括号：深度 <math>k < n</math> 时继续；右括号：<math class="inline-math">k > 0</math> 时继续；否则等待</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>用一个对象来表示条件的满足/不满足！</p>
+<ul>
+<li>条件不满足，随时可以在这个对象上<span class="red">等待</span></li>
+<li>另一个线程发现条件满足，<span class="red">唤醒</span>一个 (或所有) 正在等待的线程</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="api">条件变量 API</h2>
+<p>对于一个条件变量 cv：</p>
+<ul>
+<li><span class="red">wait(cv)</span> 💤<ul>
+<li>进入睡眠状态，等待 cv 上的事件发生</li>
+</ul>
+</li>
+<li><span class="red">signal/notify(cv)</span> 💬 私信：走起<ul>
+<li>报告 cv 上的事件发生</li>
+<li>如果有线程正在等待 cv，则唤醒其中一个线程</li>
+</ul>
+</li>
+<li><span class="red">broadcast/notifyAll(cv)</span> 📣 所有人：走起<ul>
+<li>报告 cv 上的事件发生</li>
+<li>唤醒全部正在等待 cv 的线程</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="api-contd">条件变量 API (cont'd)</h2>
+<p>和互斥锁联合使用</p>
+<pre class="codehilite"><code class="language-c">mutex_lock(&mutex);
+
+// 任意代码 &lt;-----------+
+                    // |
+wait(&cv, &mutex);  // |
+                    // |
+// 任意代码 (包括循环) ---+
+
+mutex_unlock(&mutex);
+
+// signal 不受互斥锁的约束</code></pre>
+
+
+<ul>
+<li>wait 会立即释放锁并等待</li>
+<li>被 signal 后恢复执行，会首先试图获得 mutex</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="-">条件变量：生产者-消费者问题</h2>
+<pre class="codehilite"><code class="language-c">void producer_thread() {
+  while (1) {
+    // produce
+    mutex_lock(&mutex);
+    if (count == n) wait(&cv, &mutex); // 等待“有空闲”
+    printf("("); // push
+    count++; signal(&cv);
+    mutex_unlock(&mutex);
+  }
+}
+
+void consumer_thread() {
+  while (1) {
+    mutex_lock(&mutex);
+    if (count == 0) wait(&cv, &mutex); // 等待“有数据”
+    printf(")"); // pop
+    count--; signal(&cv);
+    mutex_unlock(&mutex);
+    // consume
+  }
+}</code></pre>
+
+
+<ul>
+<li>mutex 大幅简化了正确性的证明</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">小结：条件变量 = 万能的同步算法</h2>
+<p>一个条件变量代表一个 “条件”</p>
+<ul>
+<li>wait() 等待条件发生</li>
+<li>条件发生后 signal() 唤醒等待的线程</li>
+<li>和互斥锁联合使用</li>
+</ul>
+<hr></hr>
+<p>“耍流氓”</p>
+<ul>
+<li>条件变量不满足时 wait spin + 一旦条件可能满足，就唤醒所有等待的人</li>
+</ul>
+<pre class="codehilite"><code class="language-c">mutex_lock(&big_lock);
+while (!(cond)) {
+  wait(&cv, &big_lock);
+}
+assert(cond); // 一定为真
+// 其他需要原子性的操作
+mutex_unlock(&big_lock);</code></pre></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">信号量</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">更衣室管理</h2>
+<p>我们学过的互斥锁：只允许一个人进入更衣室</p>
+<ul>
+<li><code>in(&pool)</code> - 等待管理员给他一个手环；如果没有则排队等待</li>
+<li><code>out(&pool)</code> - 把手环还给管理员</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/locker.jpg" width="400px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">更衣室管理 (cont'd)</h2>
+<p>完全没有必要限制手环的数量——让更多同学可以进入更衣室</p>
+<ul>
+<li>管理员可以持有任意数量的手环 (更衣室容量上限)</li>
+<li>先进入更衣室的同学先得到</li>
+<li>后进入更衣室的同学需要等待</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/pool-2.jpg" width="450px"></img></p>
+<p><span class="center">(有内味了)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">更衣室管理 (cont'd)</h2>
+<p><span class="float-right"><img src="../static/wiki/os/2019/img/doraemon.gif" width="300px/"></img> </span>
+<p>做一点扩展——线程可以任意 “变出” 一个手环</p>
+<ul>
+<li>把手环看成是令牌</li>
+<li>得到令牌的可以进入执行</li>
+<li>可以随时创建令牌</li>
+</ul>
+<hr></hr>
+<p>“手环” = “令牌” = “一个资源” = “信号量” (semaphore)</p>
+<ul>
+<li>P(&sem) - prolaag = try + decrease; wait; down; in<ul>
+<li>等待一个手环后返回</li>
+<li>如果此时管理员手上有空闲的手环，立即返回</li>
+</ul>
+</li>
+<li>V(&sem) - verhoog = increase; post; up; out<ul>
+<li>变出一个手环，送给管理员</li>
+</ul>
+</li>
+</ul></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="e-w-dijkstra">信号量 (E. W. Dijkstra)</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/semaphore-small.jpg" width="400px"></img></p>
+<p>信号量 = 互斥锁和条件变量的结合体</p>
+<ul>
+<li>互斥锁<ul>
+<li>仅有一个手环的情况</li>
+<li>P = lock; V = unlock</li>
+</ul>
+</li>
+<li>条件变量<ul>
+<li>手环的数量作为等待的条件</li>
+<li>P = wait; V = signal<ul>
+<li>因为计数器的存在，不会发生 signal “丢失”</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="-">信号量：实现生产者-消费者</h2>
+<p>信号量设计的重点</p>
+<ul>
+<li>考虑 “手环” (每一单位的 “<span class="red">资源</span>” 是什么)</li>
+<li>谁创造？谁获取？</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void producer() {
+  P(&empty);   // P()返回 -&gt; 得到手环
+  printf("("); // 假设线程安全
+  V(&fill);
+}
+
+void consumer() {
+  P(&fill);
+  printf(")");
+  V(&empty);
+}</code></pre>
+
+
+<ul>
+<li>不要被这种简单的假象骗了！<ul>
+<li>信号量好用，但没有那么好用！！</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">哲学家吃饭问题</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="e-w-dijkstra-1960">哲学家吃饭问题 (E. W. Dijkstra, 1960)</h2>
+<p>哲学家 (线程) 有时思考，有时吃饭</p>
+<ul>
+<li>吃饭需要同时得到左手和右手的叉子</li>
+<li>当叉子被其他人占有时，必须等待，如何完成同步？<ul>
+<li>如何用信号量实现？</li>
+</ul>
+</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/dining-philosophers.jpg" width="400px/"></img></span>
+<p><span class="center">E. W. Dijkstra 一定是哲 ♂ 学爱好者，给问题起名都这么哲学</span></p></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">忘了信号量，让我们来耍流氓吧！</h2>
+<pre class="codehilite"><code class="language-c">#define cond (empty[lhs] && empty[rhs])
+
+void philosopher(int id) {
+  int lhs = (id - 1 + n) % n, rhs = (id + 1) % n;
+  mutex_lock(&mutex);
+  while (!cond) {
+    wait(&cv, &mutex);
+  }
+  assert(cond);
+  empty[lhs] = empty[rhs] = 0;
+  mutex_unlock(&mutex);
+
+  __philosopher_eat();
+
+  mutex_lock(&mutex);
+  emtpy[lhs] = empty[rhs] = 1;
+  broadcast(&cv); // (耍流氓) 对所有人喊：叉子放回去啦，快看看吧！
+  mutex_unlock(&mutex);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">忘了信号量，让一个人集中管理叉子吧！</h2>
+<p>“Master/Slave”</p>
+<ul>
+<li>分布式系统中非常常见的解决思路 (HDFS, ...)</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void philosopher(int id) {
+  send_request(id, EAT);
+  P(allowed[id]); // 直到manager允许我吃了才开始
+
+  __philosopher_eat();
+
+  send_request(id, DONE);
+}
+
+void manager() {
+  while (1) {
+    (id, status) = receive_request();
+    if (status == EAT) { ... }
+    if (status == DONE) { ... }
+  }
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">忘了那些复杂的同步算法吧</h2>
+<blockquote>
+<p>你可能会觉得，管叉子的人是性能瓶颈</p>
+<ul>
+<li>一大桌人吃饭，每个人都叫服务员的感觉</li>
+</ul>
+</blockquote>
+<hr></hr>
+<p><span class="red">抛开 workload 谈优化就是耍流氓</span></p>
+<ul>
+<li>eat (实际的 workload) 时间可能远大于请求 (几个内存操作) 时间</li>
+<li>如果一个 manager 搞不定，可以分多个<ul>
+<li>把系统设计好，使集中管理不成为瓶颈</li>
+<li>M. Brooker, et al. <a href="https://www.usenix.org/conference/nsdi20/presentation/brooker">Millions of tiny databases</a>, In <em>Proc. of NSDI</em>, 2020.<ul>
+<li>看 Amazon 是怎么通过拆分管理数百万个配置数据库的！</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>同步：让线程在某件事发生时汇聚在同一个点</p>
+<ul>
+<li>典型问题：join, 生产者/消费者, 哲学家吃饭问题</li>
+<li>实现方法：条件变量、信号量、master/slave</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>用条件变量/信号量实现 <code>threads.h</code> 中的 <code>join</code></li>
+<li>去年的期中考试题<ul>
+<li>系统中有四种进程，分别打印 <code>[</code>, <code>(</code>, <code>]</code>, <code>)</code></li>
+<li>使用条件变量同步，满足<ul>
+<li>输出的序列一定是某个合法括号序列的前缀</li>
+<li>括号嵌套的深度不超过 <math class="inline-math">k</math></li>
+<li>不能出现中括号嵌套在小括号里的情况<ul>
+<li>允许：<code>[[(())()()]()]</code>; 不允许：<code>([])</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>碰上复杂的同步，当然是用条件变量了……</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
