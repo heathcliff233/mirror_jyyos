@@ -224,7 +224,7 @@ void type2_thread() {
 <blockquote>
 <p>条件变量是最符合 “同步” 直觉含义本质的方法。</p>
 <ul>
-<li>当你不会做同步的题目的时候，就用条件变量耍流氓吧！</li>
+<li>当你不会做同步的题目的时候，就用条件变量耍赖吧！</li>
 </ul>
 </blockquote>
 <p>非常直观的同步方法</p>
@@ -321,7 +321,7 @@ void consumer_thread() {
 <li>和互斥锁联合使用</li>
 </ul>
 <hr></hr>
-<p>“耍流氓”</p>
+<p>“耍赖”</p>
 <ul>
 <li>条件变量不满足时 wait spin + 一旦条件可能满足，就唤醒所有等待的人</li>
 </ul>
@@ -340,7 +340,7 @@ mutex_unlock(&big_lock);</code></pre></div></div>
 <div class="slide-container"><div class="center middle"><h1 id="_1">信号量</h1></div></div>
 </section>
 <section>
-<div class="slide-container"><div class=""><h2 id="_1">更衣室管理</h2>
+<div class="slide-container"><div class=""><h2 id="_1">寻求更聪明的更衣室管理算法？</h2>
 <p>我们学过的互斥锁：只允许一个人进入更衣室</p>
 <ul>
 <li><code>in(&pool)</code> - 等待管理员给他一个手环；如果没有则排队等待</li>
@@ -349,7 +349,7 @@ mutex_unlock(&big_lock);</code></pre></div></div>
 <p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/locker.jpg" width="400px"></img></p></div></div>
 </section>
 <section>
-<div class="slide-container"><div class=""><h2 id="contd">更衣室管理 (cont'd)</h2>
+<div class="slide-container"><div class=""><h2 id="_1">更衣室管理</h2>
 <p>完全没有必要限制手环的数量——让更多同学可以进入更衣室</p>
 <ul>
 <li>管理员可以持有任意数量的手环 (更衣室容量上限)</li>
@@ -407,7 +407,10 @@ mutex_unlock(&big_lock);</code></pre></div></div>
 <p>信号量设计的重点</p>
 <ul>
 <li>考虑 “手环” (每一单位的 “<span class="red">资源</span>” 是什么)</li>
-<li>谁创造？谁获取？</li>
+<li>谁创造？谁获取？<ul>
+<li><a href="../static/wiki/os/2020/demos/producer-consumer.c"><code>producer-consumer.c</code></a></li>
+</ul>
+</li>
 </ul>
 <pre class="codehilite"><code class="language-c">void producer() {
   P(&empty);   // P()返回 -&gt; 得到手环
@@ -449,10 +452,10 @@ void consumer() {
 <p><span class="center">E. W. Dijkstra 一定是哲 ♂ 学爱好者，给问题起名都这么哲学</span></p></p></div></div>
 </section>
 <section>
-<div class="slide-container"><div class=""><h2 id="_1">忘了信号量，让我们来耍流氓吧！</h2>
+<div class="slide-container"><div class=""><h2 id="_1">忘了信号量，让我们来耍赖吧！</h2>
 <pre class="codehilite"><code class="language-c">#define cond (empty[lhs] && empty[rhs])
 
-void philosopher(int id) {
+void philosopher_thread(int id) {
   int lhs = (id - 1 + n) % n, rhs = (id + 1) % n;
   mutex_lock(&mutex);
   while (!cond) {
@@ -466,7 +469,7 @@ void philosopher(int id) {
 
   mutex_lock(&mutex);
   emtpy[lhs] = empty[rhs] = 1;
-  broadcast(&cv); // (耍流氓) 对所有人喊：叉子放回去啦，快看看吧！
+  broadcast(&cv); // 对所有人喊：叉子放回去啦，快看看吧！
   mutex_unlock(&mutex);
 }</code></pre></div></div>
 </section>
@@ -476,7 +479,7 @@ void philosopher(int id) {
 <ul>
 <li>分布式系统中非常常见的解决思路 (HDFS, ...)</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void philosopher(int id) {
+<pre class="codehilite"><code class="language-c">void philosopher_thread(int id) {
   send_request(id, EAT);
   P(allowed[id]); // 直到manager允许我吃了才开始
 
@@ -485,7 +488,7 @@ void philosopher(int id) {
   send_request(id, DONE);
 }
 
-void manager() {
+void waiter_thread() {
   while (1) {
     (id, status) = receive_request();
     if (status == EAT) { ... }
