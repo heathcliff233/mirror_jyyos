@@ -157,7 +157,7 @@ int pthread_cond_signal(pthread_cond_t *cond);
 <p><img alt="" class="center" src="../static/wiki/os/2019/img/dining-philosophers.jpg" width="400px"></img></p>
 <div markdown="1"><div class="fenced fenced-green"><div>
 <h4 id="_1">想试试如何解决？</h4>
-<p>为了理解哲学家吃饭问题的难处，不妨考虑以下使用互斥锁的算法，它的 safety 没有问题——必须获得两把叉子的锁才能吃饭。但这个算法的 liveness 是由问题的。为什么？提示：有奇数个哲学家。</p>
+<p>为了理解哲学家吃饭问题的难处，不妨考虑以下使用互斥锁的算法，它的 safety 没有问题——必须获得两把叉子的锁才能吃饭。但这个算法的 liveness 是由问题的。为什么？提示：所有哲学家同时拿起左手的叉子……</p>
 <pre class="codehilite"><code>// 为每一个叉子设置一把锁
 int philosopher(int id) {
   mutex_lock(&locks[lhs(id)]);

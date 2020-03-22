@@ -1,0 +1,911 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>[C3] 并发 Bugs</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="c3-bugs">[C3] 并发 Bugs</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>同步、互斥的时候我们已经讲了很多 “不对” 的案例</p>
+<ul>
+<li>哲 ♂ 学家死锁</li>
+<li>join 同步失败死循环</li>
+<li>条件变量 signal 错线程</li>
+</ul>
+<p>不要笑！犯错误的就是你们自己！</p>
+<ul>
+<li>并发 bugs 怎么办？</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>调试理论 (fault, error, failure)</li>
+<li>并发 bugs: 死锁 (AA/ABBA), 原子性违反 (ABA), (顺序违反) BA</li>
+<li>Lab1 生存指南</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">调试理论：复习</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">基本原则</h2>
+<p>在《计算机系统基础》实验中提出</p>
+<p>在《操作系统》课程中依然成立</p>
+<ol>
+<li><span class="red">机器永远是对的</span><blockquote>
+<p>(ICS) 不管是 crash 了，图形显示不正常了，还是 <code>HIT BAD TRAP</code> 了，最后都是你自己背锅</p>
+<p>(OS) 不管是卡死、异常还是虚拟机重启，都是你自己的 bug</p>
+</blockquote>
+</li>
+<li><span class="red">未测代码永远是错的</span><blockquote>
+<p>(ICS/OS) 你以为最不可能出 bug 的地方，往往 bug 就在那躺着</p>
+</blockquote>
+</li>
+</ol></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1">调试理论 (1)</h2>
+<p>程序是 “计算” (需求/规约的计算机实现) 的<span class="red">抽象</span></p>
+<ul>
+<li>CPU 实际执行 C 程序 (翻译成的指令序列)</li>
+<li>NEMU 模拟执行 C 程序 (翻译成的指令序列)</li>
+<li>操作系统：<ul>
+<li><span class="blue">管理多个寄存器现场/执行流 (C 程序) 的并发执行</span></li>
+<li><span class="blue">实现具体的系统调用</span> (open, read, mmap, ...)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>程序中的 bug 是程序与设计/意图违反之处</p>
+<ul>
+<li>debug 就是定位到程序中 bug 的过程</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="debug">为什么 Debug 那么困难？</h2>
+<p>因为 bug 的触发经历了漫长的过程</p>
+<ul>
+<li>Fault (bug) → Error (程序状态错) → Failure (可观测的结果错)<ul>
+<li>我们只能观测到 failure</li>
+<li>我们可以检查状态的正确性 (但非常费时)</li>
+<li>无法预知 bug 在哪里 (每一行 “看起来” 都挺对的)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/fault-error-failure.png" width="800px"></img></p>
+<p><span class="center">程序 = 状态机</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2">调试理论 (2)</h2>
+<blockquote>
+<p>调试理论：如果我们能判定任意程序状态的正确性，那么给定一个 failure，我们可以通过二分查找定位到<span class="red">第一个</span> error 的状态，此时的代码就是 fault (bug)。</p>
+</blockquote>
+<hr></hr>
+<p>实际中的调试</p>
+<blockquote>
+<p>状态机的执行可能很长，但我们只要标记出一些<span class="red">关键的状态</span>，就能帮我们缩小排查问题的范围</p>
+</blockquote>
+<ul>
+<li>通过<span class="red">观察程序执行的轨迹</span> (trace)</li>
+<li>缩小错误状态 (error) 可能产生的位置</li>
+<li>从而定位到 bugs<ul>
+<li>printf → 自定义 log 的 trace</li>
+<li>gdb → 指令/语句级 trace</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">调试理论给我们的启示</h2>
+<p>找到 bug 的两个关键链条</p>
+<ul>
+<li>Fault (bug) → Error (程序状态错)<ul>
+<li><span class="red">我们需要更多的测试</span>！<ul>
+<li>构造复杂的 workloads</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Error (程序状态错) → Failure (可观测的结果错)<ul>
+<li><span class="red">我们需要更多的检查</span>！<ul>
+<li>可以随时开关的各类日志信息</li>
+<li>各种防御性的 assertions</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">福利：如何调试虚拟机重启？</h2>
+<p>调试理论告诉我们：failure point 很重要</p>
+<ul>
+<li>可以追溯出一些 error states</li>
+<li>QEMU 设计者当然知道这一点<ul>
+<li><span class="red">如果我们希望有什么，那一定会有的！</span></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>RTFM: QEMU Monitor</p>
+<ul>
+<li>得到详尽的日志: <code>log int,cpu_reset,exec</code><ul>
+<li>fault → error → failure<ul>
+<li><code>int,cpu_reset</code> - 帮助我们定位 failure</li>
+<li><code>exec</code> - 帮助我们定位 error (执行流)<ul>
+<li>甚至可以开发一个小工具，“绘制” 出程序执行的路径</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">坠入并发的深渊……</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug">并发 Bug 的调试理论</h2>
+<blockquote>
+<p>在无法 “准确复现一次执行” 的基础上，“找到第一个 error 的状态” 变难了……</p>
+</blockquote>
+<p>调试理论当然成立，只要<span class="red">并发程序不是不确定的</span></p>
+<ul>
+<li>并发 bug 每次触发方式都不太一样</li>
+<li>跨线程的数据流 ……</li>
+</ul>
+<hr></hr>
+<p>Fault → error</p>
+<ul>
+<li>每次的 error 都不一样</li>
+<li>难以确定调试 “在什么时候停下来”</li>
+</ul>
+<p>Error → failure</p>
+<ul>
+<li>日志仍然能帮助我们缩小 error 发生的范围</li>
+<li>但 failure 更难理解 (错误的输出/神秘异常/神秘重启/...)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bugs">并发 Bugs 到底长什么样？</h2>
+<p>一种研究流派：实证研究 (empirical study)</p>
+<ul>
+<li>为了更好地解决并发 bugs 的问题<ul>
+<li>从现实数据集中 (随机) 选取一定比例的例子</li>
+<li>对结论进行归纳总结</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>推荐阅读：</p>
+<ul>
+<li>S. Lu, et al. <a href="https://dl.acm.org/doi/10.1145/1353535.1346323">Learning from mistakes — A comprehensive study on real world concurrency bug characteristics</a>. In <em>Proc. of ASPLOS</em>, 2008.<ul>
+<li>揭示了那些逃过了测试、流向了用户、最终被修复的 bugs 的特性</li>
+</ul>
+</li>
+<li>Z. Yin, et al. <a href="https://dl.acm.org/doi/10.1145/2025113.2025121">How do fixes become bugs? A comprehensive characteristic study on incorrect fixes in commercial and
+open source operating systems</a>. In <em>Proc. of ESEC/FSE</em>, 2011.</li>
+</ul>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="deadlock">死锁 (Deadlock)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="deadlock">死锁 (Deadlock)</h2>
+<blockquote>
+<p>A deadlock is a state in which each member of a group is waiting for another member, including itself, to take action, such as sending a message or more commonly releasing a lock.</p>
+</blockquote>
+<p>出现线程 “互相等待” 的情况 (路口空间 = 资源)</p>
+<p><span class="center"><img src="../static/wiki/os/2019/img/deadlock-car.jpg" width="500px/"></img></span>
+<blockquote>
+<p>Empirical study: 在 105 个并发 bug 中 (non-deadlock/deadlock)</p>
+<ul>
+<li>MySQL (14/9), Apache (13/4), Mozilla (41/16), OpenOffice (6/2)</li>
+</ul>
+</blockquote></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="aa-deadlock">AA-Deadlock</h2>
+<p>假设你的 spinlock 不小心发生了中断</p>
+<ul>
+<li>错误实现的 popcli</li>
+<li>不应该发生的 <code>_yield()</code></li>
+</ul>
+<pre class="codehilite"><code class="language-c">void os_run() {
+  spin_lock(&list_lock);
+  spin_lock(&xxx);
+  spin_unlock(&xxx); // ---------+
+}                          //    |
+                           //    |
+void on_interrupt() {      //    |
+  spin_lock(&list_lock);   // &lt;--+
+  spin_unlock(&list_lock);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="abba-deadlock">ABBA-Deadlock</h2>
+<pre class="codehilite"><code class="language-c">void obj_move(int i, int j) {
+  spin_lock(&lock[i]);
+  spin_lock(&lock[j]);
+  arr[i] = NULL;
+  arr[j] = arr[i];
+  spin_unlock(&lock[j]);
+  spin_unlock(&lock[i]);
+}</code></pre>
+<div class="fragment">
+<p>上锁的顺序很重要……</p>
+<ul>
+<li><code>obj_move</code> 本身看起来没有问题<ul>
+<li>问题是它有一个隐含的 lock ordering 的 requirement</li>
+<li><code>obj_move(1, 2)</code>; <code>obj_move(2, 1)</code> → 死锁</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">避免死锁</h2>
+<p>死锁产生的四个必要条件 (<a href="https://en.wikipedia.org/wiki/Edward_G._Coffman,_Jr.">Edward G. Coffman</a>, 1971):</p>
+<ul>
+<li>互斥：一个资源每次只能被一个进程使用</li>
+<li>请求与保持：一个进程请求资阻塞时，不释放已获得的资源</li>
+<li>不剥夺：进程已获得的资源不能强行剥夺</li>
+<li>循环等待：若干进程之间形成头尾相接的循环等待资源关系</li>
+</ul>
+<hr></hr>
+<blockquote>
+<p>“理解了死锁的原因，尤其是产生死锁的四个必要条件，就可以最大可能地避免、预防和解除死锁。所以，在系统设计、进程调度等方面注意如何不让这四个必要条件成立，如何确定资源的合理分配算法，避免进程永久占据系统资源。此外，也要防止进程在处于等待状态的情况下占用资源。因此，对资源的分配要给予合理的规划。”</p>
+</blockquote>
+<div class="fragment">
+<blockquote>
+<p><span class="red">Bullshit</span>.</p>
+<ul>
+<li>破坏每一个条件都是 highly non-trivial 的 (请阅读教科书)</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">避免死锁 (cont'd)</h2>
+<p>AA-Deadlock</p>
+<ul>
+<li>AA 型的死锁容易检测，及早报告，及早修复</li>
+<li><a href="../static/wiki/os/2020/demos/spinlock-xv6.c">spinlock.c</a><ul>
+<li><code>if (holding(lk)) panic();</code></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>ABBA-Deadlock</p>
+<ul>
+<li>任意时刻系统中的锁都是有限的</li>
+<li>严格按照固定的顺序获得所有锁 (lock ordering)<ul>
+<li>破坏了 “循环等待”</li>
+<li>试一试：用状态机证明 <math class="inline-math">T_1: A\to B\to C; T_2: B \to C</math> 是安全的<ul>
+<li>“在任意时刻总是有一个线程 (获得 “最靠后” 锁的) 可以继续执行”</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="lock-ordering">Lock Ordering: 应用</h2>
+<p>按照正确的顺序上锁很重要……</p>
+<pre class="codehilite"><code class="language-c">/* Lock ordering in mm:
+ * inode-&gt;i_mutex (while writing or truncating, not reading or faulting)
+ *  mm-&gt;mmap_sem
+ *   page-&gt;flags PG_locked (lock_page)
+ *    hugetlbfs_i_mmap_rwsem_key (in huge_pmd_share)
+ *     mapping-&gt;i_mmap_rwsem
+ *      anon_vma-&gt;rwsem
+ *       mm-&gt;page_table_lock or pte_lock
+ *        pgdat-&gt;lru_lock (in mark_page_accessed, isolate_lru_page)
+ *        swap_lock (in swap_duplicate, swap_info_get)
+ *         mmlist_lock (in mmput, drain_mmlist and others)
+ *         mapping-&gt;private_lock (in __set_page_dirty_buffers)
+ *          mem_cgroup_{begin,end}_page_stat (memcg-&gt;move_lock)
+ *           i_pages lock (widely used)
+ *         inode-&gt;i_lock (in set_page_dirty's __mark_inode_dirty)
+ *         bdi.wb-&gt;list_lock (in set_page_dirty's __mark_inode_dirty)
+ *          sb_lock (within inode_lock in fs/fs-writeback.c)
+ *          i_pages lock (widely used, in set_page_dirty,
+ *               in arch-dependent flush_dcache_mmap_lock,
+ *               within bdi.wb-&gt;list_lock in __sync_single_inode)
+ */</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">你大约察觉了……</h2>
+<blockquote>
+<p>Textbooks will tell you that if you always lock in the same order, you will never get this kind of deadlock. Practice will tell you that this approach doesn't scale: when I create a new lock, I don't understand enough of the kernel to figure out where in the 5000 lock hierarchy it will fit.</p>
+<p>The best locks are encapsulated: they <em>never get exposed in headers</em>, and are <em>never held around calls to non-trivial functions outside the same file</em>. You can read through this code and see that it will never deadlock, because it never tries to grab another lock while it has that one. People using your code don't even need to know you are using a lock.</p>
+<p>—— <em>Unreliable Guide To Locking</em> by Rusty Russell</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">让程序员彻底避免死锁？你想多了……</h2>
+<p>调试公理：未测代码永远是错的</p>
+<ul>
+<li>并发那么复杂，程序员哪能充分测试啊……</li>
+</ul>
+<hr></hr>
+<p><a href="OS_lockdep.html">lockdep</a>: Kernel lock validator (since 2.6.17)</p>
+<ul>
+<li>为每一个 “lock class” 检查 (分配一个 key)<ul>
+<li>每个静态锁都是一个 class：key = 地址</li>
+<li>动态分配的锁，相同 initialization site 是同一个 class</li>
+</ul>
+</li>
+<li>在运行时观察所有的 lock/unlock<ul>
+<li>lock/unlock 时记录所有可能的上锁顺序<ul>
+<li>线程先后获得 <math class="inline-math">X, Y, Z</math> 会记录 <math class="inline-math">X \to Y, X \to Z, Y \to Z</math></li>
+</ul>
+</li>
+<li>检查<ul>
+<li>是否存在 <math class="inline-math">A \to B</math> 和 <math class="inline-math">B \to A</math> (deadlock)</li>
+<li>即便死锁没有真正发生，但只要有 ABBA 的风险就会报告<ul>
+<li>predictive analysis</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">死锁：锁并不是唯一的原因</h2>
+<p>在涉及同步的时候，情况就复杂得多了……</p>
+<ul>
+<li>老总打电话给秘书：“这几天我陪你去北京玩玩，你准备一下”</li>
+<li>秘书打电话给老公：“这几天我要和老总去北京开会”</li>
+<li>老公打电话给情人：“这几天我老婆不在家，陪我”</li>
+<li>情人打电话给辅导学生：“这几天老师有事，停课”</li>
+<li>学生打电话给爷爷：“这几天不上课，爷爷你陪我玩”</li>
+<li>爷爷给秘书打电话：“北京去不了了，孙子要我陪”</li>
+<li>秘书给老公打电话：“老总突然有事不去北京开会了”</li>
+<li>老公给情人打电话：“老婆不走了，下次再说”</li>
+<li>情人给辅导学生打电话：“这几天照常上课”</li>
+<li>学生给爷爷打电话：“555 老师说这几天照常上课”</li>
+<li>爷爷给秘书打电话：还是去北京吧，你准备准备</li>
+</ul>
+<p><span class="center"><span class="red">不要笑，你们的 L2 很有可能出现这种情况</span></span></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="bug">并发 Bug：不仅是死锁</h1>
+<p><br></br>
+<p>不上锁不就没有死锁了吗？</p></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">程序员：花式犯错</h2>
+<p>回顾我们实现并发控制的工具</p>
+<ul>
+<li>互斥锁 (lock/unlock) - 原子性</li>
+<li>条件变量 (wait/signal) - 同步</li>
+</ul>
+<hr></hr>
+<p>忘记上锁——原子性违反 (Atomicity Violation, AV)</p>
+<p>忘记同步——顺序违反 (Order Violation, OV)</p>
+<hr></hr>
+<blockquote>
+<p>Empirical study: 在 105 个并发 bug 中 (non-deadlock/deadlock)</p>
+<ul>
+<li>MySQL (14/9), Apache (13/4), Mozilla (41/16), OpenOffice (6/2)</li>
+<li><span class="red">97% 的非死锁并发 bug 都是 AV 或 OV</span>。</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="av">原子性违反 (AV)</h2>
+<p>“ABA”</p>
+<ul>
+<li>我以为一段代码没啥事呢，但被人强势插入了</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/av-bug.png" width="700px/"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">原子性违反 (cont'd)</h2>
+<p>有时候上锁也不解决问题</p>
+<ul>
+<li>“TOCTTOU” - time of check to time of use</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/tocttou.png" width="640px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ov">顺序违反 (OV)</h2>
+<p>“BA”</p>
+<ul>
+<li>怎么就没按我预想的顺序来呢？<ul>
+<li>例子：concurrent use after free  </li>
+</ul>
+</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/ov-bug.png" width="700px/"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="empirical-study">Empirical Study: 到底发现了什么？</h2>
+<blockquote>
+<p>程序员：我本地都跑了几万次了，没问题啊</p>
+<ul>
+<li>一部署到生产环境里就 💥 爆炸了</li>
+</ul>
+<p>我：在本地测的好好的啊</p>
+<ul>
+<li>提交到 Online Judge 上连 easy tests 都过不了 (真实)</li>
+</ul>
+</blockquote>
+<p>Empirical study 给了我们更多有趣的发现，指导 bug 的发现/修复：</p>
+<ul>
+<li>Almost all (96%) of the examined concurrency bugs are guaranteed to manifest if certain partial order between <em>2 threads</em> is enforced. </li>
+<li>Many (66%) of the examined non-deadlock concurrency bugs’ manifestation involves concurrent accesses to <em>only one variable</em>. </li>
+<li>Almost all (97%) of the examined deadlock bugs involve <em>two threads</em> circularly waiting for at most two resources. </li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="lab-1-pmm">Lab 1 (PMM) 生存指南</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="online-judge">Online Judge 体验极差</h2>
+<blockquote>
+<p>Lab 1 有一定难度</p>
+<ul>
+<li>有一点轻微的并发 bug → Wrong Answer</li>
+<li>用一把大锁吧，性能达不到 1Mop/s 的要求 (大部分分数到手)<ul>
+<li>目前 Accept 的同学，平均提交次数达到了惊人的 33.5 次</li>
+<li>(还是学习自觉性和基础都比较好的同学)</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/L1-result.png" width="640px"></img></p>
+<p><span class="center">让调试理论来帮帮我们吧！</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fault-error">Fault → Error: 我们需要更多的测试用例！</h2>
+<blockquote>
+<p>想糊弄？糊弄不过去的。</p>
+</blockquote>
+<p>来构造 kalloc 的 workload 吧！</p>
+<pre class="codehilite"><code class="language-c">void os_run() {
+  while (1) {
+    pmm-&gt;alloc(random_size());
+    // Insufficient: pmm-&gt;alloc(32);
+  }
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="workload-kalloc">创建合理的 Workload: <code>kalloc</code></h2>
+<p>Online Judge 上的 workload:</p>
+<ul>
+<li>为每一种分配大小 <math class="inline-math">(2^{i-1} + 1) \ldots 2^{i}</math> 设置概率</li>
+<li>频繁的小内存分配、频繁的大内存分配 (4 KiB)、混合的内存分配……</li>
+</ul>
+<pre class="codehilite"><code class="language-c">struct workload {
+  int prob[N], sum; // sum = prob[0] + prob[1] + ... prob[N-1]
+                    // roll(0, sum-1) =&gt; allocation size
+};
+
+static struct workload
+  wl_typical = {.prob = {10,0,0, 40, 50, 40,30,20,10,4,2,1} },
+  wl_stress  = {.prob = { 1,0,0,400,200,100, 1, 1, 1,1,1,1} },
+  wl_page    = {.prob = {10,0,0,  1,  1,  1, 1, 1, 1,1,1,1} }
+;
+static struct workload *workload = &wl_typical;</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="workload-kfree">创建合理的 Workload: <code>kfree</code></h2>
+<blockquote>
+<p>并发的 alloc-free 是很多问题的来源。</p>
+<p>但同学们一定是懒得去测试的。<span class="float-right">—— jyy</span></p>
+</blockquote>
+<p>Online Judge: 会把分配的结果保存到一个并发数据结构中</p>
+<ul>
+<li>用 C11 <a href="https://en.cppreference.com/w/c/atomic"><code>stdatomic.h</code></a> 实现<ul>
+<li>保证合法的 kalloc/kfree 序列 (没有 double-free 或 use-after-free)</li>
+<li>但一个 CPU 的申请的内存可以在另一个 CPU free (RTFM)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>想简单一点？</p>
+<ul>
+<li>在 CPU 本地缓存本 CPU 的 allocation log (自旋锁保护)</li>
+<li>隔一段时间进行 free<ul>
+<li>获取自旋锁 “偷取” 其他线程的日志</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="workload">更多的测试用例：不仅是 Workload</h2>
+<blockquote>
+<p>基本想法: workload + 在适当的时候插入 <code>delay()</code></p>
+<ul>
+<li>这才是 Online Judge 测试的精髓<ul>
+<li>allocation-biased/free-biased/mixed</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>ABBA (deadlock), ABA (AV), BA (OV) 都可以通过这种方式触发</p>
+<ul>
+<li>如何聪明地插入 delay？<ul>
+<li>是个技术活<ul>
+<li>K. Sen. <a href="https://dl.acm.org/doi/10.1145/1375581.1375584">Race directed random testing of concurrent programs</a>. In <em>Proc. of PLDI</em>, 2008.</li>
+<li>D. Chen, et al. <a href="https://dl.acm.org/doi/10.1145/3236024.3236077">Testing multithreaded programs via thread speed control</a>. In <em>Proc. of ESEC/FSE, 2018</em>.</li>
+<li>G. Li, et al. <a href="https://dl.acm.org/doi/10.1145/3341301.3359638">Efficient scalable thread-safety-violation detection: Finding thousands of concurrency bugs during testing</a>. In <em>Proc. SOSP</em>, 2019.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="error-failure">Error → Failure: 我们需要更多的检查！</h2>
+<blockquote>
+<p>很多程序应该满足的 specification 并没有被检查</p>
+<ul>
+<li>C/C++ 为了性能考虑，就让 undefined behavior 发生<ul>
+<li>并不总是显现 “显著” 的后果</li>
+<li>给你一种程序好像没问题的错觉</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>在程序中设计各种检查 (就像 <a href="../static/wiki/os/2020/demos/spinlock-xv6.c">spinlock.c</a> 那样)</p>
+<ul>
+<li>double acquire, dangling release, 持有锁时开中断, 不配对的 unlock</li>
+</ul>
+<hr></hr>
+<p>小技巧</p>
+<ul>
+<li>统计 cpu 的 spin count<ul>
+<li>如果超过某个明显不正常的数值就报告</li>
+<li><code>getcallerpcs()</code> 记录的 PC 就有价值了<ul>
+<li>一秒诊断死锁</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="double-allocation">更多的检查: Double-Allocation</h2>
+<p>内存分配要求：假设已分配的集合 <math>S = [l_0, r_0) \cup [l_1, r_1) \cup \ldots \cup [l_n, r_n)</math></p>
+<ul>
+<li>kalloc(<math>s</math>) 返回的 <math>[l, r)</math> 满足 <math>[l, r) \cap S = \varnothing</math></li>
+<li>如果实现了 thread-local allocation + 并发的 free，其实很容易弄错</li>
+</ul>
+<pre class="codehilite"><code class="language-c">void *wl_kalloc(size_t size) {
+  u32 *arr = kalloc(size);
+  if (arr) {
+    for (int i = 0; (i + 1) * sizeof(u32) &lt;= size) {
+      panic_on(arr[i] == MAGIC, "double-allocation");
+      arr[i] = MAGIC;
+    }
+  }
+  return arr;
+}
+
+void wl_kfree(void *ptr) {
+  u32 *arr = ptr;
+  for (int i = 0; (i + 1) * sizeof(u32) &lt;= size) { // Compile Error
+    panic_on(arr[i] == 0, "double-free");
+    arr[i] = 0;
+  }
+  kfree(ptr);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="buffer-overrun">更多的检查: Buffer Overrun</h2>
+<p>Canary (金丝雀) 对一氧化碳非常敏感</p>
+<ul>
+<li>用生命预警矿井下的瓦斯泄露 (since 1911)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/canary_with_miner.jpg" width="400px"></img></p>
+<p>Canary</p>
+<ul>
+<li>“牺牲” 一些内存单元，来预警 memory bug 的发生<ul>
+<li>(程序运行时没有动物受到实质的伤害)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="canary">Canary 的例子：保护内核栈</h2>
+<pre class="codehilite"><code class="language-c">#define MAGIC 0x5a5aa5a5
+typedef u32 canary_t[N];
+
+struct kernel_stack {
+  canary_t __c1;
+  char data[4096 - sizeof(canary_t) * 2];
+  canary_t __c2;
+} __attribute__((packed));
+
+void canary_init(canary_t *c) {
+  for (int i = 0; i &lt; N; i++) (*c)[i] = MAGIC;
+}
+void canary_check(canary_t *c, const char *msg) {
+  for (int i = 0; i &lt; N; i++) panic_on((*c)[i] != MAGIC, msg);
+}
+
+void kstack_check(struct kernel_stack *stk) {
+  canary_check(&stk-&gt;__c1, "kernel stack overflow");
+  canary_check(&stk-&gt;__c2, "kernel stack underflow");
+}
+
+void kstack_init(struct kernel_stack *stk) {
+  canary_init(&stk-&gt;__c1);
+  canary_init(&stk-&gt;__c2);
+}</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">烫烫烫和屯屯屯</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/GET.jpg" width="220px"></img></p>
+<p>msvc 中 debug mode 的 guard/fence/canary (<code>MAGIC</code>)</p>
+<ul>
+<li>未初始化栈: <code>0xcccccccc</code></li>
+<li>未初始化堆: <code>0xcdcdcdcd</code></li>
+<li>对象头尾: <code>0xfdfdfdfd</code></li>
+<li>已回收内存: <code>0xdddddddd</code></li>
+</ul>
+<pre class="codehilite"><code class="language-text">python3
+&gt;&gt;&gt; (b'\xcc' * 80).decode('gb2312')
+'烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫'
+&gt;&gt;&gt; (b'\xcd' * 80).decode('gb2312')
+'屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯'</code></pre>
+
+
+<blockquote>
+<p>手持两把锟斤拷，口中疾呼烫烫烫</p>
+<p>脚踏千朵屯屯屯，笑看万物锘锘锘</p>
+<p>——不要笑啦，它们在无形中保护你！</p>
+<p>(仿佛这些曾经可怕的形象高大了许多)</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="sanitizers">更多的检查: Sanitizers</h2>
+<blockquote>
+<p>“动态程序分析”</p>
+<ul>
+<li>在程序运行时进行观测和检查</li>
+<li>适当的时候对程序行为进行调控</li>
+</ul>
+</blockquote>
+<p>常见的动态分析：检查某些 specification 是否被违反</p>
+<p><span class="float-right"><img src="../static/wiki/os/2019/img/observe.jpg" width="150px/"></img></span>
+<ul>
+<li>可以把动态分析理解成两个部分<ul>
+<li>一个部分不断地在程序运行时打印日志 <ul>
+<li>lock, unlock, memory access, ...</li>
+</ul>
+</li>
+<li>另一个部分解析日志，查看有没有什么问题<ul>
+<li>lockdep: 检查是否存在 ABBA</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>付出程序变慢的代价<ul>
+<li>但是非常值得 ← <span class="red">jyy 的主要研究方向，快来卖自己 (误</span></li>
+</ul>
+</li>
+</ul></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="sanitizers-contd">更多的检查: Sanitizers (cont'd)</h2>
+<blockquote>
+<p>前所未有的宝藏！！！</p>
+<ul>
+<li>如果你不知道、没用过 lint 和 sanitizers，根本不能算会编程。</li>
+</ul>
+</blockquote>
+<ul>
+<li><a href="https://clang.llvm.org/docs/AddressSanitizer.html">AddressSanitizer</a> (asan)<ul>
+<li>检查各种非法地址访问: buffer (heap/stack/global) overflow, use-after-free, use-after-return, double-free, memory leak (lsan)</li>
+<li>demo: <a href="../static/wiki/os/2020/demos/uaf.c">uaf.c</a>; <a href="https://www.kernel.org/doc/html/latest/dev-tools/kasan.html">kasan 现已加入 Linux 内核</a></li>
+</ul>
+</li>
+<li><a href="https://clang.llvm.org/docs/MemorySanitizer.html">MemorySanitizer</a> (msan)<ul>
+<li>检查未初始化的读取</li>
+</ul>
+</li>
+<li><a href="https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html">ThreadSanitizer</a> (tsan)<ul>
+<li>检查是否存在数据竞争 (data race)</li>
+</ul>
+</li>
+<li><a href="https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html">UBSanitizer</a> (ubsan)<ul>
+<li>检查是否存在各种看起来没问题的 undefined behavior: misaligned pointer, signed integer overflow, ...</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>三种 “错误”：fault, error, and failure</p>
+<ul>
+<li>Fault → Error: 我们需要更多的测试用例！<ul>
+<li>构造更强的 workloads</li>
+</ul>
+</li>
+<li>Error → Failure: 我们需要更多的检查！<ul>
+<li>assertions, sanitizers, ...</li>
+</ul>
+</li>
+</ul>
+<p>三种并发 bugs</p>
+<ul>
+<li>死锁 (AA/ABBA)、原子性违反 (ABA)、顺序违反 (BA)</li>
+</ul>
+<hr></hr>
+<p>复习题：</p>
+<ul>
+<li>做好 Lab1 的测试框架<ul>
+<li>虽然大家可以硬来 (xjb 改程序直到 Online Judge 通过)</li>
+<li>但总有一天大家会面对交付代码给客户的场景</li>
+</ul>
+</li>
+<li>Further reading<ul>
+<li>K. Serebryany, et al. <a href="https://www.usenix.org/conference/atc12/technical-sessions/presentation/serebryany">AddressSanitizer: A fast address sanity checker</a>. In <em>Proc. of USENIX ATC</em>, 2012.</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,6 +1,133 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>The kernel lock validator</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="the-kernel-lock-validator">The kernel lock validator</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<p>这是 LWN.net 在 2006 年 5 月发布的 lockdep 文档。更详细的文档参考 <a href="https://www.kernel.org/doc/Documentation/locking/lockdep-design.txt">kernel.org</a>。</p>
+</div></div></div>
+
+<p>Locking is a necessary evil in operating systems; without a solid locking regime, different parts of the system will collide when trying to access the same resources, leading to data corruption and general chaos. But locking has hazards of its own; carelessly implemented locking can cause system deadlocks. As a simple example, consider two locks <math class="inline-math">L_1</math> and <math class="inline-math">L_2</math>. Any code which requires both locks must take care to acquire the locks in the right order. If one function acquires <math class="inline-math">L_1</math> before <math class="inline-math">L_2</math>, but another function acquires them in the opposite order, eventually the system will find itself in a situation where each function has acquired one lock and is blocked waiting for the other - a deadlock.</p>
+<p>A race condition like the one described above may be a one-in-a-million possibility, but, with computers, it does not take too long to exercise a code path a million times. Sooner or later, a system containing this sort of bug will lock up, leaving its users wondering what is going on. To avoid this sort of situation, kernel developers try to define rules for the order in which locks should be acquired. But, in a system with many thousands of locks, defining a comprehensive set of rules is challenging at best, and enforcing them is even harder. So locking bugs creep into the kernel, lurk until some truly inconvenient time, and eventually surprise some unsuspecting user.</p>
+<p>Over time, the kernel developers have made increasing use of automated code analysis tools as those tools become available. The latest such is <a href="http://lwn.net/Articles/185605/">the first version of the lock validator patch</a>, posted by Ingo Molnar (这位也是 Complete-Fair-Scheduler 的作者). This patch (a 61-part set, actually) adds a complex infrastructure to the kernel which can then be used to prove that none of the locking patterns observed in a running system could ever deadlock the kernel.</p>
+<p>To that end, the lock validator must track real locking patterns in the kernel. There is no point, however, in tracking every individual lock - there are thousands of them, but many of them are treated in exactly the same way by the kernel. For example, every inode structure contains a spinlock, as does every file structure. Once the kernel has seen how locking is handled for one inode structure, it knows how it will be handled for every inode structure. So, somehow, the lock validator needs to be able to recognize that all spinlocks contained within (for example) the inode structure are essentially the same.</p>
+<p>To this end, every lock in the system (including rwlocks and mutexes, now) is assigned a specific key. For locks which are declared statically (for example, files_lock, which protects the list of open files), the address of the lock is used as the key. Locks which are allocated dynamically (as most locks embedded within structures are) cannot be tracked that way, however; there may be vast numbers of addresses involved, and, in any case, all locks associated with a specific structure field should be mapped to a single key. This is done by recognizing that these locks are initialized at run time, so, for example, spin_lock_init() is redefined as:</p>
+<pre class="codehilite"><code class="language-c"># define spin_lock_init(lock) \
+do { \
+  static struct lockdep_type_key __key; \
+  __spin_lock_init((lock), #lock, &__key); \
+} while (0)</code></pre>
+
+
+<p>Thus, for each lock initialization, this code creates a static variable (<code>__key</code>) and uses its address as the key identifying the type of the lock. Since any particular type of lock tends to be initialized in a single place, this trick associates the same key with every lock of the same type.</p>
+<p>Next, the validator code intercepts every locking operation and performs a number of tests:</p>
+<ul>
+<li><p>The code looks at all other locks which are already held when a new lock is taken. For all of those locks, the validator looks for a past occurrence where any of them were taken <em>after</em> the new lock. If any such are found, it indicates a violation of locking order rules, and an eventual deadlock.</p>
+</li>
+<li><p>A stack of currently-held locks is maintained, so any lock being released should be at the top of the stack; anything else means that something strange is going on.</p>
+</li>
+<li><p>Any spinlock which is acquired by a hardware interrupt handler can never be held when interrupts are enabled. Consider what happens when this rule is broken. A kernel function, running in process context, acquires a specific lock. An interrupt arrives, and the associated interrupt handler runs on the same CPU; that handler then attempts to acquire the same lock. Since the lock is unavailable, the handler will spin, waiting for the lock to become free. But the handler has preempted the only code which will ever free that lock, so it will spin forever, deadlocking that processor.</p>
+</li>
+</ul>
+<p>To catch problems of this type, the validator records two bits of information for every lock it knows about: (1) whether the lock has ever been acquired in hardware interrupt context, and (2) whether the lock is ever held by code which runs with hardware interrupts enabled. If both bits are set, the lock is being used erroneously and an error is signaled.</p>
+<ul>
+<li>Similar tests are made for software interrupts, which present the same problems.</li>
+</ul>
+<p>The interrupt tests are relatively straightforward, requiring just four bits of information for each lock (though the situation is a little more complicated for rwlocks). But the ordering tests require a bit more work. For every known lock key, the validator maintains two lists. One of them contains all locks which have ever been held when the lock of interest (call it <em>L</em>) is acquired; it thus contains the keys of all locks which might be acquired before <em>L</em>. The other list (the "after" list) holds all locks acquired while the <em>L</em> is held. These two lists thus encapsulate the proper ordering of how those other locks should be acquired relative to <em>L</em>.</p>
+<p>Whenever <em>L</em> is acquired, the validator checks whether any lock on the "after" list associated with <em>L</em> is already held. It should not find any, since all locks on the "after" list should only be acquired after acquiring <em>L</em>. Should it find a lock which should not be held, an error is signaled. The validator code also takes the "after" list of <em>L</em>, connects it with the "before" lists of the currently-held locks, and convinces itself that there are no ordering or interrupt violations anywhere within that chain. If all the tests pass, the validator updates the various "before" and "after" lists and the kernel continues on its way.</p>
+<p>Needless to say, all this checking imposes a certain amount of overhead; it is not something which one will want to enable on production kernels. It is not quite as bad as one might expect, however. As the kernel does its thing, the lock validator maintains its stack of currently-held locks. It also generates a 64-bit hash value from that series of locks. Whenever a particular combination of locks is validated, the associated hash value is stored in a table. The next time that lock sequence is encountered, the code can find the associated hash value in the table and know that the checks have already been performed. This hashing speeds the process considerably. </p>
+<p>Of course, there are plenty of exceptions to the locking rules as understood by the validator. As a result, a significant portion of the validator patch set is aimed at getting rid of false error reports. For example, the validator normally complains if more than one lock with the same key is held at the same time - doing so is asking for deadlocks. There are situations, however, where this pattern is legitimate. For example, the block subsystem will often lock a block device, then lock a partition within that device. Since the partition also looks like a block device, the validator signals an error. To keep that from happening, the validator implements the notion of lock "subtypes." In this case, locks on partition devices can be marked with a different subtype, allowing their usage to be validated properly. This marking is done by using new versions of the locking functions (spin_lock_nested(), for example) which take a subtype parameter.</p>
+<p>The lock validator was added to <a href="http://lwn.net/Articles/185572/">2.6.17-rc5-mm1</a>, so interested people can play with it. Waiting for another -mm release might not be a bad idea, however; there has since been a fairly long series of validator fixes posted.</p>
+<p>The key point behind all of this is that deadlock situations can be found without having to actually make the kernel lock up. By watching the sequences in which locks are acquired, the validator can extrapolate a much larger set of possible sequences. So, even though a particular deadlock might only happen as the result of unfortunate timing caused by a specific combination of strange hardware, a rare set of configuration options, 220V power, a slightly flaky video controller, Mars transiting through Leo, an old version of gcc, an application which severely stresses the system (yum, say), and an especially bad Darl McBride hair day, the validator has a good chance of catching it. So this code should result in a whole class of bugs being eliminated from the kernel code base; that can only be a good thing.</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

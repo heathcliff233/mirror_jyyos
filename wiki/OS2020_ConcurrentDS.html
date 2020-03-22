@@ -181,8 +181,11 @@ trace $@ 2&gt;&1 # move stderr to stdout</code></pre>
     list_head list;  // 属于同一个线程的页面的链表
     ...
   }; // 匿名结构体
-  uint8_t header[HDR_SIZE], data[PAGE_SIZE - HDR_SIZE];
-} __attribute__((packed)) page_t;</code></pre>
+  struct {
+    uint8_t header[HDR_SIZE];
+    uint8_t data[PAGE_SIZE - HDR_SIZE];
+  } __attribute__((packed));
+} page_t;</code></pre>
 
 
 </li>

@@ -331,7 +331,13 @@ while (!(cond)) {
 }
 assert(cond); // 一定为真
 // 其他需要原子性的操作
-mutex_unlock(&big_lock);</code></pre></div></div>
+mutex_unlock(&big_lock);</code></pre>
+<div class="fragment">
+<ul>
+<li>上述代码保证了 safety: wait 结束后条件一定为真</li>
+<li>如果需要 liveness，只需在任何可能条件为真时 broadcast 唤醒所有人</li>
+</ul>
+</div></div></div>
 </section>
 </section>
 
