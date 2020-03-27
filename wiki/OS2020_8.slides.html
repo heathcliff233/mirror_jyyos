@@ -1,6 +1,773 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>虚拟化：进程抽象</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">虚拟化：进程抽象</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="academic-integrity">Academic Integrity (学术诚信)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">上周的一件大事：撤回的提交</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/bbq.png" width="840px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">撤回提交：两种情况</h2>
+<p>Case 1: 误伤</p>
+<ul>
+<li>每份提交都 double-check 过，一定是存在某种异常，才会撤回</li>
+<li>因此你需要作出一个承诺 (如 M1 是独立完成的)<ul>
+<li>我们选择<span class="red">立即信任你</span> (即恢复对你提交的认可)</li>
+<li>但如果发现非独立完成的证据 (例如和往届/互联网代码的相似度)<ul>
+<li>double-fault, 严惩 (triple-fault 会导致系统重启)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>Case 2: 的确有非独立完成的部分</p>
+<ul>
+<li>删除它们<ul>
+<li>自己独立完成一遍</li>
+<li>即便你记得相当多的细节，我们也能看出你是独立完成的</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>注意保持 git 记录完整</p>
+<ul>
+<li>遇到问题及时咨询老师和助教</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="academic-integrity">Academic Integrity (学术诚信)</h2>
+<p>参考：<a href="https://integrity.mit.edu/">https://integrity.mit.edu/</a></p>
+<blockquote>
+<p>Occasionally, you may feel overwhelmed by the amount of work you need to accomplish... However, <em>no matter what level of stress you may find yourself under, MIT expects you to approach your work with honesty and integrity</em>.</p>
+</blockquote>
+<p>阅读：</p>
+<ul>
+<li><a href="https://integrity.mit.edu/handbook/writing-code">Academic integrity: writing code</a></li>
+<li>jyy 意识到：<span class="red">你们可能没有正确理解什么是学术诚信</span><ul>
+<li>什么叫 “独立完成”？</li>
+<li>为什么要独立完成？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="example-1-6031-rob-miller">Example #1 (6.031, Rob Miller)</h2>
+<ul>
+<li>Alyssa and Ben sit next to each other with their laptops while working on a problem set. They talk in general terms about different approaches to doing the problem set. They draw diagrams on the whiteboard. When Alyssa discovers a useful class in the Java library, she mentions it to Ben. When Ben finds a StackOverflow answer that helps, he sends the URL to Alyssa. <span class="green">OK</span>.</li>
+<li>As they type lines of code, they speak the code aloud to the other person, to make sure both people have the right code. <span class="red">INAPPROPRIATE</span>.</li>
+<li>In a tricky part of the problem set, Alyssa and Ben look at each other’s screens and compare them so that they can get their code right. <span class="red">INAPPROPRIATE</span>.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="example-2-6031-rob-miller">Example #2 (6.031, Rob Miller)</h2>
+<ul>
+<li>Jerry already finished the problem set, but his friend Ben is now struggling with a nasty bug. Jerry sits next to Ben, looks at his code, and helps him debug. <span class="green">OK</span>.</li>
+<li>Jerry opens his own laptop, finds his solution to the problem set, and refers to it while he’s helping Ben correct his code. <span class="red">INAPPROPRIATE</span>.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="example-3-6031-rob-miller">Example #3 (6.031, Rob Miller)</h2>
+<ul>
+<li>Louis had three problem sets and two quizzes this week, was away from campus for several days for a track meet, and then got sick. He’s already taken two slack days on the deadline and has made almost no progress on the problem set. Ben feels sorry for Louis and wants to help, so he sits down with Louis and talks with him about how to do the problem set while Louis is working on it. Ben already handed in his own solution, but he doesn’t open his own laptop to look at it while he’s helping Louis. <span class="green">OK</span>.</li>
+<li>Ben opens his laptop and reads his own code while he’s helping Louis. <span class="red">INAPPROPRIATE</span>.</li>
+<li>Ben has by now spent a couple hours with Louis, and Louis still needs help, but Ben really needs to get back to his own work. He puts his code in a Dropbox and shares it with Louis, after Louis promises only to look at it when he really has to. <span class="red">INAPPROPRIATE</span>.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="example-4-6031-rob-miller">Example #4 (6.031, Rob Miller)</h2>
+<ul>
+<li>John and Ellen both worked on their problem sets separately. They exchange their test cases with each other to check their work. <span class="red">INAPPROPRIATE</span>. Test cases are part of the material for the problem set, and part of the learning experience of the course. You are copying if you use somebody else’s test cases, even if temporarily.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="6031-rob-miller">学术诚信问题 (6.031, Rob Miller)</h2>
+<p>Note that in the examples marked inappropriate above, both people are held responsible for the violation in academic honesty. Copying work, or knowingly making work available for copying, in contravention of this policy is a <em>serious offense</em> that may incur reduced grades, failing the course, and disciplinary action. Copying, or helping somebody copy, may result in an F on your transcript that you will not be able to drop.</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="academic-integrity">Academic Integrity 看起来像是个笑话？</h2>
+<p>小手一抖，分数到手，抓抄袭对老师来说只有麻烦</p>
+<ul>
+<li>我用了很多时间看 git log、写代码、和助教一起 double-check</li>
+</ul>
+<p>更何况大部分 academic integrity violation 根本不可能被确认</p>
+<ul>
+<li>我从进大学第一天就这样了，法不责众，人人都抄我凭什么不？</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p><strong><span class="red">你们要相信这个充满问题的世界还是有希望的</span></strong></p>
+<ul>
+<li>“好” 的标准到底是什么？<ul>
+<li>为什么大家都觉得 “世界一流大学” 是笑话？<ul>
+<li>bar 低得久了，就不觉得 bar 低是问题了</li>
+<li>诚信不存在的久了，就不觉得不诚信是问题了</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><strong><span class="red">只有你们才能使这个世界更有希望</span></strong></p>
+<ul>
+<li>你们不改变、不对 “不道德” 的事情感到羞愧，这个世界就改变不了</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">如果你被 “抓住” 了？</h2>
+<p><span class="red">每次学到新的东西，你都变成了更好的人</span></p>
+<ul>
+<li><p>注意我们没有在 “惩罚” 大家</p>
+<ul>
+<li>看成是一次 “学术诚信” 的教育</li>
+<li>独立完成作业就可以得到所有分数</li>
+</ul>
+</li>
+<li><p>删除有问题的代码，再来一次就好</p>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>觉得这门课实在是太难了？</p>
+<blockquote>
+<p>如果独立完成所有前导课程的作业，你会觉得这门课非常轻松合理</p>
+<p>从更基础的内容开始学起 (C 语言)</p>
+<ul>
+<li>简单的 labs (M1, M3, M4, L0 等) 足够大家理解本课程中相当一部分重要内容，并且通过这门课程</li>
+</ul>
+<p>在 academic integrity 允许的范围内请教其他人</p>
+<ul>
+<li>讨论如何获取资料、询问应该补充什么知识、交流 high-level 的实现细节</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">学术诚信：小结</h2>
+<blockquote>
+<p>原则 1: 我们优先假设大家的 academic integrity</p>
+<ul>
+<li>除非我们有确凿证据，否则不会惩罚大家</li>
+<li>撤回只是 “可能存在潜在的问题”</li>
+</ul>
+</blockquote>
+<div></div>
+
+<blockquote>
+<p>原则 2: Be constructive, not destructive</p>
+<ul>
+<li>今天 (2020.3.23) 之前的所有提交，有抄袭的部分我们不再追究<ul>
+<li>请同学们主动删除涉及严重学术诚信违规的代码</li>
+<li>自己独立完成，保留好 git 记录</li>
+</ul>
+</li>
+<li>引导大家成为更好的人</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="btw">BTW, 好奇我们怎么抓人？</h2>
+<blockquote>
+<p>怪你们碰上一个做软件工程/程序分析的老师</p>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/needle-qr.png" width="150px"></img></p>
+<p>技术 1: 代码相似度比对</p>
+<ul>
+<li>有空就在 Online Judge 上线 2.0 版本</li>
+<li>提交时如果找到相似度过大的代码片段立即预警 </li>
+</ul>
+<p>技术 2: git trace 分析</p>
+<ul>
+<li>我们都知道的<ul>
+<li>分次粘入代码然后小改的同学，我们都 retract 了</li>
+<li>欺骗是非常不道德的行为</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>发生误伤的情况</p>
+<ul>
+<li>码力超强的同学；使用了 IDE (和/或 lint)</li>
+<li>切换过 git repo，看起来一次性提交大量代码</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>哦哦哦哦哦！从并发的苦海里脱离了。</p>
+<p>我们已经做足了准备，终于可以回到操作系统啦！！</p>
+</blockquote>
+<p>回到 “操作系统是管理程序运行的软件”</p>
+<ul>
+<li>操作系统中的进程<ul>
+<li>程序 = 状态机</li>
+<li>操作系统 = 多个状态机</li>
+</ul>
+</li>
+<li>进程管理 API<ul>
+<li>fork</li>
+<li>execve</li>
+<li>exit</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统中的进程</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">复习：应用程序</h2>
+<p>应用程序 = 代码 + 数据 (文件) = 状态机</p>
+<ul>
+<li>a.out, bash, ls, grep, ...</li>
+<li>gcc (cc1, as, collect2, ld)</li>
+<li>xedit , vscode, ...</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/osapp.jpg" width="600"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">复习：操作系统</h2>
+<p>操作系统是管理多个<span class="red">应用程序</span>执行的软件</p>
+<ul>
+<li>应用视角：一组系统调用 API</li>
+<li>硬件视角：就是个状态机 (C 程序)</li>
+</ul>
+<hr></hr>
+<p>理解 “最小” 的操作系统</p>
+<ul>
+<li><a href="../static/wiki/os/2020/demos/thread-os.c">thread-os.c</a>: 共享内存状态机的模拟</li>
+<li>如果硬件提供一些机制 (虚拟存储)<ul>
+<li>使各个 “线程” 不能访问其他线程/操作系统的内存</li>
+<li>就得到了虚拟化的 “进程”，仿佛独占 CPU 执行</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">操作系统：状态机的虚拟化</h2>
+<blockquote>
+<p>嗷！操作系统 “模拟” 了其中所有进程的状态机！</p>
+<ul>
+<li>这就是 “虚拟化”</li>
+<li>程序仿佛自己独占 CPU 执行，但它独占的只是 CPU 的一部分<ul>
+<li>还有其他部分它 “看不见”</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>进程：运行的程序</p>
+<ul>
+<li>任意时刻，进程都可以看成是状态机的状态</li>
+</ul>
+<p>操作系统在中断后，可以选择将进程 (状态机) 调度到 CPU 上执行</p>
+<ul>
+<li>进程执行系统调用，会使用指令 (syscall) 等回到操作系统</li>
+<li>“操作系统是一个中断处理程序”<ul>
+<li>被动的中断：硬件 (时钟、I/O设备、NMI, ...)</li>
+<li>主动的中断：系统调用</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">操作系统课中的三类系统调用</h2>
+<p>进程 (状态机) 管理</p>
+<ul>
+<li>fork, execve, exit - 状态机的创建/改变/删除</li>
+</ul>
+<p>存储 (地址空间) 管理</p>
+<ul>
+<li>mmap - 对进程虚拟地址空间的一部分进行映射</li>
+<li>brk - 虚拟地址空间管理 </li>
+</ul>
+<p>文件 (数据对象) 管理</p>
+<ul>
+<li>open, close - 文件访问管理</li>
+<li>read, write - 数据管理</li>
+<li>mkdir, link, unlink - 目录管理</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="fork">fork()</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">状态机管理：创建状态机</h2>
+<blockquote>
+<p>如果要创建状态机，我们应该提供什么样的 API？</p>
+<ul>
+<li>UNIX 的答案: fork<ul>
+<li>做一份状态机完整的复制 (内存、寄存器现场)</li>
+<li>一个返回子进程的 pid，子进程返回 0</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/2-fork.jpg" width="400px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-bomb">Fork Bomb</h2>
+<p>模拟状态机需要资源</p>
+<ul>
+<li>只要不停地创建进程，系统还是会挂掉的</li>
+<li>Don't try it (or try it in docker)<ul>
+<li>你们交这个到 Online Judge 是不会挂的</li>
+</ul>
+</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/fork-bomb.jpg" width="500px/"></img> </span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-bomb">代码解析: Fork Bomb</h2>
+<pre class="codehilite"><code class="language-bash">:(){:|:&};:   # 刚才的一行版本
+
+:() {         # 格式化一下
+  : | : &
+}; :
+
+fork() {      # bash: 允许冒号作为标识符……
+  fork | fork &
+}; fork</code></pre>
+
+
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/fork-bomb.png" width="300px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork">这次你们记住 Fork 了！</h2>
+<p>因为状态机是复制的，因此总能找到 “父子关系”</p>
+<ul>
+<li>因此有了进程树 (pstree)</li>
+</ul>
+<pre class="codehilite"><code class="language-text">systemd(1)─┬─ModemManager(924)─┬─{ModemManager}(992)
+           │                   └─{ModemManager}(1026)
+           ├─NetworkManager(1008)─┬─{NetworkManager}(1252)
+           │                      └─{NetworkManager}(1257)
+           ├─accounts-daemon(1059)─┬─{accounts-daemon}(1120)
+           │                       └─{accounts-daemon}(1124)
+           ├─agetty(1517)
+           ├─atd(909)
+           ├─avahi-daemon(925)───avahi-daemon(970)
+           ├─cron(1075)
+           ├─dbus-daemon(928)
+           ...
+           ├─sshd(1562)───sshd(27620)───sshd(27702)───zsh(27703)...
+           ...</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-1">理解 fork: 习题 (1)</h2>
+<p>试着拿出一张纸，写出以下程序的输出结果</p>
+<ul>
+<li><a href="../static/wiki/os/2020/demos/fork-demo.c">fork-demo.c</a><ul>
+<li>你心里可能立即想，运行一下不就完了吗？</li>
+<li>试图去理解它</li>
+</ul>
+</li>
+</ul>
+<pre class="codehilite"><code class="language-c">pid_t pid1 = fork();
+pid_t pid2 = fork();
+pid_t pid3 = fork();
+printf("Hello World from (%d, %d, %d)\n", pid1, pid2, pid3);</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-2">理解 fork: 习题 (2)</h2>
+<p>问以下程序的输出结果</p>
+<ul>
+<li>一个更好的版本: <a href="../static/wiki/os/2020/demos/fork-printf.c">fork-printf.c</a><ul>
+<li>用状态机的视角再试一次</li>
+</ul>
+</li>
+</ul>
+<pre class="codehilite"><code class="language-c">#define n 2
+
+int main() {
+  for (int i = 0; i &lt; n; i++) {
+    fork();
+    printf("Hello\n");
+  }
+}</code></pre>
+
+
+<blockquote>
+<p>计算机系统里没有魔法。机器永远是对的。</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="execve">execve()</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">状态机管理：替换状态机</h2>
+<blockquote>
+<p>光有 fork 还不够，我们还需要能 “执行别的程序” 啊？</p>
+<ul>
+<li>UNIX 的答案: execve<ul>
+<li>将当前运行的进程 “替换” 成另一个程序，从头开始执行</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p><code>execve(filename, argv, enpv)</code></p>
+<ul>
+<li>执行名为 <code>filename</code> 的程序</li>
+<li>分别传入参数 <code>argv</code> (v) 和环境变量 <code>envp</code> (e)</li>
+</ul>
+<hr></hr>
+<p>这刚好对应了<code>main()</code>的参数</p>
+<pre class="codehilite"><code class="language-c">int main(int argc, char **argv, char **envp) {
+  ...
+}</code></pre>
+
+<ul>
+<li><a href="../static/wiki/os/2019/demos/execve-demo.c">execve-demo.c</a></li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">环境变量</h2>
+<p>“应用程序执行的环境”</p>
+<ul>
+<li>使用 <code>env</code> 命令查看<ul>
+<li><code>PATH</code>: 可执行文件搜索路径</li>
+<li><code>PWD</code>: 当前路径</li>
+<li><code>HOME</code>: home 目录</li>
+<li><code>DISPLAY</code>: 图形输出</li>
+<li><code>PS1</code>: shell 的提示符</li>
+</ul>
+</li>
+<li><code>export</code>: 告诉 shell 在创建子进程时设置环境变量<ul>
+<li>小技巧：<code>export ARCH=x86_64-qemu</code> 或 <code>export ARCH=native</code></li>
+<li>上学期的 <code>AM_HOME</code> 终于破案了</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="path">环境变量：<code>PATH</code></h2>
+<p>可执行文件搜索路径</p>
+<ul>
+<li>还记得 gcc 的 strace 结果吗？</li>
+</ul>
+<pre class="codehilite"><code class="language-text">[pid 28369] execve("/usr/local/sbin/as", ["as", "--64", ...
+[pid 28369] execve("/usr/local/bin/as", ["as", "--64", ...
+[pid 28369] execve("/usr/sbin/as", ["as", "--64", ...
+[pid 28369] execve("/usr/bin/as", ["as", "--64", ...</code></pre>
+
+
+<ul>
+<li>这个搜索顺序恰好是 <code>PATH</code> 里指定的顺序</li>
+</ul>
+<pre class="codehilite"><code class="language-text">$ PATH="" /usr/bin/gcc fork-demo.c
+gcc: error trying to exec 'as': execvp: No such file or directory
+$ PATH="/usr/bin/" gcc fork-demo.c</code></pre>
+
+
+<blockquote>
+<p>计算机系统里没有魔法。机器永远是对的。</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_exit">_exit()</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">状态机管理：终止状态机</h2>
+<blockquote>
+<p>有了 fork, execve 我们就能自由执行任何程序了，还缺一个销毁状态机的函数</p>
+<ul>
+<li>UNIX 的答案: exit<ul>
+<li>销毁当前状态机，并允许有一个返回值</li>
+<li>子进程终止会通知父进程 (之后的内容)</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>这个简单……</p>
+<ul>
+<li>但问题来了：状态机里有多个线程啊……</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">结束程序执行的三种方法</h2>
+<p>exit 的几种写法 (它们是<span class="red">不同</span>的)</p>
+<ul>
+<li><code>exit(0)</code> - <code>stdlib.h</code> 中声明的 libc 函数<ul>
+<li>会调用 <code>atexit</code></li>
+</ul>
+</li>
+<li><code>_exit(0)</code> - glibc 的 syscall wrapper<ul>
+<li>执行 “<code>exit_group</code>” 系统调用终止整个进程 (所有线程)<ul>
+<li>细心的同学已经在 strace 中发现了</li>
+</ul>
+</li>
+<li>不会调用 <code>atexit</code></li>
+</ul>
+</li>
+<li><code>syscall(SYS_exit, 0)</code><ul>
+<li>执行 “<code>exit</code>” 系统调用终止当前线程</li>
+<li>不会调用 <code>atexit</code></li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>这么复杂？区分好库函数 (应用程序的一部分) 和系统调用就好啦</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">不妨试一试</h2>
+<p>结束当前进程执行的四种方式</p>
+<ul>
+<li><code>return</code>, <code>exit</code>, <code>_exit</code>, <code>syscall</code></li>
+<li><a href="../static/wiki/os/2020/demos/exit-demo.c">exit-demo.c</a><ul>
+<li>用 strace 观察程序的执行</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="fork-execve-exit">关于 fork, execve 和 exit</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-exec-vs-spawn">Fork-Exec v.s. Spawn</h2>
+<blockquote>
+<p>绝大部分时候，我们都希望创建状态机执行新程序</p>
+<ul>
+<li>例如 <code>system("oj-killer")</code><ul>
+<li>即 fork 后立即 execve</li>
+<li>为什么操作系统不提供一个 <code>spawn(path, argv, enpv)</code><ul>
+<li>也就是 fork + execve?</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<hr></hr>
+<p>只是历史原因吗？</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-exec-vs-spawn-contd">Fork-Exec v.s. Spawn (cont'd)</h2>
+<blockquote>
+<p>The elegant part: 进程可以持有操作系统中的对象！</p>
+<ul>
+<li>这使 fork, execve, exit 还涉及到操作系统对象的管理</li>
+<li>之前简化了 (压根没有提)，但是这学期课程很重要的内容</li>
+</ul>
+</blockquote>
+<p>fork-execve: 继承原先状态机拥有的操作系统对象</p>
+<ul>
+<li><code>find . -name "*.c" | wc -l</code><ul>
+<li>需要配置<ul>
+<li>find 的 stdout → pipe</li>
+<li>pipe → wc 的 stdin </li>
+</ul>
+</li>
+<li>用 fork-execve 实现很优雅；用 spawn 实现很复杂</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-unix">fork: UNIX 给我们的礼物</h2>
+<p>近乎免费的进程 “快照” (之后的课程给大家揭晓为什么近乎免费)</p>
+<ul>
+<li><p>F. Qin, et al. <a href="https://dl.acm.org/citation.cfm?id=1095833">Rx: Treating bugs as allergies--A safe method to survive software failures</a>. In <em>Proc. of SOSP</em>, 2005.</p>
+<ul>
+<li>程序有 bug 找不到怎么办？<ul>
+<li>定期打上快照 (fork)，fail 了就把执行环境改改再试，好了就继续吧</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/qin-rx.png" width="800px"></img></p>
+<blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/qb.webp" width="110px"></img>
+计算机系统里没有魔法。机器永远是对的。</p>
+<ul>
+<li>但这就是魔法啊！ ← <span class="del">和我签订契约，成为魔法少女吧</span></li>
+<li>(疯狂暗示；以及：<a href="https://zh.moegirl.org/QB%E5%A8%98">这是什么梗</a>)</li>
+</ul>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>虚拟化</p>
+<ul>
+<li>程序 = 状态机</li>
+<li>操作系统 = 状态机的管理者<ul>
+<li>用硬件 (物理状态机) 实现多个并发执行的虚拟状态机</li>
+<li>API: fork, execve, exit</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>阅读 fork, execve, _exit 的 manpages</li>
+<li>如果对 pthreads 多线程程序进行 fork，会发生什么？<ul>
+<li>这是今天上课没有讲解的情况</li>
+<li>查阅手册/做实验，理解多线程程序 fork 后的行为</li>
+</ul>
+</li>
+<li><code>exit</code>/<code>exit_group</code> 在多线程程序上有什么区别？</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
