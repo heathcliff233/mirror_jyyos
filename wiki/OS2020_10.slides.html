@@ -1,0 +1,719 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>虚拟化：处理器调度</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">虚拟化：处理器调度</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>我们已经知道如何在线程/进程之间切换 (分时虚拟化处理器)</p>
+<ul>
+<li>这里引入了一个新的问题<ul>
+<li>系统里有很多进程</li>
+<li>下次中断后应该让哪个在处理器上运行？<ul>
+<li>还记得 <a href="../static/wiki/os/2020/demos/trivial-os.c">trivial-os.c</a> 是怎么做得吗？</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>处理器调度</p>
+<ul>
+<li>处理器调度问题</li>
+<li>单处理器分时调度</li>
+<li>多处理器调度</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">处理器调度</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">一个批处理系统时代就有的古老问题</h2>
+<p>有 <math class="inline-math">n</math> 个任务，分别需要 <math class="inline-math">t_1, t_2, \ldots, t_n</math> 时间完成</p>
+<ul>
+<li>任务一旦开始就要完成到结束 (批处理)</li>
+<li>按照什么顺序完成它们最好？<ul>
+<li>仿佛计算中心前一天接收代码，第二天运行给出结果</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>主要问题：什么是 “好”？</p>
+<ul>
+<li><del>领导的任务先完成比较好</del> (模型里没有这一点)</li>
+<li>最小化 cost: <span class="red">平均完成时间</span><ul>
+<li>小学生都会做 (!)</li>
+<li>Shortest Job First (SJF)</li>
+</ul>
+</li>
+<li>……</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">改变我们的假设</h2>
+<p>任务可以在一天中的任意时刻到达</p>
+<ul>
+<li>任务的 cost = 完成时间 - 到达时间</li>
+<li>如何最小化所有任务的平均 cost?</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>在任意时刻，如果有 <math class="inline-math">k</math> 个任务在等待，这个时刻就要付出 <math class="inline-math">k</math> 的 cost</p>
+<ul>
+<li>所以应该以减少 <math class="inline-math">k</math> 为最优先考虑<ul>
+<li>让当前<span class="red">剩余执行时间最小</span>的任务执行！</li>
+<li>新到的 short job 会 “抢占” 当前 job 执行<ul>
+<li>Shortest Time-to-Completion First (STCF)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>算法题时间到此结束</p>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="1">单处理器分时调度 (1)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">中断/上下文切换机制、处理器调度策略</h2>
+<blockquote>
+<p>中断 (机制, mechanism: 提供什么功能)</p>
+</blockquote>
+<ul>
+<li>进程不再独占处理器直到运行完成</li>
+<li>操作系统代码可以定时强制得到执行<ul>
+<li>保存寄存器 (上下文) 到内存</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<blockquote>
+<p>处理器调度 (策略, policy: 如何使用这些功能)</p>
+</blockquote>
+<ul>
+<li>系统中有很多进程等待执行<ul>
+<li>操作系统代码执行调度策略选择一个进程</li>
+<li>使用中断返回机制运行上下文</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">单处理器分时调度：基本假设</h2>
+<blockquote>
+<ol>
+<li>进程是 <code>while (1) do_sth()</code> 的循环<ul>
+<li>执行计算，使用 CPU</li>
+<li>等待 I/O 返回，不使用 CPU (通常时间较长)</li>
+</ul>
+</li>
+<li>处理器以固定的频率被中断</li>
+<li>随时可能有新的进程被创建/旧的进程退出</li>
+</ol>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="round-robin">策略: Round-Robin</h2>
+<p>假设当前 <math class="inline-math">T_i</math> 运行</p>
+<ul>
+<li>中断后试图切换到下一个线程 <math class="inline-math">T_{(i+1)\,\textrm{mod}\,n}</math></li>
+<li>如果下一个线程正在等待 I/O 返回，继续尝试下一个<ul>
+<li>如果系统所有的线程都不需要 CPU，就调度 idle 进程执行</li>
+<li>执行 <code>hlt</code> 指令进入低功耗模式等待中断</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>我们的 <a href="../static/wiki/os/2020/demos/thread-os.c">thread-os.c</a> 实际上实现了 Round-Robin 的调度器</p>
+<ul>
+<li>中断之间的进程执行称为 “时间片” (time-slicing)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/sched-rr.png" width="650px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">策略：引入优先级</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/haorenka.jpg" width="250px"></img></p>
+<p>UNIX niceness</p>
+<ul>
+<li>-20 .. 19<ul>
+<li>越 nice，越被不 nice 的人抢占</li>
+<li>-20: 极坏; most favorable to the process</li>
+<li>19: 极好; least favorable to the process</li>
+<li><del>好人流下了悔恨的泪水</del></li>
+</ul>
+</li>
+<li>nice 相差 10, CPU 获得相差 10 倍<ul>
+<li>nice 相差 1 大约相差 1.25 倍</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/unix-nice.jpg" width="750px"></img></p>
+<ul>
+<li>不妨试一试: nice/renice</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="mlfq">策略：多级反馈调度 (MLFQ)</h2>
+<blockquote>
+<p>假设：系统里有两种进程</p>
+<ul>
+<li>交互进程 (vi, vscode, ...), 大部分时候在等待<ul>
+<li>优先调度它们能提升用户体验，减少卡顿 (试想 Round-Robin)</li>
+</ul>
+</li>
+<li>计算进程 (gcc, ld, ...), 在处理器空闲时才执行</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/MLFQ.png" width="400px"></img></p>
+<p>设置若干个 Round-Robin 队列</p>
+<ul>
+<li>每个队列对应一个优先级</li>
+</ul>
+<p>调度策略</p>
+<ul>
+<li>优先调度高优先级队列</li>
+<li>用完时间片 (被中断) → ?</li>
+<li>主动让出 CPU 等待 I/O → ?<ul>
+<li>很直观也很有趣，请阅读教科书</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="complete-fair-scheduling-cfs">Complete Fair Scheduling (CFS)</h2>
+<blockquote>
+<p>试图去模拟一个 “Ideal Multi-Tasking CPU”: </p>
+<ul>
+<li>“Ideal multi-tasking CPU” is a (non-existent :-)) CPU that has 100% physical power and which can run each task at precise equal speed, in parallel, each at <math>1/n</math>. For example: if there are 2 tasks running, then it runs each at 50% physical power — i.e., actually in parallel.</li>
+</ul>
+</blockquote>
+<p>让系统里的所有进程尽可能公平地共享处理器</p>
+<ul>
+<li>记录系统中每个进程的精确运行时间 (vruntime, nanoseconds)</li>
+<li>中断发生后，切换到 vruntime 最少的进程执行<ul>
+<li>下次中断后，当前进程的 vruntime 可能就不是最小的了</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="complete-fair-scheduling-contd">Complete Fair Scheduling (cont'd)</h2>
+<blockquote>
+<p>复杂的情况 (1): 创建新进程/线程</p>
+<ul>
+<li>子进程继承父进程的 vruntime</li>
+</ul>
+</blockquote>
+<pre class="codehilite"><code class="language-c">static void task_fork_fair(struct task_struct *p) {
+  struct sched_entity *se = &p-&gt;se, *curr;
+  ...
+  rq_lock(rq, &rf);
+  update_rq_clock(rq);
+  cfs_rq = task_cfs_rq(current);
+  curr = cfs_rq-&gt;curr;
+  if (curr) {
+    update_curr(cfs_rq);
+    se-&gt;vruntime = curr-&gt;vruntime; // 继承父进程的 vruntime
+  }
+  place_entity(cfs_rq, se, 1);
+  ...</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="complete-fair-scheduling-contd">Complete Fair Scheduling (cont'd)</h2>
+<blockquote>
+<p>复杂的情况 (2): I/O</p>
+<ul>
+<li>I/O (例如 1 分钟) 以后回来 vruntime 严重落后</li>
+<li>为了赶上，CPU 会全部归它所有</li>
+</ul>
+</blockquote>
+<p>解决：唤醒的线程</p>
+<ul>
+<li>获得 “最小” 的 vruntime (可以立即被执行)</li>
+</ul>
+<pre class="codehilite"><code class="language-c">if (renorm && curr)
+  se-&gt;vruntime += cfs_rq-&gt;min_vruntime;</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="complete-fair-scheduling-contd">Complete Fair Scheduling (cont'd)</h2>
+<blockquote>
+<p>实现优先级</p>
+<ul>
+<li>让好人的时间变得快一些，坏人的时间变得慢一些……</li>
+<li>vrt[i] / vrt[j] 的增加比例 = wt[j] / wt[i]</li>
+</ul>
+</blockquote>
+<pre class="codehilite"><code class="language-c">const int sched_prio_to_weight[40] = {
+  /* -20 */ 88761, 71755, 56483, 46273, 36291,
+  /* -15 */ 29154, 23254, 18705, 14949, 11916,
+  /* -10 */  9548,  7620,  6100,  4904,  3906,
+  /*  -5 */  3121,  2501,  1991,  1586,  1277,
+  /*   0 */  1024,   820,   655,   526,   423,
+  /*   5 */   335,   272,   215,   172,   137,
+  /*  10 */   110,    87,    70,    56,    45,
+  /*  15 */    36,    29,    23,    18,    15,
+};</code></pre></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="complete-fair-scheduling">Complete Fair Scheduling: 实现</h2>
+<blockquote>
+<p>思考题：用什么数据结构维护所有进程的 vruntime?</p>
+</blockquote>
+<p>我们需要什么操作</p>
+<div class="fragment">
+<ul>
+<li>为每个进程维护映射 <math class="inline-math">t \mapsto vt(t)</math><ul>
+<li>维护进程的 vruntime <math class="inline-math">vt(t) \leftarrow vt(t) + \Delta_t / w</math></li>
+<li>找到 <math class="inline-math">t</math> 满足 <math class="inline-math">vt(t)</math> 最小</li>
+<li>进程创建/退出/睡眠/唤醒时插入/删除 <math class="inline-math">t</math></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<p>又是有序集合！上一个见到的有序集合：地址空间中的内存映射</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/rbtree.svg" width="500px"></img></p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">一个小细节：整数溢出</h2>
+<p>64-bit 无符号整数如果存储以纳秒为单位的时间</p>
+<ul>
+<li><math>2^{64} / 10^9 / 3600 / 24 / 365 = 584.9</math> (年)</li>
+<li>假如真的有运行的那么久的系统……</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>基本假设：系统的所有时间都是相对 “最近” 的</p>
+<ul>
+<li>signed integer overflow → UB<ul>
+<li>但 unsigned integer overflow 保证 wrap-around</li>
+</ul>
+</li>
+<li>始终使用 time-delta 的正负来判定大小</li>
+</ul>
+</blockquote>
+<pre class="codehilite"><code class="language-c">static inline u64 min_vruntime(u64 min_vruntime, u64 vruntime) {
+  s64 delta = (s64)(vruntime - min_vruntime);
+  if (delta &lt; 0) min_vruntime = vruntime;
+  return min_vruntime;
+}
+
+static inline int entity_before(struct sched_entity *a,
+                                struct sched_entity *b) {
+  return (s64)(a-&gt;vruntime - b-&gt;vruntime) &lt; 0;
+}</code></pre>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="2">单处理器分时调度 (2)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="io">实际情况：不止是计算和 I/O</h2>
+<blockquote>
+<p>调度策略的复杂性来源</p>
+<ul>
+<li>因为线程不是 <code>while (1)</code> 的循环</li>
+<li>进程/线程不是纯粹的计算或 (长时间) I/O<ul>
+<li><span class="red">等待互斥锁/信号量</span></li>
+<li>或是非常短暂的 I/O 等待 (比一个时间片短很多)</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>在此情形下，会发生什么？</p>
+<ul>
+<li>round-robin?<ul>
+<li>考虑三个进程/线程: producer, consumer, <code>while (1)</code></li>
+<li>Lab 2 你们就会遇到这个问题了<ul>
+<li>主要是因为没有精确的时间统计</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>CFS?<ul>
+<li>似乎没有这个问题：线程有精确的 accounting 信息<ul>
+<li>producer/consumer 被唤醒后会正确分享 CPU</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="so-far-so-good">So Far, So Good...</h2>
+<p>进程/线程公平地共享 CPU</p>
+<ul>
+<li>支持睡眠、等待、fork</li>
+<li>坏人有更高的优先级，能更多地获得被执行的机会</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>并发 bugs 还在等着大家呢！</p>
+<ul>
+<li>处理器调度中有一类非常有趣的并发 bug</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="priority-inversion">优先级反转 (Priority Inversion)</h2>
+<pre class="codehilite"><code class="language-c">void bad_guy() { // 高优先级
+  while (1) {
+    mutex_lock(&lk);
+    ...
+    mutex_unlock(&lk);
+  }
+}
+
+void nice_guy() { // 中优先级
+  while (1) ;
+}
+
+void very_nice_guy() { // 最低优先级
+  while (1) {
+    mutex_lock(&lk);
+    ...
+    mutex_unlock(&lk);
+  }
+}</code></pre>
+
+
+<ul>
+<li>very nice guy 在持有锁的时候让出了处理器……<ul>
+<li>bad guy 顺便也无法运行了 (nice guy 抢在了它前面 👎)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="the-first-bug-on-mars"><a href="https://news.ycombinator.com/item?id=13210478">The First Bug on Mars</a></h2>
+<blockquote>
+<p>Sojourner “探路者号” (PathFinder), 1997 年 7 月 4 日着陆</p>
+<ul>
+<li>大家出生前发生的事情，但我依然有印象</li>
+<li>着陆几天后，出现系统重启和数据丢失</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/PATHCOV.jpg" width="300px"></img>
+硬件配置</p>
+<ul>
+<li>Lander: IBM RISC 6000 Single Chip (Rad6000 SC) 20 MIPS CPU, 128 MiB RAM, 6 MiB EEPROM<ul>
+<li>操作系统: VxWorks 实时操作系统<ul>
+<li>实时：任务可以在指定的时间内完成</li>
+<li>ASI/MET task: 大气成分监测 (低优先级)</li>
+<li><code>bc_dist</code> task: 分发任务 (中优先级)</li>
+<li><code>bc_sched</code> task: 总线调度 (高优先级)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Rover: 0.1 MIPS Intel 80C85 CPU, 512 KiB RAM, 176 KiB Flash SSD</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="the-first-bug-on-mars-contd">The First Bug on Mars (cont'd)</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/marsbot.png" width="750px"></img></p>
+<ul>
+<li>(低优先级) <code>select -&gt; pipeIoctl -&gt; selNodeAdd -&gt; mutex_lock</code></li>
+<li>(高优先级) <code>pipeWrite -&gt; mutex_lock</code></li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">优先级反转：修复</h2>
+<blockquote>
+<p>非实时系统：CFS 基本满足要求</p>
+<ul>
+<li>低优先级进程也能获得时间执行</li>
+<li>一旦释放锁，高优先级进程就能执行了</li>
+</ul>
+<p>实时系统：如何解决？</p>
+</blockquote>
+<ul>
+<li>优先级继承 (Priority Inheritance)/优先级提升 (Priority Ceiling)<ul>
+<li>持有 mutex 的线程/进程会继承 block 在该 mutex 上的最高优先级</li>
+<li>不总是能 work (例如条件变量唤醒)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>在系统中动态维护资源依赖关系<ul>
+<li>优先级继承是它的特例</li>
+<li>似乎更困难了……</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>避免高/低优先级的任务争抢资源<ul>
+<li>对潜在的优先级反转进行预警 (lockdep)</li>
+<li>TX-based: 冲突的 TX 发生时，总是低优先级的 abort</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">多处理器调度</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多处理器调度</h2>
+<blockquote>
+<p>调度策略的复杂性来源</p>
+<ul>
+<li>因为系统中有多个处理器</li>
+<li><span class="red">进程在处理器间迁移对缓存非常不友好</span></li>
+</ul>
+</blockquote>
+<p>Trade-offs</p>
+<ul>
+<li>不迁移吧：处理器 workload 不平衡</li>
+<li>迁移吧：付出一些难以估计的成本</li>
+</ul>
+<hr></hr>
+<p>本质 (也是困难): 对系统未来的行为进行预测</p>
+<ul>
+<li>通常假设系统 workload 短时间不会变化<ul>
+<li>定时的 load balancing (Linux Kernel)</li>
+</ul>
+</li>
+<li>但这明显不对啊<ul>
+<li>线程少、同步多的时候<ul>
+<li>load balance 频率不足, “一核出力，他人围观”</li>
+<li>不要笑，你们的 Lab2 也会</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">多处理器调度 (cont'd)</h2>
+<blockquote>
+<p>“And you have to realize that there are not very many things that have aged as well as the scheduler. Which is just another proof that scheduling is easy.”<span class="float-right">——Linus Torvalds, 2001</span></p>
+</blockquote>
+<div class="fragment">
+<p>真以为调度是个挺简单的问题？</p>
+<ul>
+<li>As a central part of resource management, the OS thread scheduler must maintain the following, simple, invariant: make sure that ready threads are scheduled on available cores.</li>
+<li>As simple as it may seem, we found that this invariant is often broken in Linux. Cores may stay idle for seconds while ready threads are waiting in runqueues.<ul>
+<li>J. Lozi, et al. <a href="https://dl.acm.org/doi/10.1145/2901318.2901326">The Linux scheduler: A decade of wasted cores</a>. In <em>Proc. of EuroSys</em>, 2016. </li>
+<li>多处理器调度依然是 open problem</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">数据中心的多处理器调度</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/data-center.jpg" width="500px"></img></p>
+<p>高优先级的任务 (搜索、购物车、……) → 质量必须得到保证</p>
+<ul>
+<li>Amazon: 100ms 延迟 = 少卖 1% 的货物<ul>
+<li>想想淘宝/京东/拼多多...的 1% 是多么天大的数额……</li>
+</ul>
+</li>
+</ul>
+<p>低优先级的任务 (索引、视频转码、……) → 尽可能把服务器填满</p>
+<ul>
+<li>估计 Google 有 2.5 million 台服务器 (2016)<ul>
+<li>提高 1% 的利用率都节约巨大的机器/能量</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>给高优先级的任务无穷小的 nice 值？</p>
+<ul>
+<li><span class="red">不，没用</span>。并行的任务可能会占用 I/O, pollute cache/buffer, ...</li>
+</ul>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>处理器调度</p>
+<ul>
+<li>机制<ul>
+<li>中断/系统调用时，进入操作系统代码执行</li>
+<li>操作系统代码可以选择任何一个线程/进程继续执行</li>
+<li><span class="red">设计 rock-solid 的机制，支持任何策略</span></li>
+</ul>
+</li>
+<li>策略<ul>
+<li>Round-Robin, MLFQ, CFS, ...</li>
+<li><span class="red">根据实际情况 (workload) 尝试各种策略</span></li>
+</ul>
+</li>
+<li>真实系统的复杂性来源<ul>
+<li>优先级、优先级反转、多处理器……</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>阅读: J. Bouron, et al. <a href="https://www.usenix.org/system/files/conference/atc18/atc18-bouron.pdf">The battle of the schedulers: FreeBSD ULE vs. Linux CFS</a>. In <em>Proc. of USENIX ATC</em>, 2018.</li>
+<li>开始做 Lab2!</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

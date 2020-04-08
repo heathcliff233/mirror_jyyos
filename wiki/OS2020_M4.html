@@ -1,0 +1,239 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>M4: C Real-Eval-Print-Loop (crepl)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="m4-c-real-eval-print-loop-crepl">M4: C Real-Eval-Print-Loop (crepl)</h1>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">截止日期</h4>
+<p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
+<pre class="codehilite"><code>git pull origin M4</code></pre>
+
+
+<p>Soft Deadline: 2020 年 4 月 26 日 23:59:59。</p>
+</div></div></div>
+
+<div plugin="submission(course='OS2020', module='M4')"><div class="accordion submission" id="accordionExample">
+
+  <div class="card">
+    <div class="card-header submit-card">
+      <form action="../upload.html" method="post" enctype="multipart/form-data">
+        <div class="form-row align-items-center">
+            <label class="col-form-label">OS2020-M4</label> 提交结果
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+</div></div>
+
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="shell">热身问题：交互式的 Shell</h4>
+<p>如果你想计算一些表达式的数值，不会还在用 Windows 的计算器或者自带的搜索框吧？在终端输入 <code>python3</code>，再输入一些表达式 (回车)，有惊喜——高精度计算器真香。基于 “解释执行” 的程序设计语言 (包括 shell 本身) 天生就具有这种交互式的工作模式。</p>
+<p>你可能没有想到，C 这种编译型的语言，同样也可以实现 “交互式” 的 shell？——支持即时定义函数，而且能计算 C 表达式的数值。如果你输入一行代码，比如<code>strlen("Hello World")</code>，这段代码会经历 gcc 编译、动态加载、调用执行，最终把代码执行得到的数值 <code>11</code> 打印到屏幕上！</p>
+</div></div></div>
+
+<h2 id="1">1. 背景</h2>
+<p>很多编程语言都提供了交互式的 <a href="https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">read-eval-print-loop</a> (REPL)，更俗一点的名字就是 “交互式的shell”。比如你在命令行输入 <code>python</code>，就可以和 Python shell 交互了。比如你想知道 <math>2^{100}</math> 是多少，直接输入 <code>2**100</code> 回车就可以了。现代程序设计语言都提供类似的设施，即便是非解释型的程序设计语言也提供类似的设施，例如 Scala REPL、go-eval 等。</p>
+<p>在这个实验中，我们实现非常简单的 C 交互式 shell，就像下面图中所示那样：</p>
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/crepl-demo.gif" width="640px"></img></p>
+<p>这个技术和现代虚拟机中的即时编译 (just-in-time) 技术是非常相关的：在程序运行时 (而非程序执行前) 进行编译，并将编译得到的二进制代码 (指令/数据) 动态加载。其中最成功的案例之一是 Sun (现在是 Oracle) 的 Java 虚拟机 <a href="https://wiki.openjdk.java.net/display/HotSpot/Main">HotSpot</a> (现在是OpenJDK的一部分)，它使 Java 彻底摆脱了 “性能低下” 的诟病，也是引领 Web 热潮的核心后端技术。另一个最成功的案例是 JavaScript 的 <a href="https://v8.dev/">V8 引擎</a>。借助 Webkit/v8，Chrome 成功地把 IE 拖下神坛，并且奠定了 Google 在互联网技术领域的霸主地位。</p>
+<h2 id="2">2. 实验描述</h2>
+<p><code>crepl</code> - 逐行从 stdin 中输入，根据内容进行处理：</p>
+<ul>
+<li>如果输入的一行定义了一个函数，则把函数编译并加载到进程的地址空间中；</li>
+<li>如果输入是一个表达式，则把它的值输出。</li>
+</ul>
+<h3 id="_1">总览</h3>
+<p><center>crepl</center></p>
+<h3 id="_2">描述</h3>
+<p>解释执行每一行标准输入中的 C <span class="red">“单行”</span> 代码 (假设我们只使用 <code>int</code> 类型，即所有输入的表达式都是整数；定义函数的返回值也永远是整数)，分如下两种情况：</p>
+<ul>
+<li><strong>函数</strong>总是以 <code>int</code> 开头，例如<pre class="codehilite"><code>int fib(int n) { if (n &lt;= 1) return 1; return fib(n - 1) + fib(n - 2); }</code></pre>
+
+
+</li>
+</ul>
+<p>函数接收若干 <code>int</code> 类型的参数，返回一个 <code>int</code> 数值。如果一行是一个函数，我们希望它将会经过 gcc 编译，并被加载到当前进程的地址空间中。函数可以引用之前定义过的函数。</p>
+<ul>
+<li>如果一行不是以 <code>int</code> 开头，我们认为这一行是一个 C 语言的<strong>表达式</strong>，其类型为 <code>int</code>，例如<pre class="codehilite"><code>1 + 2 || (fib(3) * fib(4))</code></pre>
+
+
+</li>
+</ul>
+<p><strong>函数和表达式均可以调用之前定义过的函数</strong>，但不允许访问全局的状态 (变量) 或调用标准 C 中的函数。如果一行既不是合法的函数，也不是合法的表达式，<code>crepl</code> 可以不保证它们执行的结果 (但你的程序要尽量不会 crash)；重复定义重名函数行为未定义。</p>
+<p>和之前的实验一样，我们并不严格限制你的输出格式，你只要你为每一个函数或表达式输出一行即可，例如以下程序实现也是完全没问题的：</p>
+<pre class="codehilite"><code class="language-text">$ ./crepl-64
+int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }
+OK.
+gcd(256, 144) * gcd(56, 84)
+= 448.</code></pre>
+
+
+<p>看起来很好玩吧，从前可能大家都觉得只有解释型的语言能这么做。但实际上，编译和解释并没有明确的边界——在 OpenJDK 的实现中，即便是 “解释器” 也是编译的 (只是没有经过优化)；而传统的所谓解释型的语言，Python, JavaScript, ……都有编译到机器代码的过程。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="demo">为什么 demo 那么酷炫？</h4>
+<p>JYY 才不会告诉你 demo 调用了一些外挂程序在终端里实现了语法高亮。你完全没有做这件事情的必要——我们的环境里没有你需要的运行库，因此会导致你无情的 Compile Error 或 Wrong Answer。</p>
+<p>如果你使用外挂，一个更好的习惯 (也是编写软件常见的做法) 是在运行时检查外挂是否存在。如果存在则调用；如果不存在则直接输出没有外挂非高亮的版本。</p>
+</div></div></div>
+
+<h2 id="3">3. 正确性标准</h2>
+<p>你只要能正确解析单行的函数 (以 <code>int</code> 开头)，并且默认其他输入都是表达式即可。我们可能会输入不合法的 C 代码 (例如不合法的表达式)；你的程序应该给出错误提示而不应该 crash。你可以做出比较友好的假设——不像之前的实验，会为了 “强迫” 你掌握某些知识而使你疯狂 Wrong Answer。这个实验纯属放松，Online Judge 没有刁难你的测试用例，都和 demo 中的差不多。</p>
+<ul>
+<li>注意我们允许函数和表达式调用之前 (在 crepl 中) 定义过的函数；</li>
+<li>你可以假设我们输入的命令/表达式数量不超过 100 个；</li>
+<li>注意你处在的运行目录可能没有写入的权限。建议你将创建的临时文件都放在 <code>/tmp/</code> 目录下。建议使用 <code>mkstemp</code> family API 创建临时文件；</li>
+<li>禁止使用 C 标准库 system 和 popen。这稍稍增加了实验的难度，不过并没有增加多少。请把这个限制理解成强迫大家掌握操作系统知识的训练。</li>
+</ul>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="system-popen">禁止使用 system() 和 popen()</h4>
+<p>调用它们将会导致编译错误。好消息是这个实验我们不禁止 <code>exec</code> family 的系统调用：execl, execlp, execle, execv, execvp, execvpe 都是允许的。</p>
+</div></div></div>
+
+<h2 id="4">4. 实验指南</h2>
+<h3 id="41">4.1 解析读入的命令</h3>
+<p>框架代码里已经包含了读入命令的循环 (看起来像是一个小 shell)，它打印出一个提示符，然后接受输入并解析：</p>
+<pre class="codehilite"><code class="language-c">int main(int argc, char *argv[]) {
+  static char line[4096];
+  while (1) {
+    printf("crepl&gt; ");
+    fflush(stdout);
+    if (!fgets(line, sizeof(line), stdin)) {
+      break;
+    }
+    printf("Got %zu chars.\n", strlen(line)); // WTF?
+  }
+}</code></pre>
+
+
+<p>当你在终端里按下 Ctrl-d，会结束 stdin 输入流，fgets 会得到 <code>NULL</code>。</p>
+<p>这段代码里一个有趣的小细节是对 fflush 的调用：你会发现把它去掉对程序的运行并没有什么影响。但如果你在 fgets 之前插入一些延迟，例如 <code>sleep(1)</code>，你会发现 fgets 会 flush stdout 的缓冲区。但 C 标准并没有规定这个行为，glibc 只是因为大家用错得太多，为大家贴心地兜了——其实 System 领域这种 “事实行为” 并不少见，大家错得多了，我们的库函数、编译器等不得不做出防御性的行为容忍大家犯错。一个例子是某一时期本的 gcc 会非常激进地对能证明的 undefined behavior 进行优化，但却导致不少以前 “正确” 工作的代码的崩溃，到新版本里反而不再做这些激进的优化了。</p>
+<p>回到实验，在上面的代码里，如果读入的字符串以 <code>int</code> 开头，你就可以假设是一个函数；否则就可以假设是一个表达式。</p>
+<h3 id="42">4.2 把函数编译成共享库</h3>
+<p>对于一个一行的函数，比如</p>
+<pre class="codehilite"><code class="language-c">int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }</code></pre>
+
+
+<p>如何把它编译成共享库？我们在课堂上讲解过编译成共享库 (shared object, so) 的代码，我们的 M2 (libco) 也实现了共享库。我们只需要把这个文件保存到临时文件里，例如 <code>a.c</code> 中，然后使用正确的选项调用 gcc 即可。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">选取合适的路径和文件名</h4>
+<p>如果你的工具在当前目录下创建文件，有可能会失败——例如，你可能在一个没有访问权限的工作目录上 (例如文件系统的根 <code>/</code>)。在 <code>/tmp</code> 中创建临时文件是更安全的做法。此外，glibc 还为我们提供了 <code>mkstemp</code> family API 调用，能够帮助我们生成名称唯一的临时文件。</p>
+</div></div></div>
+
+<p>除了编译和命名的问题，大家可能会感到困惑是，如果我的函数调用了其他函数怎么办？</p>
+<pre class="codehilite"><code class="language-c">int foo() { return bar() + baz(); }</code></pre>
+
+
+<p>你不妨试着编译这个程序……它竟然可以被编译！所以忽略所有的 warnings 就好了！最后，为了巩固大家在上一个实验中学过的知识，我们限制你不能使用 libc 中的 system 和 popen——它们会让实验变得有些过于简单。</p>
+<h3 id="43">4.3 把表达式编译成共享库</h3>
+<p>把函数编译成共享库是常规操作——库函数主要就是为我们提供函数的。但表达式怎么办？又用到我们这门课里反复用的小技巧了：我们可以做一个 wrapper 呀！每当我们收到一个表达式，例如 <code>gcd(256, 144)</code> 的时候，我们都可以 “人工生成” 一段 C 代码</p>
+<pre class="codehilite"><code class="language-c">int __expr_wrapper_4() {
+  return gcd(256, 144);
+}</code></pre>
+
+
+<p>注意到函数名里的数字——我们通过加上数字为表达式生成不一样的名字。我们的表达式变成一个函数，我们就可以把它编译成共享库了。把动态库加载到地址空间并得到 <code>__expr_wrapper_4</code> 的地址，直接进行函数调用就能得到表达式的值了。</p>
+<h3 id="44">4.4 共享库的加载</h3>
+<p>我们可以使用 <code>dlopen</code> 加载共享库。我们已经为大家提供了 <code>-ldl</code> 的链接选项。如果你的 Makefile 中没有，你可能代码下载得太早，请再次 pull M4 分支。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/labs/img/rtfm.jpg" width="400px"></img></p>
+<p>另一个很不错的手册是 elf (5)。</p>
+<h3 id="45-mmap">4.5 试试自己用 mmap 加载？</h3>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">注意</h4>
+<p>以下部分不计任何成绩也不需要实现，给闲得蛋疼的学霸玩用的。</p>
+</div></div></div>
+
+<p>实现成功，肯定会好奇 <code>dlopen</code> 等一系列函数到底做了什么。如果你有兴趣，可以自己 hack 一下——在这个实验里，我们的假设很简单，函数只访问局部变量，因此你可以通过解析 ELF 文件，把共享库中的代码部分提取出来。甚至简单起见，你只需要用一个 mmap 把整个文件映射到地址空间中，并解析 ELF 文件中的符号，找到符号对应的地址即可。这大约只需要 50 行左右的代码——你就这样实现了一个最简单 (虽然功能不完善) 的动态加载器！</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,112 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>处理器调度</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">处理器调度</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a> 第 6, 7, 8, 9, 10 章。</p>
+<p>课后阅读材料：</p>
+<ul>
+<li><a href="https://news.ycombinator.com/item?id=13210478">The first bug on Mars</a>.</li>
+<li>J. Bouron, et al. <a href="https://www.usenix.org/system/files/conference/atc18/atc18-bouron.pdf">The battle of the schedulers: FreeBSD ULE vs. Linux CFS</a>. In <em>Proc. of USENIX ATC</em>, 2018.</li>
+<li>J. Lozi, et al. <a href="https://dl.acm.org/doi/10.1145/2901318.2901326">The Linux scheduler: A decade of wasted cores</a>. In <em>Proc. of EuroSys</em>, 2016. </li>
+</ul>
+</div></div></div>
+
+<p>我们一口气讲完了教科书上相当多的内容。这和我们这门课的设计定位有很大的关系：我们更多地关注机制 (mechanisms)，而策略更多是留给大家阅读，以及在今后更长时间的动手实践中体会。如果你对机制理解透彻，带着实际的 workload 去理解策略，就会觉得相当轻松自然。</p>
+<p>传统的《操作系统》课程 (比如 jyy 学生时代学过的) 至少有一大半的时间在讲解各种 (过时) 的策略。但因为我们对计算机系统底层的机制理解并不透彻，例如并不知道中断/上下文切换到底是如何工作的、操作系统内核代码是如何执行的、虚拟存储是如何使用指令实现的……因此学到的各种 “策略” 也就成为空中楼阁，纸上谈兵。更不用说利用现代软件/硬件提供的各种妙趣机制，实现高性能、高可靠的计算机系统。</p>
+<p>实际上，抛开应用场景 (workload)，根本就无法谈策略。而想要理解实际的应用场景，就必须对程序从编译到链接到加载的过程、程序在运行周期中执行的所有系统调用、系统调用的实现、使用的硬件资源等的行为等等都有非常清楚的理解和认识。而这些认识恰恰来自于对各种计算机系统提供的机制的熟识。</p>
+<p>因此我们建议你在完成 Lab2 以后 (真正吃过一些苦头以后)，再回过头来看调度问题 (包括阅读材料)，应该会有一些新的认识。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

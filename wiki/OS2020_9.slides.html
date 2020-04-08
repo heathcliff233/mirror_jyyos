@@ -1,0 +1,644 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>虚拟化：虚存抽象</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">虚拟化：虚存抽象</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">实验来啦！</h2>
+<blockquote>
+<p>Soft Deadline 是帮助大家控制进度的</p>
+<ul>
+<li>偶尔落后还可以接受，但拖到最后就不可能完成了</li>
+</ul>
+</blockquote>
+<p>MiniLabs</p>
+<ul>
+<li>M1 - pstree (96 人提交); 3.15</li>
+<li>M2 - libco (69 人提交); 3.22</li>
+<li>M3 - sperf (5 人提交); 4.19</li>
+<li>M4 - crepl; 本周发布</li>
+</ul>
+<p>OSLabs</p>
+<ul>
+<li>L0 - amgame (84 人提交); 3.22</li>
+<li>L1 - kernel/pmm (30 人提交); 4.12<ul>
+<li><span class="red">收到 844 次提交，仅 5 人通过</span></li>
+</ul>
+</li>
+<li>L2 - kernel/kmt; 4.26<ul>
+<li>实验要求/框架已发布，等待 Online Judge 部署</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>程序 = 状态机；进程 = 状态机的执行 (路径)</p>
+<ul>
+<li>状态机的状态由寄存器和内存决定<ul>
+<li>寄存器会在中断发生后保存到进程的内存 (内核栈) 中</li>
+<li>内存呢？</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>虚存抽象</p>
+<ul>
+<li>进程的地址空间</li>
+<li>分页机制</li>
+<li>分页机制与虚拟存储</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">进程的地址空间</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">进程的地址空间</h2>
+<p>进程执行指令需要代码、数据、堆栈</p>
+<ul>
+<li>代码 (<code>main</code>, <code>%rip</code> 会从此处取出待执行的指令)</li>
+<li>数据 (<code>static int x</code>)</li>
+<li>堆栈 (<code>int y</code>)<ul>
+<li>它们都可以用<span class="red">指针</span>访问</li>
+</ul>
+</li>
+<li>动态链接库</li>
+<li>运行时分配的内存</li>
+</ul>
+<blockquote>
+<p>那么，这个地址空间是怎么创建的呢？</p>
+<ul>
+<li>创建了以后，我们还能修改它吗？</li>
+<li>肯定是能的：动态链接库可以动态加载 (M4)</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">进程的地址空间 (cont'd)</h2>
+<blockquote>
+<p>进程的地址空间 = 内存里若干连续的 “段”</p>
+<ul>
+<li>每一段是可访问 (读/写/执行) 的内存<ul>
+<li>可能映射到某个文件和/或在进程间共享</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>管理进程地址空间的系统调用</p>
+<pre class="codehilite"><code class="language-c">// 映射
+void *mmap(void *addr, size_t length, int prot, int flags,
+           int fd, off_t offset);
+int munmap(void *addr, size_t length);
+
+// 修改映射权限
+int mprotect(void *addr, size_t length, int prot);</code></pre>
+
+
+<ul>
+<li>RTFM<ul>
+<li>说人话：在状态机状态 <math class="inline-math">M</math> 上增加/删除一段可访问的内存</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">把文件映射到进程地址空间？</h2>
+<p>它们的确好像没有什么区别</p>
+<ul>
+<li>文件 = 字节序列</li>
+<li>内存 = 字节序列</li>
+<li>操作系统允许映射好像挺合理的……<ul>
+<li>带来了很大的方便</li>
+<li>下一次课：ELF loader 用 mmap 非常容易实现<ul>
+<li>解析出要加载哪部分到内存，直接 mmap 就完了</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">查看进程的地址空间</h2>
+<p>pmap (1) - report memory of a process:</p>
+<p>演示：调试一个最小的程序 (静态/动态链接)</p>
+<ul>
+<li>程序执行 (execve) 之后的地址空间 (操作系统创建)</li>
+<li>到达 main 之后的地址空间<ul>
+<li>这就是我们看到进程地址空间的全部：<span class="red">若干连续的 “段”</span></li>
+<li>不在段内的内存访问 (和违反权限的访问) 都将导致 Segmentation Fault</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<ul>
+<li>思考题 1: <span class="green">pmap 是如何实现的</span>？</li>
+<li>思考题 2: <span class="green">如何知道 pmap 是如何实现的</span>？</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">查看进程的地址空间 (cont'd)</h2>
+<p>pmap 是基于 procfs 中的 maps 实现的</p>
+<ul>
+<li>我们有 strace 的证据！</li>
+</ul>
+<pre class="codehilite"><code class="language-text">$ cat /proc/[pid]/maps
+00400000-004b6000                 r-xp  /tmp/a.out (代码)
+006b6000-006bc000                 rw-p  /tmp/a.out (数据)
+006bc000-006bd000                 rw-p             (bss)
+0131f000-01342000                 rw-p  [heap]
+7fff993c9000-7fff993ea000         rw-p  [stack]
+7fff993f4000-7fff993f7000         r--p  [vvar]     &lt;- WTF?
+7fff993f7000-7fff993f9000         r-xp  [vdso]     &lt;- WTF?
+ffffffffff600000-ffffffffff601000 r-xp  [vsyscall] &lt;- WTF? 这地址?</code></pre>
+
+
+<ul>
+<li>思考题：<span class="green">为什么动态链接的 a.out 每次加载的位置都不同？</span><ul>
+<li>也可以通过 ldd 查看</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">我们发现了什么宝藏？</h2>
+<blockquote>
+<p>Virtual system calls: <span class="red">只读</span>的系统调用也许可以不陷入内核执行</p>
+<ul>
+<li>RTFM: vdso (7)</li>
+</ul>
+</blockquote>
+<p>vsyscall 的例子</p>
+<ul>
+<li><p>时间：内核维护秒级的时间 (所有进程映射同一个页面)</p>
+<ul>
+<li>例子：time (2)<ul>
+<li>我们可以调试它 (<code>date -d @tsc</code>)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>getcpu：per-CPU 映射页面</p>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/end-world.jpg" width="400px"></img> </p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="virtual-system-calls">Virtual System Calls: 实现</h2>
+<p>让内核和进程共享数据 (内核可写，进程只读)</p>
+<ul>
+<li>vvar: 内核和进程共享的数据</li>
+<li>vdso: 系统调用代码实现 (是操作系统的一部分)</li>
+<li>vsyscall: ??? (<code>ffffffffff600000</code> 这么诡异的地址)<ul>
+<li>当然是用 gdb 看看啦</li>
+<li>是普通系统调用的包装<ul>
+<li>曾经的 exception-less syscall 实现，但存在安全问题</li>
+<li>依然存在，保持向后兼容</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>计算机系统里没有魔法！</p>
+<ul>
+<li>我们理解了 Linux 进程地址空间的<span class="red">全部</span>！</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">(小知识) 系统调用的实现</h2>
+<blockquote>
+<p>“执行系统调用时，进程陷入内核态执行”——不，不是的。</p>
+</blockquote>
+<p>如果使用 <code>int</code> 指令系统调用 (像 xv6 或 AbstractMachine)</p>
+<ul>
+<li>光这一条指令就要保存 ss, rsp, cs, rip, rflags (40 字节) 到内存</li>
+<li>太慢了，再提供一条指令吧！</li>
+</ul>
+<hr></hr>
+<p>SYSCALL — Fast System Call</p>
+<pre class="codehilite"><code class="language-text">RCX    &lt;- RIP; (* 下条指令执行的地址 *)
+RIP    &lt;- IA32_LSTAR;
+R11    &lt;- RFLAGS;
+RFLAGS &lt;- RFLAGS & ~(IA32_FMASK);
+CPL    &lt;- 0; (* 进入 Ring 0 执行 *)
+CS.Selector &lt;- IA32_STAR[47:32] & 0xFFFC
+SS.Selector &lt;- IA32_STAR[47:32] + 8;</code></pre>
+
+
+<ul>
+<li><code>man 2 syscall</code> 会发现 x86-64 的 system call ABI 避开了这些寄存器<ul>
+<li><code>%r11</code> 是 caller-save (volatile)，数值可以随意摧毁</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">(小知识) 系统调用的实现 (cont'd)</h2>
+<blockquote>
+<p>如果还嫌 syscall 指令慢？？</p>
+<ul>
+<li>L. Soares and M. Stumm. FlexSC: Flexible system call scheduling with exception-less system calls. In <em>Proc. of OSDI</em>, 2010.<ul>
+<li>“exception-less system call”??? 在极端情况下数倍性能提升？</li>
+</ul>
+</li>
+</ul>
+<p>能不能让其他系统调用也不要陷入内核？</p>
+<ul>
+<li>crazy 的事情也许真的是能实现的 (这算是魔法吗？)</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/GET.jpg" width="220px"></img></p>
+<p>Key ingredients</p>
+<ul>
+<li>syscall batching<ul>
+<li>如果系统调用很多，可以打包处理</li>
+</ul>
+</li>
+<li>让进程和内核共享内存<ul>
+<li>有一个 (内核) 线程在 spinning 等待系统调用的到来</li>
+<li>系统调用准备好后，只需要一个 memory store, 系统调用立即开始执行</li>
+<li>进程 spin 等待系统调用完成</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">访问进程地址空间：游戏外挂</h2>
+<p>实现 “游戏外挂程序” (<a href="../static/wiki/os/2019/demos/mem-probe.c">mem-probe.c</a>)</p>
+<ul>
+<li>这是一个简单版的 “内挂”——修改自己进程的地址空间<ul>
+<li>游戏外挂就像是游戏专用的 debugger<ul>
+<li>hook 游戏执行的函数 (breakpoint)</li>
+<li>在适当的时候修改游戏本地的数据 (透视、瞬移等)<ul>
+<li>例如直接修改 rendering pipeline 里的指令，给 “人物” 对象瞄边</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>根据 pmap 的结果，读/写地址空间中的内存</li>
+<li>其他进程的内存可以通过 <code>/proc/[pid]/mem</code> 访问，原理类似</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/lfg.jpg" width="400px"></img></p>
+<p><span class="center">(为了保证低延迟，网络游戏相当一部分状态在进程本地)</span></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">实现虚拟存储：分页机制</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">需求分析</h2>
+<p>操作系统希望实现地址空间管理 (mmap/munmap API)</p>
+<ul>
+<li>进程的地址空间是由若干 “段” 组成的<ul>
+<li>但操作系统只拥有一个物理地址空间 (物理内存)<ul>
+<li>就像大家做的《计算机系统基础》PA</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>操作系统<ul>
+<li>为进程存储各个段的信息 (例如在 <code>struct proc</code> 里)</li>
+<li>在物理内存中实际分配内存 (<code>pmm-&gt;alloc()</code>)</li>
+<li>借用硬件的机制实现虚拟化<ul>
+<li>CPU 在执行用户进行时，强制进行地址翻译</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>例如静态链接的程序 (<code>-static</code>)</p>
+<ul>
+<li>代码从固定的地址开始，数据随后<ul>
+<li>启动多个程序，同一个函数/静态变量地址是一样的</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">需求分析 (cont'd)</h2>
+<p>我们需要</p>
+<ul>
+<li>一个函数 <math>f: [0,M) \mapsto [0, M)</math> <ul>
+<li>把 “虚拟地址” 翻译成 “物理地址”</li>
+<li>毕竟我们的内存只有一份</li>
+<li><math>f</math> 由操作系统控制 (应用程序不可见)<ul>
+<li>可以把 <math class="inline-math">f</math> “装载” 到 CPU 上</li>
+<li>此后任何指令访问地址 <math>x</math> (包括取指令)，都实际访问物理地址 <math>f(x)</math><ul>
+<li>任何越权访问 (如 <math>f(x)=\bot</math>) 将会触发异常</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<blockquote>
+<p>问题：<span class="green">如何高效地在硬件上实现 <math>f</math></span>？</p>
+<ul>
+<li>支持 <math>f</math> 在运行时的动态修改 (mmap, munmap)</li>
+<li>非常节约：<math>f</math> 的存储开销必须远小于实际使用的内存</li>
+<li>非常高效：每次访问内存都要计算 <math>f(x)</math></li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">分页机制：用合适的数据结构存储页映射</h2>
+<p>把地址空间切成大小是 <math class="inline-math">p</math> “页面”</p>
+<ul>
+<li>只维护以页面为单位的映射<ul>
+<li>只要维护 <math>[0, M/p) \mapsto [0, M/p)</math> 的映射</li>
+<li>需要一个内存中的数据结构来描述这样的映射<ul>
+<li>基本假设：<span class="red">绝大部分页面都没有映射</span>、<span class="red">映射的一般是连续的空间</span></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Radix-Tree (Trie) + TLB (Translation Lookaside Buffer)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/trie.png" width="640"></img></p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">分页 + 保护：实现虚拟化</h2>
+<p>映射是页面到页面的，也就意味着<span class="red">映射的低位永远是 0</span></p>
+<ul>
+<li>4 KiB 页面就有 12 个 bits</li>
+<li><p>可以用来存储页面的存储保护等信息！</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/pfnx86.png" width="640px"></img></p>
+<ul>
+<li>G - global</li>
+<li>PAT - large page (PML4 支持 1 GiB, 2 MiB, 4 KiB 页面)</li>
+<li>D - dirty</li>
+<li>A - accessed</li>
+<li>PCT/PWT - cache-disable/write-through</li>
+<li>U/S - user/supervisor</li>
+<li>R/W - read/write</li>
+<li>P - present</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">分页机制与虚拟存储</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="mmap">神奇的 mmap</h2>
+<p>Example 1:</p>
+<ul>
+<li>用 mmap 申请 8 GiB 内存空间<ul>
+<li>你们觉得要多久？</li>
+<li>不妨 strace 看一下吧……</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>Example 2:</p>
+<ul>
+<li>用 mmap 映射整个磁盘 (128 GiB)<ul>
+<li>瞬间完成</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">为什么？</h2>
+<blockquote>
+<p>因为 mmap 并不需要真的为进程分配任何页面</p>
+<ul>
+<li>只需要 “让操作系统知道这么映射” 就够了</li>
+<li>进程访问页面会发生缺页进入操作系统……</li>
+</ul>
+</blockquote>
+<p>缺页时操作系统会得到缺页的地址 (<code>%cr2</code>)</p>
+<ul>
+<li>根据操作系统维护的进程地址空间信息分配页面<ul>
+<li>思考题：<span class="green">用什么样的数据结构可以支持映射列表的维护</span>？</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>如果访问合法，分配一页<ul>
+<li>匿名内存 → 直接返回</li>
+<li>文件 → 执行 read 把文件数据读到内存<ul>
+<li>所以即便映射整个磁盘，也只有 touch 的页面被读取</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>如果访问非法，发送信号 (<code>SIGSEGV</code>)<ul>
+<li>这就是你们看到的 Segmentation Fault</li>
+<li>但进程也可以捕获这个信号</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="memory-mapped-file">Memory-Mapped File: 一致性</h2>
+<p>但我们好像带来了一些问题……</p>
+<ul>
+<li>如果把页面映射到文件<ul>
+<li>修改什么时候生效？<ul>
+<li>立即生效：那会造成巨大量的磁盘 I/O</li>
+<li>unmap (进程终止) 时生效：好像又太迟了……</li>
+</ul>
+</li>
+<li>若干个映射到同一个文件的进程？<ul>
+<li>共享一份内存？</li>
+<li>各自有本地的副本？</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>请查阅手册，看看操作系统是如何规定这些操作的行为的</p>
+<ul>
+<li>例如阅读 <code>msync (2)</code></li>
+<li>这才是操作系统真正的复杂性</li>
+</ul>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>虚拟化</p>
+<ul>
+<li>程序 = 状态机</li>
+<li>操作系统 = 状态机的管理者<ul>
+<li>用硬件 (物理状态机) 实现多个并发执行的虚拟状态机</li>
+</ul>
+</li>
+<li>状态机中的地址空间 (虚拟地址空间)<ul>
+<li>应用视角：用 mmap 系统调用管理</li>
+<li>硬件视角：用分页机制实现</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>阅读 mmap 系统调用的手册</li>
+<li>阅读 xv6/AbstractMachine 分页部分的代码</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

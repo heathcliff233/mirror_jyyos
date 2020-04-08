@@ -50,7 +50,6 @@
       <h1 id="m3-profiler-sperf">M3: 系统调用 Profiler (sperf)</h1>
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">截止日期</h4>
-<p>(框架代码已更新，Online Judge 暂未配置完成)</p>
 <p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
 <pre class="codehilite"><code>git pull origin M3</code></pre>
 
@@ -104,6 +103,16 @@
 <li>假设 <code>COMMAND</code> 是单进程、单线程的，无需处理多进程 (<code>fork</code>) 和多线程 (<code>clone</code>/<code>pthread_create</code>) 的情况；虽然 strace 明确支持多进程/多线程程序。 </li>
 <li>作为对大家的考验，必须使用 execve 系统调用；使用 glibc 对 execve 的包装 (execl, execlp, execle, execv, execvp, execvpe) 将导致编译错误，但我们鼓励你阅读后者的手册。</li>
 </ul>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="execve">只允许用 execve？</h4>
+<p>在终端里，我们输入 “strace” 以后，为什么 <code>/usr/bin/strace</code> 会被找到执行？为什么输入 <code>a.out</code> 当前目录下的 <code>a.out</code> 不会被执行 (必须要 <code>./a.out</code>?) 路径的解析是通过 <code>PATH</code> 环境变量实现的，如果执行命令，会逐个尝试 <code>PATH</code> 环境变量中的路径，直到找不到后才失败。</p>
+<p>在这个实验里，为了强迫大家理解环境变量，我们设置了两个坑：</p>
+<ol>
+<li>必须使用 execve，并且 strace 的可执行文件并不位于 <code>/usr/bin</code>，但它的确在 <code>PATH</code> 环境变量中的某个目录中。因此如果你直接 <code>execve("/usr/bin/strace", ...)</code> 将会失败；</li>
+<li>必须正确处理传递给子进程的环境变量，否则将在 hard test 发生 Wrong Answer。</li>
+</ol>
+</div></div></div>
+
 <p>例如，在我们的参考实现中，通过在字符终端里绘制系统调用图的方式展示系统调用的耗时 (系统调用所花时间与所占面积成正比)，下图统计了执行 <code>python -c "print()"</code> 在各个系统调用上花费的时间。很酷对吧？</p>
 <p><center><img alt="" src="../static/wiki/os/2019/img/sperf.jpg" width="500px"></img></center></p>
 <p>在运行时，还可以实时显示一段时间内的系统调用时间统计：</p>
@@ -139,8 +148,12 @@ getdents (20%)
 <li>输出系统调用在 strace 输出中的小写名字、在系统调用耗时比例的左右写上小括号，按照 “<code>(XX%)</code>”，即 <code>printf("(%d%%)", ratio)</code> 的格式输出系统调用耗时所占的百分比；</li>
 <li>除了系统调用的名字和耗时以外，不要输出额外的字母和数字 (ANSI Escape Code 是允许的)；</li>
 <li>在统计信息输出完毕后，打印 80 个 <code>\0</code> (注意不是 <code>'0'</code>，是数值为 0 的字符，它们不会在终端上显示)。我们将以这 80 个 <code>\0</code> 作为划分；</li>
+<li>输出过于频繁会致 Output Limit Exceeded。每秒输出一次是较为合理的。</li>
 </ul>
-<p>以帮助我们判定正确性。</p>
+<p>以帮助我们判定正确性。此外，特别注意：</p>
+<ul>
+<li>请不要混合你的输出和被追踪进程的输出，否则将可能会导致 Wrong Answer。</li>
+</ul>
 </div></div></div>
 
 <p>最后，如果你要在终端上进行绘图，有以提示可以帮助你防止被 Online Judge 误伤：</p>
@@ -150,7 +163,12 @@ getdents (20%)
 <li>不要依赖不可靠的终端数据来源 (如 <code>LINES</code> 环境变量，虽然你的 shell 里可能存在，但 Online Judge 里未必)；</li>
 <li>可以假设窗口大小不会发生变化——窗口大小发生变化时会收到 <code>SIGWINCH</code> 信号，默认忽略，而你也不需要处理它。</li>
 </ul>
-<p>你只要完成简单的时间统计就能获得这个实验的满分，打印出 “不错” 的图形完全是你出于个人兴趣的行为。</p>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="flush">留意 flush 你的输出</h4>
+<p>我们重定向 stdout 后，会进入 fully buffered mode (就像我们课堂上讲 fork 在 <code>./a.out</code> 和 <code>./a.out | wc -l</code> 看到不同行数的例子那样)。因此请确保你在每一轮输出后使用 fflush。</p>
+</div></div></div>
+
+<p>最后，你只要完成简单的时间统计就能获得这个实验的满分，打印出 “不错” 的图形完全是你出于个人兴趣的行为。</p>
 <h2 id="4">4. 实验指南</h2>
 <p>在 pstree 中，我们已经学习了如何用 API (库函数和系统调用) 与操作系统交互，具体而言，我们学会了如何扫描操作系统中的目录。在这个实验中，我们要做的事情是：</p>
 <ol>
@@ -315,7 +333,7 @@ close(1)                                = 0 &lt;0.000126&gt;</code></pre>
 <li>能够即刻捕获终端按键的API。</li>
 </ol>
 <p>能 “绘图”、能输入、能定时，各种游戏和小工具 (比如输入函数 <math class="inline-math">y=f(x)</math>，在终端上绘制它的曲线)，就都能实现啦。当然，这件事肯定早就有人做了，比如著名的 <a href="http://www.nethack.org">NetHack</a>，以及如果想读一点短的代码，可以看看<a href="https://raw.githubusercontent.com/mevdschee/2048.c/master/2048.c">终端 2048 游戏</a>。</p>
-<h3 id="_1">(补充) 这个实验到底是什么目的？</h3>
+<h3 id="47">4.7 (补充) 这个实验到底是什么目的？</h3>
 <p>我们总是需要一个实验来体验 fork, execve, pipe——它们是 UNIX 世界的基础。往常的办法是实现一个 shell，不过我们用 sperf 实验来替代它，它不仅达到了目的，而且强迫大家阅读了系统调用的序列，还理解了 trace 和 profiler。</p>
 <blockquote>
 <p>In <a href="https://en.wikipedia.org/wiki/Software_engineering">software engineering</a>, <strong>profiling</strong> ("program profiling", "software profiling") is a form of <a href="https://en.wikipedia.org/wiki/Dynamic_program_analysis">dynamic program analysis</a> that measures, for example, the space (memory) or time <a href="https://en.wikipedia.org/wiki/Computational_complexity_theory">complexity of a program</a>, the <a href="https://en.wikipedia.org/wiki/Instruction_set_simulator">usage of particular instructions</a>, or the frequency and duration of function calls. Most commonly, profiling information serves to aid <a href="https://en.wikipedia.org/wiki/Program_optimization">program optimization</a>.</p>
