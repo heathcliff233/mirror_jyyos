@@ -108,20 +108,22 @@
 </tbody>
 </table>
 <p>当然，在操作系统里全局存储这个数据结构不是个好主意——文件系统是不断变化的，甚至随时可能被mount到其他目录，或者存储文件的介质物理上断开了和计算机的连接。因此，把这些访问控制权限作为文件系统的一部分，同样是一个很自然的设计，这就得到了今天我们<code>ls -l</code>时非常熟悉的结果：</p>
-<pre class="codehilite"><code>$ ls -l
--rw-rw-r-- 1 jyy  jyy     6 May 26 10:44 a.txt
+<div class="codehilite"><pre><span></span>$ ls -l
+-rw-rw-r-- <span class="m">1</span> jyy  jyy     <span class="m">6</span> May <span class="m">26</span> <span class="m">10</span>:44 a.txt
 ^            ^    ^
-访问控制      owner user/group</code></pre>
+访问控制      owner user/group
+</pre></div>
 
 
 <h2 id="_4">操作系统中的用户</h2>
 <p>想得到操作系统中所有的用户？一条命令就可以了：</p>
-<pre class="codehilite"><code>$ awk -F : '{ print $1 }' /etc/passwd
+<div class="codehilite"><pre><span></span>$ awk -F : <span class="s1">&#39;{ print $1 }&#39;</span> /etc/passwd
 root
 daemon
 bin
 sys
-...</code></pre>
+...
+</pre></div>
 
 
 <p>UNIX系统中的用户信息以文本的形式存储在<code>/etc/passwd</code>。实际上，我们真的可以通过修改<code>/etc/passwd</code><a href="../static/wiki/os/2019/%5Bhttp_/tldp.org/LDP/sag/html/adduser.html%5D(http_/tldp.org/LDP/sag/html/adduser.html).html">手工创建用户</a>。在这个例子里，我们知道了文件其实就是数据库的前身。在现代DBMS (MySQL, SQLite等)出现之前，大家就是用普通的文件管理系统中的重要数据！</p>
@@ -135,17 +137,19 @@ sys
 <p>于是，我们不难为每个文件配置它对于所有用户的访问权限。当然了，对每个文件配置每个用户的访问控制权限，仍然是个非常笨拙的办法：我们的系统里可能有上百个用户。UNIX聪明地在文件中记下文件所有者的用户和组(uid, gid)，然后用一个9个bit的字符串(或3个八进制数)来表示文件的访问权限：</p>
 <p><center><img alt="" src="../static/wiki/os/2019/img/permissions.png" width="400px" /></center></p>
 <p>r代表读、w代表写、x代表可执行，前3个bit表示同一个用户(user class)是否可以访问这个文件、中间3个bit表示文件对应的组(group class)是否可以访问这个文件、后三个bit表示所有其他人是否可以访问这个文件。如果设置成000 (或者甚至077)，那么自己也不能访问这个文件：</p>
-<pre class="codehilite"><code>$ chmod 000 a.txt
+<div class="codehilite"><pre><span></span>$ chmod <span class="m">000</span> a.txt
 $ ls -l a.txt
----------- 1 jyy jyy 6 May 26 10:44 a.txt
+---------- <span class="m">1</span> jyy jyy <span class="m">6</span> May <span class="m">26</span> <span class="m">10</span>:44 a.txt
 $ cat a.txt
-cat: a.txt: Permission denied</code></pre>
+cat: a.txt: Permission denied
+</pre></div>
 
 
 <p>如果我们<code>chmod</code> 444, 222, 111，分别会得到：</p>
-<pre class="codehilite"><code>r--r--r-- # 444
--w--w--w- # 222
---x--x--x # 111</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">r--r--r-- # 444</span>
+<span class="err">-w--w--w- # 222</span>
+<span class="err">--x--x--x # 111</span>
+</pre></div>
 
 
 <p>于是大家就不难理解网上教程中的各种chmod的含义：</p>
@@ -161,8 +165,9 @@ cat: a.txt: Permission denied</code></pre>
 </div>
 <p>就这样，UNIX文件系统就巧妙地避免了存储整个访问控制矩阵，而是在每个文件里用一个若干位二进制数和uid, gid来存储访问控制策略。</p>
 <p>当然，UNIX还给我们留了很多遗产，例如setuid bit——它允许一个文件在运行时，获得它的uid所对应的权限：</p>
-<pre class="codehilite"><code>$ ls -l $(which passwd)
--rwsr-xr-x 1 root root 59640 Jan 25  2018 /usr/bin/passwd*</code></pre>
+<div class="codehilite"><pre><span></span>$ ls -l <span class="k">$(</span>which passwd<span class="k">)</span>
+-rwsr-xr-x <span class="m">1</span> root root <span class="m">59640</span> Jan <span class="m">25</span>  <span class="m">2018</span> /usr/bin/passwd*
+</pre></div>
 
 
 <p>于是passwd在运行时就能获得root权限，从而修改存储在文件系统数据库中的密码。但这听起来就很不安全：</p>

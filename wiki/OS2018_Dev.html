@@ -56,24 +56,25 @@
 </ul>
 <p>从道理上来说，I/O设备无非就是一组接口，能够读取/写入数据，I/O设备会根据自己的协议解读这些数据，并且反映到物理世界中去。我们每个人使用计算机，使用的都是它的I/O设备，因此对“计算机”的第一印象其实都来自这些设备——我们可以通过按键、移动鼠标，来改变屏幕上的内容。这一切都是用<strong>计算</strong>实现的——处理器读取二进制的数据、进行计算，再以二进制的形式输出。</p>
 <p>例如IBM PC键盘可以通过8042键盘控制器访问，AM中的实现如下：</p>
-<pre class="codehilite"><code class="language-c">size_t input_read(uintptr_t reg, void *buf, size_t size) {
-  ...
-  int status = inb(0x64); // 状态寄存器
-  kbd-&gt;keydown = 0;
-  kbd-&gt;keycode = _KEY_NONE;
-  if ((status &amp; 0x1) == 0) {
-    // 没有数据
-  } else {
-    if (status &amp; 0x20) {
-      // 鼠标事件
-    } else {
-      // 键盘事件
-      int code = inb(0x60) &amp; 0xff;
-      // 从数据寄存器读出扫描码
-    }
-  }
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">size_t</span> <span class="nf">input_read</span><span class="p">(</span><span class="kt">uintptr_t</span> <span class="n">reg</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">inb</span><span class="p">(</span><span class="mh">0x64</span><span class="p">);</span> <span class="c1">// 状态寄存器</span>
+  <span class="n">kbd</span><span class="o">-&gt;</span><span class="n">keydown</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">kbd</span><span class="o">-&gt;</span><span class="n">keycode</span> <span class="o">=</span> <span class="n">_KEY_NONE</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">status</span> <span class="o">&amp;</span> <span class="mh">0x1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// 没有数据</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">&amp;</span> <span class="mh">0x20</span><span class="p">)</span> <span class="p">{</span>
+      <span class="c1">// 鼠标事件</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="c1">// 键盘事件</span>
+      <span class="kt">int</span> <span class="n">code</span> <span class="o">=</span> <span class="n">inb</span><span class="p">(</span><span class="mh">0x60</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">;</span>
+      <span class="c1">// 从数据寄存器读出扫描码</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>就这么简单，我们就能从键盘里读出数据了。为了完全理解这部分内容，你需要一些电路知识(手册里会描述键盘控制器的电气特性)，然后花时间阅读手册(因为控制器有多种功能，所以手册其实非常长)。管理实际的设备从来都不是一件容易的事情。不过AM给我们做了抽象，大家只要知道计算机系统为管理I/O设备提供的机制即可。</p>
@@ -96,19 +97,21 @@
 <p>中断控制器也是一个I/O设备，通过配置这个设备，可以实现中断的屏蔽、响应等。现在的Intel处理器使用的是APIC (Advanced PIC)的扩展版xAPIC的扩展版x2APIC……如果你去看<a href="https://www.intel.com/content/dam/doc/specification-update/64-architecture-x2apic-specification.pdf">手册</a>，会发现原来一个I/O设备都那么复杂，牵涉到那么多概念，如果从事真正的系统编程，以前读的i386手册那简直太简单了，根本不是事儿。</p>
 <h2 id="dma">DMA</h2>
 <p>中断并没有完全解决问题。如果我们面对大量的I/O：</p>
-<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; nbytes; i++) {
-  outb(DATA_PORT, data[i]);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">nbytes</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">outb</span><span class="p">(</span><span class="n">DATA_PORT</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这显然会占用很多宝贵的处理器资源。所以如果我们的电脑里可以有第二个处理器，它不用非常复杂，只要能被配置(称为可编程)，然后只执行一个非常固定的小程序就行：</p>
-<pre class="codehilite"><code class="language-c">// SRC是内存或I/O端口
-// DST是内存或I/O端口
-for (int i = 0; i &lt; nbytes; i += nmemb) {
-  value = read(SRC, nmemb);
-  write(DST, value);
-}
-send_interrupt();</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// SRC是内存或I/O端口</span>
+<span class="c1">// DST是内存或I/O端口</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">nbytes</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">nmemb</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">value</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">SRC</span><span class="p">,</span> <span class="n">nmemb</span><span class="p">);</span>
+  <span class="n">write</span><span class="p">(</span><span class="n">DST</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">send_interrupt</span><span class="p">();</span>
+</pre></div>
 
 
 <p>这就是8237 DMA控制器，约等于一个小型的CPU，但只执行特定的代码(直接以状态机的形式写死在集成电路里)。可不要小看DMA控制器：它不仅能实现内存和I/O设备之间的传输(例如磁盘、网卡)，还能实现内存到内存之间的传输(可以实现异步的写显存)，能够非常明显地提升计算机系统的性能。今天DMA是所有高速I/O设备默认的传输方式，PCI总线自带DMA控制器。</p>

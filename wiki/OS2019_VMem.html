@@ -69,38 +69,42 @@
 </div>
 <h3 id="linux">Linux进程的地址空间</h3>
 <p>回到进程眼中的内存：无论是代码、数据、bss、堆区、栈区、操作系统……这些空间通常都是连续的，想办法把它们排在地址空间里就行了。操作系统也为我们提供了工具，查看某个地址空间：</p>
-<pre class="codehilite"><code class="language-bash">./a.out &amp; // 后台运行一个程序
-pmap $!   // 使用pmap命令查看进程地址空间信息</code></pre>
+<div class="codehilite"><pre><span></span>./a.out <span class="p">&amp;</span> // 后台运行一个程序
+pmap <span class="nv">$!</span>   // 使用pmap命令查看进程地址空间信息
+</pre></div>
 
 
 <p>例如，一个静态链接的C程序的pmap输出结果：</p>
-<pre class="codehilite"><code class="language-text">0000000000400000    728K r-x-- a.out
+<div class="codehilite"><pre><span></span>0000000000400000    728K r-x-- a.out
 00000000006b6000     24K rw--- a.out
 00000000006bc000      4K rw---   [ anon ]
 0000000000fa4000    140K rw---   [ anon ]
 00007ffed8844000    132K rw---   [ stack ]
 00007ffed8928000     12K r----   [ anon ]
 00007ffed892b000      8K r-x--   [ anon ]
-ffffffffff600000      4K r-x--   [ anon ]</code></pre>
+ffffffffff600000      4K r-x--   [ anon ]
+</pre></div>
 
 
 <p>如果想自己实现一个pmap，我们可以用ltrace/ptrace把它“拆开”，看看它到底做了什么获得了进程的地址空间信息：</p>
-<pre class="codehilite"><code class="language-text">$ strace pmap $!
+<div class="codehilite"><pre><span></span>$ strace pmap $!
 ...
 openat(AT_FDCWD, &quot;/proc/2078/maps&quot;, O_RDONLY) = 3
 fstat(3, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
-read(3, &quot;00400000-004b6000 r-xp 00000000 &quot;..., 1024) = 614</code></pre>
+read(3, &quot;00400000-004b6000 r-xp 00000000 &quot;..., 1024) = 614
+</pre></div>
 
 
 <p>经过一些观察，不难发现是procfs里有这个信息！感谢Everything is a file，procfs把操作系统内进程的信息作为文件暴露给了操作系统的其他部分。这样我们也可以实现一个自己的pmap了。言归正传，procfs里提供的maps信息，比pmap还要多一些：</p>
-<pre class="codehilite"><code class="language-text">00400000-004b6000 r-xp 00000000 08:02 2359313              /tmp/a.out
+<div class="codehilite"><pre><span></span>00400000-004b6000 r-xp 00000000 08:02 2359313              /tmp/a.out
 006b6000-006bc000 rw-p 000b6000 08:02 2359313              /tmp/a.out
 006bc000-006bd000 rw-p 00000000 00:00 0 
 00fa4000-00fc7000 rw-p 00000000 00:00 0                    [heap]
 7ffed8844000-7ffed8865000 rw-p 00000000 00:00 0            [stack]
 7ffed8928000-7ffed892b000 r--p 00000000 00:00 0            [vvar]
 7ffed892b000-7ffed892d000 r-xp 00000000 00:00 0            [vdso]
-ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0    [vsyscall]</code></pre>
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0    [vsyscall]
+</pre></div>
 
 
 <p>不难理解(和验证)的是：</p>
@@ -115,7 +119,7 @@ ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0    [vsyscall]</code></pr
 <p>我们可以使用一些系统工具(例如readelf)，或者自己写程序来验证上述猜测(例如利用end符号)。有兴趣的同学不妨试试。</p>
 </div>
 <p>对于动态链接程序，也是类似的，只是每一个动态链接库都有代码、数据、bss，但进程中只有一个堆区和一个堆栈：</p>
-<pre class="codehilite"><code class="language-text">55dd6c01b000-55dd6c01c000 r-xp 00000000 08:02 2359313     /tmp/a.out
+<div class="codehilite"><pre><span></span>55dd6c01b000-55dd6c01c000 r-xp 00000000 08:02 2359313     /tmp/a.out
 55dd6c21b000-55dd6c21c000 r--p 00000000 08:02 2359313     /tmp/a.out
 55dd6c21c000-55dd6c21d000 rw-p 00001000 08:02 2359313     /tmp/a.out
 7fc8ca48e000-7fc8ca675000 r-xp 00000000 08:02 5772000     /lib/x86_64-linux-gnu/libc-2.27.so
@@ -131,11 +135,12 @@ ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0    [vsyscall]</code></pr
 7ffe38768000-7ffe38789000 rw-p 00000000 00:00 0           [stack]
 7ffe38795000-7ffe38798000 r--p 00000000 00:00 0           [vvar]
 7ffe38798000-7ffe3879a000 r-xp 00000000 00:00 0           [vdso]
-ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0   [vsyscall]</code></pre>
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0   [vsyscall]
+</pre></div>
 
 
 <p>非常有趣的是，堆区和bss节都没有了！当然其实还是有的。如果我们声明足够大的内存空间，地址空间里就会有bss和堆区，例如在静态/动态时各分配1GB的内存后的地址空间后pmap的结果(pmap的结果对人类更友好一些)：</p>
-<pre class="codehilite"><code class="language-text">0000556e701c2000       4K r-x-- a.out
+<div class="codehilite"><pre><span></span>0000556e701c2000       4K r-x-- a.out
 0000556e703c2000       4K r---- a.out
 0000556e703c3000       4K rw--- a.out
 0000556e703c4000 1048576K rw---   [ anon ] # bss
@@ -154,7 +159,8 @@ ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0   [vsyscall]</code></pre
 00007ffed7608000     132K rw---   [ stack ]
 00007ffed7722000      12K r----   [ anon ]
 00007ffed7725000       8K r-x--   [ anon ]
-ffffffffff600000       4K r-x--   [ anon ]</code></pre>
+ffffffffff600000       4K r-x--   [ anon ]
+</pre></div>
 
 
 <p>在这个例子里我们还看到，heap的内存是不连续的——有一部分被标记为了传统的UNIX heap，但1GB的内存空间实际是在地址空间的另外的位置分配的。</p>
@@ -168,7 +174,7 @@ ffffffffff600000       4K r-x--   [ anon ]</code></pre>
 </div>
 <h3 id="_8">地址空间随机化</h3>
 <p>多次运行同一个程序，你会发现地址空间中各个部分的地址大体相同(处于同一范围)，但具体的值每次都不同，例如多次运行ldd：</p>
-<pre class="codehilite"><code class="language-text">$ ldd ./a.out
+<div class="codehilite"><pre><span></span>$ ldd ./a.out
     linux-vdso.so.1 (0x00007ffe335bc000)
     libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007fe0a408f000)
     /lib64/ld-linux-x86-64.so.2 (0x00007fe0e4682000)
@@ -179,7 +185,8 @@ $ ldd ./a.out
 $ ldd ./a.out
     linux-vdso.so.1 (0x00007ffc90bf3000)
     libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f7046bd2000)
-    /lib64/ld-linux-x86-64.so.2 (0x00007f70871c5000)</code></pre>
+    /lib64/ld-linux-x86-64.so.2 (0x00007f70871c5000)
+</pre></div>
 
 
 <p>甚至每次运行程序，代码/数据加载的位置也都不同(静态链接除外)。这是称为“Address Space Layout Randomization”的机制，能够降低缓冲区溢出攻击的成功概率，主流的操作系统在进入2000s之后都开始支持ASLR，甚至Linux内核本身的地址也是随机化的——内核中的这些问题一直都是“越狱”漏洞的重要来源。</p>
@@ -198,8 +205,9 @@ $ ldd ./a.out
 <li><code>malloc(1024 * 1024 * 1024);</code> - 分配一段非常大的内存</li>
 </ul>
 <p>系统为我们提供了mmap系统调用(和相应的munmap)：</p>
-<pre class="codehilite"><code class="language-c">void *mmap(void *addr, size_t length, int prot, int flags,
-  int fd, off_t offset);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">mmap</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span> <span class="n">prot</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span>
+  <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">);</span>
+</pre></div>
 
 
 <p>首先让我们来回顾一下操作系统中的对象。所谓对象，就是对数据(和操作)的封装——对象数据的部分通常可以看做是一个数组，例如C中的一个结构体，而这些对象都可以通过文件被访问。Everything is a file提供了统一的接口，实现应用程序访问操作系统中的对象，而对文件来说最重要的操作就是read和write。</p>
@@ -213,25 +221,27 @@ $ ldd ./a.out
 <div class="fenced fenced-green">
 <h4 id="_11">试试把你的磁盘映射到地址空间里</h4>
 <p>以下程序把磁盘磁盘的128GB空间以只读的方式映射到地址空间里。即便只有8GB的物理内存，映射依然在瞬间完成，并且读取第一个扇区的内容，能够读出引导块的<code>0x55 0xaa</code> magic number——这真的是我们的磁盘！</p>
-<pre class="codehilite"><code class="language-c">int main() {
-  // BUG: no error checking
-  int fd = open(&quot;/dev/sda&quot;, O_RDONLY);
-  uint8_t *disk = mmap(NULL, 137438953472LL, PROT_READ, MAP_SHARED, fd, 0);
-  printf(&quot;mapped address = %p\n&quot;, disk);
-  for (int i = 0; i &lt; 512; i++) {
-    printf(&quot;%02x &quot;, disk[i]);
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// BUG: no error checking</span>
+  <span class="kt">int</span> <span class="n">fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/dev/sda&quot;</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+  <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">disk</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">137438953472LL</span><span class="p">,</span> <span class="n">PROT_READ</span><span class="p">,</span> <span class="n">MAP_SHARED</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;mapped address = %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">disk</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">512</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%02x &quot;</span><span class="p">,</span> <span class="n">disk</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 </div>
 <h2 id="mmap">实现mmap</h2>
 <p>现代系统中的mmap是通过分页机制实现的。原则上，初始时，操作系统实际上并不需要为进程分配任何内存(在分页机制中标记进程地址空间中的所有地址均为不可访问)，只需要记住进程的地址空间映射关系即可，例如：</p>
-<pre class="codehilite"><code>0000000000400000    728K r-x-- a.out
-00000000006b6000     24K rw--- a.out
-00000000006bc000      4K rw--- a.out bss
-0000000000fa4000    140K rw--- [ heap ]
-00007ffed8844000    132K rw--- [ stack ]</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">0000000000400000    728K r-x-- a.out</span>
+<span class="err">00000000006b6000     24K rw--- a.out</span>
+<span class="err">00000000006bc000      4K rw--- a.out bss</span>
+<span class="err">0000000000fa4000    140K rw--- [ heap ]</span>
+<span class="err">00007ffed8844000    132K rw--- [ stack ]</span>
+</pre></div>
 
 
 <p>当进程访问任何内存时，都会发生MMU异常(对x86系统来说，是Page Fault)，操作系统能捕获这个异常，并且进入操作系统代码执行。此时，操作系统代码能够找到异常地址对应的内存映射，例如：</p>

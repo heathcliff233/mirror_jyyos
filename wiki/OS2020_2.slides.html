@@ -184,17 +184,18 @@
 <li>两个执行流共享代码和所有全局变量 (数据、堆区)</li>
 <li>线程之间指令的执行顺序是不确定 (<em>non-deterministic</em>) 的</li>
 </ul>
-<pre class="codehilite"><code class="language-c">int x = 0, y = 0; // defaults to 0
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// defaults to 0</span>
 
-void thread_1() {
-  [1] x = 1;
-  [2] printf("y = %d\n", y);
-}
+<span class="kt">void</span> <span class="nf">thread_1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="n">printf</span><span class="p">(</span><span class="s">"y = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="p">}</span>
 
-void thread_2() {
-  [3] y = 1;
-  [4] printf("x = %d\n", x);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread_2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="n">printf</span><span class="p">(</span><span class="s">"x = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <ul>
@@ -206,15 +207,16 @@ void thread_2() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">线程：什么该共享、什么不共享？</h2>
-<pre class="codehilite"><code class="language-c">extern int x;
-int foo() {
-  int volatile t = x;
-  t += 1;
-  x = t;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">extern</span> <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+<span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="k">volatile</span> <span class="n">t</span> <span class="o">=</span> <span class="n">x</span><span class="p">;</span>
+  <span class="n">t</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="n">t</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
-<pre class="codehilite"><code class="language-text">0000000000001140 &lt;foo&gt;:
+<div class="codehilite"><pre><span></span>0000000000001140 &lt;foo&gt;:
  1140: 8b 05 ce 2e 00 00       mov    0x2ece(%rip),%eax # 4014 &lt;x&gt;
  1146: 89 44 24 fc             mov    %eax,-0x4(%rsp)
  114a: 8b 44 24 fc             mov    -0x4(%rsp),%eax
@@ -222,7 +224,8 @@ int foo() {
  1151: 89 44 24 fc             mov    %eax,-0x4(%rsp)
  1155: 8b 44 24 fc             mov    -0x4(%rsp),%eax
  1159: 89 05 b5 2e 00 00       mov    %eax,0x2eb5(%rip) # 4014 &lt;x&gt;
- 115f: c3                      retq   </code></pre>
+ 115f: c3                      retq   
+</pre></div>
 
 
 <p>考虑如果有两个执行流同时调用 <code>foo</code>，哪些资源是共享的？</p>
@@ -268,65 +271,69 @@ int foo() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="threadsh"><code>threads.h</code> 实现：数据结构</h2>
-<pre class="codehilite"><code class="language-c">struct thread {
-  int id;               // 线程号
-  pthread_t thread;     // pthread 线程
-  void (*entry)(int);   // 入口地址
-  struct thread *next;  // 链表
-};
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="kr">thread</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">id</span><span class="p">;</span>               <span class="c1">// 线程号</span>
+  <span class="n">pthread_t</span> <span class="kr">thread</span><span class="p">;</span>     <span class="c1">// pthread 线程</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)(</span><span class="kt">int</span><span class="p">);</span>   <span class="c1">// 入口地址</span>
+  <span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>  <span class="c1">// 链表</span>
+<span class="p">};</span>
 
-struct thread *threads; // 链表头
-void (*join_fn)();      // callback</code></pre>
+<span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="n">threads</span><span class="p">;</span> <span class="c1">// 链表头</span>
+<span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">join_fn</span><span class="p">)();</span>      <span class="c1">// callback</span>
+</pre></div>
 
 
 <p><code>pthread_t</code>: POSIX thread API 中的线程号</p></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="threadsh"><code>threads.h</code> 实现：线程创建</h2>
-<pre class="codehilite"><code class="language-c">static inline void *entry_all(void *arg) {
-  struct thread *thread = (struct thread *)arg;
-  thread-&gt;entry(thread-&gt;id);
-  return NULL;
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">entry_all</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="kr">thread</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+  <span class="kr">thread</span><span class="o">-&gt;</span><span class="n">entry</span><span class="p">(</span><span class="kr">thread</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">);</span>
+  <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
 
-static inline void create(void *fn) {
-  struct thread *cur = (struct thread *)malloc(sizeof(struct thread));
-  assert(cur);
-  cur-&gt;id    = threads ? threads-&gt;id + 1 : 1;
-  cur-&gt;next  = threads;
-  cur-&gt;entry = (void (*)(int))fn;
-  threads    = cur;
-  pthread_create(&cur-&gt;thread, NULL, entry_all, cur);
-}</code></pre></div></div>
+<span class="k">static</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">create</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">fn</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="n">cur</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="kr">thread</span><span class="p">));</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">cur</span><span class="p">);</span>
+  <span class="n">cur</span><span class="o">-&gt;</span><span class="n">id</span>    <span class="o">=</span> <span class="n">threads</span> <span class="o">?</span> <span class="n">threads</span><span class="o">-&gt;</span><span class="n">id</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">cur</span><span class="o">-&gt;</span><span class="n">next</span>  <span class="o">=</span> <span class="n">threads</span><span class="p">;</span>
+  <span class="n">cur</span><span class="o">-&gt;</span><span class="n">entry</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">int</span><span class="p">))</span><span class="n">fn</span><span class="p">;</span>
+  <span class="n">threads</span>    <span class="o">=</span> <span class="n">cur</span><span class="p">;</span>
+  <span class="n">pthread_create</span><span class="p">(</span><span class="o">&</span><span class="n">cur</span><span class="o">-&gt;</span><span class="kr">thread</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">entry_all</span><span class="p">,</span> <span class="n">cur</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="threadsh-join"><code>threads.h</code> 实现：线程 Join</h2>
-<pre class="codehilite"><code class="language-c">static inline void join(void (*fn)()) {
-  join_fn = fn;
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">join</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">fn</span><span class="p">)())</span> <span class="p">{</span>
+  <span class="n">join_fn</span> <span class="o">=</span> <span class="n">fn</span><span class="p">;</span>
+<span class="p">}</span>
 
-__attribute__((destructor)) static void join_all() {
-  for (struct thread *next; threads; threads = next) {
-    pthread_join(threads-&gt;thread, NULL);
-    next = threads-&gt;next;
-    free(threads);
-  }
-  join_fn ? join_fn() : (void)0;
-}</code></pre></div></div>
+<span class="n">__attribute__</span><span class="p">((</span><span class="n">destructor</span><span class="p">))</span> <span class="k">static</span> <span class="kt">void</span> <span class="n">join_all</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span> <span class="n">threads</span><span class="p">;</span> <span class="n">threads</span> <span class="o">=</span> <span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">pthread_join</span><span class="p">(</span><span class="n">threads</span><span class="o">-&gt;</span><span class="kr">thread</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">next</span> <span class="o">=</span> <span class="n">threads</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span>
+    <span class="n">free</span><span class="p">(</span><span class="n">threads</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">join_fn</span> <span class="o">?</span> <span class="n">join_fn</span><span class="p">()</span> <span class="o">:</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">多处理器 & 多线程：入门！</h2>
 <p>恭喜你，你已经可以玩起多线程编程啦！</p>
-<pre class="codehilite"><code class="language-c">#include &lt;threads.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;threads.h&gt;</span><span class="cp"></span>
 
-void a() { while (1) { printf("a"); } }
-void b() { while (1) { printf("b"); } }
+<span class="kt">void</span> <span class="nf">a</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"a"</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">b</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"b"</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
 
-int main() {
-  setbuf(stdout, NULL); // ???
-  create(a);
-  create(b);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">setbuf</span><span class="p">(</span><span class="n">stdout</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span> <span class="c1">// ???</span>
+  <span class="n">create</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
+  <span class="n">create</span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>更多的例子</p>
@@ -342,12 +349,13 @@ int main() {
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">共享内存带来的麻烦……</h2>
 <p>线程共享代码、数据，拥有独立堆栈</p>
-<pre class="codehilite"><code class="language-c">int x;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
 
-void thread_func() {
-  int y;  // 除非指针逃逸，其他线程不可见
-  x++;    // 其他线程直接可见
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread_func</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">y</span><span class="p">;</span>  <span class="c1">// 除非指针逃逸，其他线程不可见</span>
+  <span class="n">x</span><span class="o">++</span><span class="p">;</span>    <span class="c1">// 其他线程直接可见</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <hr></hr>
@@ -378,26 +386,28 @@ void thread_func() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="write">例子: write 的实现</h2>
-<pre class="codehilite"><code class="language-c">ssize_t write(int fd, const char *buf, size_t size) {
-  struct file *file = get_file(fd);
-  ...
-  write_to_disk(buf, file-&gt;offset, size);
-  file-&gt;offset += size;
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">ssize_t</span> <span class="nf">write</span><span class="p">(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span> <span class="o">=</span> <span class="n">get_file</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+  <span class="p">...</span>
+  <span class="n">write_to_disk</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">file</span><span class="o">-&gt;</span><span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+  <span class="n">file</span><span class="o">-&gt;</span><span class="n">offset</span> <span class="o">+=</span> <span class="n">size</span><span class="p">;</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 <p>并发执行 <code>write</code> 会发生什么？</p></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">例子：山寨多线程支付宝</h2>
-<pre class="codehilite"><code class="language-c">int pay(int money) {
-  if (deposit &gt;= money) {
-    deposit -= money;
-    return SUCCESS;
-  } else {
-    return FAIL;
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">pay</span><span class="p">(</span><span class="kt">int</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">deposit</span> <span class="o">&gt;=</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">deposit</span> <span class="o">-=</span> <span class="n">money</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">SUCCESS</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">FAIL</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>并发执行 <code>pay(100)</code> 会发生什么 (<code>balance == 100</code>)？</p>
@@ -419,37 +429,40 @@ void thread_func() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="look-deeper-inside">Look Deeper Inside...</h2>
-<pre class="codehilite"><code class="language-c">int pay(int money) {
-  if (deposit &gt;= money) {
-    deposit -= money;
-    return SUCCESS;
-  } else {
-    return FAIL;
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">pay</span><span class="p">(</span><span class="kt">int</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">deposit</span> <span class="o">&gt;=</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">deposit</span> <span class="o">-=</span> <span class="n">money</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">SUCCESS</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">FAIL</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>中的 <code>deposit -= money;</code> 在硬件上的实际实现：</p>
-<pre class="codehilite"><code class="language-c">int tmp = deposit;
-// 可能与其他处理器并发
-tmp -= money;
-// 可能与其他处理器并发
-deposit = tmp;</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">deposit</span><span class="p">;</span>
+<span class="c1">// 可能与其他处理器并发</span>
+<span class="n">tmp</span> <span class="o">-=</span> <span class="n">money</span><span class="p">;</span>
+<span class="c1">// 可能与其他处理器并发</span>
+<span class="n">deposit</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">;</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">另一个例子：求和</h2>
 <p>分两个线程，计算 <math class="inline-math">1+1+1+\ldots+1</math> (共计 <math class="inline-math">2n</math> 个 <math class="inline-math">1</math>)</p>
-<pre class="codehilite"><code class="language-c">#define n 100000000
-long sum = 0;
+<div class="codehilite"><pre><span></span><span class="cp">#define n 100000000</span>
+<span class="kt">long</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void do_sum() { for (int i = 0; i &lt; n; i++) sum++; }
-void print()  { printf("sum = %ld\n", sum); }
+<span class="kt">void</span> <span class="nf">do_sum</span><span class="p">()</span> <span class="p">{</span> <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="n">sum</span><span class="o">++</span><span class="p">;</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">print</span><span class="p">()</span>  <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"sum = %ld</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">sum</span><span class="p">);</span> <span class="p">}</span>
 
-int main() {
-  create(do_sum);
-  create(do_sum);
-  join(print);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">create</span><span class="p">(</span><span class="n">do_sum</span><span class="p">);</span>
+  <span class="n">create</span><span class="p">(</span><span class="n">do_sum</span><span class="p">);</span>
+  <span class="n">join</span><span class="p">(</span><span class="n">print</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>结果</p>
@@ -464,7 +477,7 @@ int main() {
 <li>即便是最简单的 <code>x++</code>，也不能保证原子性</li>
 <li>不用谈更大的代码片段了 (例如 <code>pay</code>)</li>
 </ul>
-<pre class="codehilite"><code class="language-text">===Thread 1===     ===Thread 2===
+<div class="codehilite"><pre><span></span>===Thread 1===     ===Thread 2===
 movl (x), %eax           .                  // 1st x++;   x == 0
 addl $1,  %eax           .
       .                  .
@@ -476,19 +489,21 @@ addl $1,  %eax           .
       .                  .
       . // interrupt & context switch
       .                  .
-mov %eax, (x)            .                  // 1st x++;   x == 1</code></pre></div></div>
+mov %eax, (x)            .                  // 1st x++;   x == 1
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">有没有感到后怕？</h2>
 <p>单线程程序代码没有原子性的保证</p>
-<pre class="codehilite"><code class="language-c">void thread1() { while (1) { printf("a"); } }
-void thread2() { while (1) { printf("b"); } }</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"a"</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"b"</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
+</pre></div>
 
 
 <p><code>printf</code> 并发还对么？</p>
 <div class="fragment">
 <hr></hr>
-<pre class="codehilite"><code class="language-text">PRINTF(3)  ATTRIBUTES
+<div class="codehilite"><pre><span></span>PRINTF(3)  ATTRIBUTES
 For an explanation of the terms used in this section, see attributes(7).
 ┌────────────────────────┬───────────────┬────────────────┐
 │Interface               │ Attribute     │ Value          │
@@ -497,7 +512,8 @@ For an explanation of the terms used in this section, see attributes(7).
 │sprintf(), snprintf(),  │               │                │
 │vprintf(), vfprintf(),  │               │                │
 │vsprintf(), vsnprintf() │               │                │
-└────────────────────────┴───────────────┴────────────────┘</code></pre>
+└────────────────────────┴───────────────┴────────────────┘
+</pre></div>
 </div></div></div>
 </section>
 </section>
@@ -509,17 +525,18 @@ For an explanation of the terms used in this section, see attributes(7).
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">更多的实验：求和</h2>
 <p>分两个线程，计算 <math class="inline-math">1+1+1+\ldots+1</math> (共计 <math class="inline-math">2n</math> 个 <math class="inline-math">1</math>)</p>
-<pre class="codehilite"><code class="language-c">#define n 100000000
-long sum = 0;
+<div class="codehilite"><pre><span></span><span class="cp">#define n 100000000</span>
+<span class="kt">long</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void do_sum() { for (int i = 0; i &lt; n; i++) sum++; }
-void print()  { printf("sum = %ld\n", sum); }
+<span class="kt">void</span> <span class="nf">do_sum</span><span class="p">()</span> <span class="p">{</span> <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="n">sum</span><span class="o">++</span><span class="p">;</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">print</span><span class="p">()</span>  <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"sum = %ld</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">sum</span><span class="p">);</span> <span class="p">}</span>
 
-int main() {
-  create(do_sum);
-  create(do_sum);
-  join(print);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">create</span><span class="p">(</span><span class="n">do_sum</span><span class="p">);</span>
+  <span class="n">create</span><span class="p">(</span><span class="n">do_sum</span><span class="p">);</span>
+  <span class="n">join</span><span class="p">(</span><span class="n">print</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 <div class="fragment">
 <p>结果： <span class="float-right"><img src="../static/wiki/os/2019/img/question.jpg" width="150px/"></img> </span>
 <ul>
@@ -546,7 +563,8 @@ int main() {
 </li>
 </ul>
 <hr></hr>
-<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; n; i++) sum++;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="n">sum</span><span class="o">++</span><span class="p">;</span>
+</pre></div>
 
 
 <p>可以翻译成</p>
@@ -563,17 +581,18 @@ int main() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">实验：之前的一小段代码</h2>
-<pre class="codehilite"><code class="language-c">int x = 0, y = 0;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void thread_1() {
-  [1] x = 1;
-  [2] printf("y = %d\n", y);
-}
+<span class="kt">void</span> <span class="nf">thread_1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="n">printf</span><span class="p">(</span><span class="s">"y = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="p">}</span>
 
-void thread_2() {
-  [3] y = 1;
-  [4] printf("x = %d\n", x);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread_2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="n">printf</span><span class="p">(</span><span class="s">"x = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <hr></hr>
@@ -644,11 +663,12 @@ void thread_2() {
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">放弃的理由：可见性的丧失</h2>
 <p>为了使 CPU 运行得更快，CPU 可以<span class="red">不按顺序执行指令</span>！</p>
-<pre class="codehilite"><code class="language-text">movl $1, (x)   # x = 1, cache miss
+<div class="codehilite"><pre><span></span>movl $1, (x)   # x = 1, cache miss
                # 如果等这条指令执行完，会浪费大量时间
 movl (y), %eax # 因此只要 x, y 不是同一个变量，CPU 会立即执行这条指令
                # (此时 y = 0)
-...</code></pre>
+...
+</pre></div>
 
 
 <p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/arch-book.jpg" width="250px"></img></p>
@@ -697,22 +717,24 @@ movl (y), %eax # 因此只要 x, y 不是同一个变量，CPU 会立即执行�
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">保证顺序</h2>
 <p>控制编译器行为、阻止编译优化</p>
-<pre class="codehilite"><code class="language-c">void delay() {
-  for (volatile // !!!
-       int i = 0; i &lt; DELAY_COUNT; i++) ;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">delay</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="k">volatile</span> <span class="c1">// !!!</span>
+       <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">DELAY_COUNT</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 <p>保证内存访问 (指令) 的顺序</p>
-<pre class="codehilite"><code class="language-c">extern int x;
+<div class="codehilite"><pre><span></span><span class="k">extern</span> <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
 
-#define barrier() asm volatile ("":::"memory")
+<span class="cp">#define barrier() asm volatile ("":::"memory")</span>
 
-void foo() {
-  x++;
-  barrier(); // ============================
-  x++;       // 阻止 x 的访问被合并
-  y++;       // y 的访问不能被移到 barrier 之前
-}</code></pre>
+<span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">x</span><span class="o">++</span><span class="p">;</span>
+  <span class="n">barrier</span><span class="p">();</span> <span class="c1">// ============================</span>
+  <span class="n">x</span><span class="o">++</span><span class="p">;</span>       <span class="c1">// 阻止 x 的访问被合并</span>
+  <span class="n">y</span><span class="o">++</span><span class="p">;</span>       <span class="c1">// y 的访问不能被移到 barrier 之前</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>(这部分内容应该出现在《计算机系统基础》)</p></div></div>
@@ -722,9 +744,10 @@ void foo() {
 <p>本学期的重要主题：互斥 (mutual exclusion)</p>
 <ul>
 <li><p>效果等效于：</p>
-<pre class="codehilite"><code class="language-c">stop_the_world();
-... // critical section, 临界区
-resume_the_world();</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">stop_the_world</span><span class="p">();</span>
+<span class="p">...</span> <span class="c1">// critical section, 临界区</span>
+<span class="n">resume_the_world</span><span class="p">();</span>
+</pre></div>
 
 
 <ul>

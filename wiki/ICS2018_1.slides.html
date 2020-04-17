@@ -98,10 +98,11 @@
 <section>
 <div class="slide-container"><div class=""><h1 id="hello-c-world">Hello, C World!</h1>
 <p>欢迎！大家想必已经是(面向OJ编程)的C/C++高手了！</p>
-<pre class="codehilite"><code class="language-c">int main(int argc, const char *argv[]) {
-  printf("Hello, C World!\n");
-  return 0;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"Hello, C World!</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 <p>ICS这门课的基本目标：(1) 理解程序是如何在计算机上运行的；(2) 做一个相对大，并且non-trivial的系统软件。</p>
 <p>本课程选择<strong>C语言</strong>作为官方语言，quiz：</p>
@@ -116,7 +117,8 @@
 <section>
 <div class="slide-container"><div class=""><h1 id="c1main">C语言复习1：<code>main</code>函数</h1>
 <p>所有C程序都是从<code>main</code>开始执行的，那谁执行的main呢？</p>
-<pre class="codehilite"><code class="language-c">int main(int argc, char *argv[]);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+</pre></div>
 
 <ul>
 <li>argc (argument count): 参数个数</li>
@@ -156,15 +158,17 @@
 <section>
 <div class="slide-container"><div class=""><h1 id="c21">C语言复习2.1：类型</h1>
 <p>附加题：这是啥？</p>
-<pre class="codehilite"><code class="language-c">void (*signal(int sig, void (*func)(int)))(int);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">signal</span><span class="p">(</span><span class="kt">int</span> <span class="n">sig</span><span class="p">,</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)(</span><span class="kt">int</span><span class="p">)))(</span><span class="kt">int</span><span class="p">);</span>
+</pre></div>
 <div class="fragment">
 
 </div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><p>说人话：</p>
-<pre class="codehilite"><code class="language-c">typedef void (*sig_t)(int);
-sig_t signal(int sig, sig_t func);</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="kt">sig_t</span><span class="p">)(</span><span class="kt">int</span><span class="p">);</span>
+<span class="kt">sig_t</span> <span class="nf">signal</span><span class="p">(</span><span class="kt">int</span> <span class="n">sig</span><span class="p">,</span> <span class="kt">sig_t</span> <span class="n">func</span><span class="p">);</span>
+</pre></div>
 
 
 <ul>
@@ -186,7 +190,8 @@ sig_t signal(int sig, sig_t func);</code></pre>
 <section>
 <div class="slide-container"><div class=""><p>原则上，给你<code>gettime()</code>, <code>read_key()</code>和<code>draw_pixel(x, y, color)</code>，你就能做各种东西了！</p>
 <p>quiz: 如何用<code>draw_pixel</code>实现<code>putchar</code>，进而实现：</p>
-<pre class="codehilite"><code class="language-c">int printf(const char * restrict format, ...);</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">printf</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="kr">restrict</span> <span class="n">format</span><span class="p">,</span> <span class="p">...);</span>
+</pre></div></div></div>
 </section>
 </section>
 
@@ -224,76 +229,80 @@ sig_t signal(int sig, sig_t func);</code></pre>
 <blockquote>
 <p>剧透：这就是NEMU PA的简化版。</p>
 </blockquote>
-<pre class="codehilite"><code class="language-c">#include &lt;stdint.h&gt;
-#define NREG 4
-#define NMEM 16
-typedef uint8_t u8;
-u8 pc = 0, R[NREG], M[NMEM] = { ... };
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdint.h&gt;</span><span class="cp"></span>
+<span class="cp">#define NREG 4</span>
+<span class="cp">#define NMEM 16</span>
+<span class="k">typedef</span> <span class="kt">uint8_t</span> <span class="n">u8</span><span class="p">;</span>
+<span class="n">u8</span> <span class="n">pc</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">R</span><span class="p">[</span><span class="n">NREG</span><span class="p">],</span> <span class="n">M</span><span class="p">[</span><span class="n">NMEM</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span>
 
-int main() {
-  while (!is_halt(M[pc])) {
-    execute();
-  }
-}</code></pre></div></div>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">is_halt</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]))</span> <span class="p">{</span>
+    <span class="n">execute</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 
 <section>
 <div class="slide-container"><div class=""><h1 id="1">代码例子1</h1>
-<pre class="codehilite"><code class="language-c">void execute() {
-  if ((M[pc] &gt;&gt; 4) == 0) {
-    R[(M[pc] &gt;&gt; 2) & 3] = R[M[pc] & 3];
-    pc++;
-  } else if ((M[pc] &gt;&gt; 4) == 1) {
-    R[(M[pc] &gt;&gt; 2) & 3] += R[M[pc] & 3];
-    pc++;
-  } else if ((M[pc] &gt;&gt; 4) == 14) {
-    R[0] = M[M[pc] & 0xf]; 
-    pc++;
-  } else if ((M[pc] &gt;&gt; 4) == 15) {
-    M[M[pc] & 0xf] = R[0];
-    pc++;
-  }
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">execute</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">R</span><span class="p">[(</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&</span> <span class="mi">3</span><span class="p">];</span>
+    <span class="n">pc</span><span class="o">++</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">R</span><span class="p">[(</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&</span> <span class="mi">3</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span><span class="p">[</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&</span> <span class="mi">3</span><span class="p">];</span>
+    <span class="n">pc</span><span class="o">++</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="mi">14</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span><span class="p">[</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&</span> <span class="mh">0xf</span><span class="p">];</span> 
+    <span class="n">pc</span><span class="o">++</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="mi">15</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">M</span><span class="p">[</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">]</span> <span class="o">&</span> <span class="mh">0xf</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+    <span class="n">pc</span><span class="o">++</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 
 <section>
 <div class="slide-container"><div class=""><h1 id="2">代码例子2</h1>
-<pre class="codehilite"><code class="language-c">void execute() {
-  u8 inst = M[pc++];
-  u8 op = inst &gt;&gt; 4;
-  if (op == 0x0 || op == 0x1) {
-    int rt = (inst &gt;&gt; 2) & 3, rs = (inst & 3);
-    if      (op == 0x0) R[rt]  = R[rs];
-    else if (op == 0x1) R[rt] += R[rs];
-  }
-  if (op == 0xe || op == 0xf) {
-    int addr = inst & 0xf;
-    if      (op == 0xe) R[0]    = M[addr];
-    else if (op == 0xf) M[addr] = R[0];
-  }
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">execute</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">u8</span> <span class="n">inst</span> <span class="o">=</span> <span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="o">++</span><span class="p">];</span>
+  <span class="n">u8</span> <span class="n">op</span> <span class="o">=</span> <span class="n">inst</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">op</span> <span class="o">==</span> <span class="mh">0x0</span> <span class="o">||</span> <span class="n">op</span> <span class="o">==</span> <span class="mh">0x1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">rt</span> <span class="o">=</span> <span class="p">(</span><span class="n">inst</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&</span> <span class="mi">3</span><span class="p">,</span> <span class="n">rs</span> <span class="o">=</span> <span class="p">(</span><span class="n">inst</span> <span class="o">&</span> <span class="mi">3</span><span class="p">);</span>
+    <span class="k">if</span>      <span class="p">(</span><span class="n">op</span> <span class="o">==</span> <span class="mh">0x0</span><span class="p">)</span> <span class="n">R</span><span class="p">[</span><span class="n">rt</span><span class="p">]</span>  <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">rs</span><span class="p">];</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">op</span> <span class="o">==</span> <span class="mh">0x1</span><span class="p">)</span> <span class="n">R</span><span class="p">[</span><span class="n">rt</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span><span class="p">[</span><span class="n">rs</span><span class="p">];</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">op</span> <span class="o">==</span> <span class="mh">0xe</span> <span class="o">||</span> <span class="n">op</span> <span class="o">==</span> <span class="mh">0xf</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">inst</span> <span class="o">&</span> <span class="mh">0xf</span><span class="p">;</span>
+    <span class="k">if</span>      <span class="p">(</span><span class="n">op</span> <span class="o">==</span> <span class="mh">0xe</span><span class="p">)</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>    <span class="o">=</span> <span class="n">M</span><span class="p">[</span><span class="n">addr</span><span class="p">];</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">op</span> <span class="o">==</span> <span class="mh">0xf</span><span class="p">)</span> <span class="n">M</span><span class="p">[</span><span class="n">addr</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 
 <section>
 <div class="slide-container"><div class=""><h1 id="3">代码例子3</h1>
-<pre class="codehilite"><code class="language-c">typedef union inst {
-  struct { u8 rs  : 2, rt: 2, op: 4; } rtype;
-  struct { u8 addr: 4,        op: 4; } mtype;
-} inst_t;
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">union</span> <span class="n">inst</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="p">{</span> <span class="n">u8</span> <span class="nl">rs</span>  <span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nl">rt</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nl">op</span><span class="p">:</span> <span class="mi">4</span><span class="p">;</span> <span class="p">}</span> <span class="n">rtype</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="p">{</span> <span class="n">u8</span> <span class="nl">addr</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>        <span class="nl">op</span><span class="p">:</span> <span class="mi">4</span><span class="p">;</span> <span class="p">}</span> <span class="n">mtype</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">inst_t</span><span class="p">;</span>
 
-#define RTYPE(i) u8 rt = (i)-&gt;rtype.rt, rs = (i)-&gt;rtype.rs;
-#define MTYPE(i) u8 addr = (i)-&gt;mtype.addr;
+<span class="cp">#define RTYPE(i) u8 rt = (i)-&gt;rtype.rt, rs = (i)-&gt;rtype.rs;</span>
+<span class="cp">#define MTYPE(i) u8 addr = (i)-&gt;mtype.addr;</span>
 
-void execute() {
-  inst_t *cur = (inst_t *)&M[pc];
-  switch (cur-&gt;rtype.op) {
-  case 0b0000: { RTYPE(cur); R[rt]   = R[rs];   pc++; break; }
-  case 0b0001: { RTYPE(cur); R[rt]  += R[rs];   pc++; break; }
-  case 0b1110: { MTYPE(cur); R[0]    = M[addr]; pc++; break; }
-  case 0b1111: { MTYPE(cur); M[addr] = R[0];    pc++; break; }
-  default: assert(0);
-  }
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">execute</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">inst_t</span> <span class="o">*</span><span class="n">cur</span> <span class="o">=</span> <span class="p">(</span><span class="n">inst_t</span> <span class="o">*</span><span class="p">)</span><span class="o">&</span><span class="n">M</span><span class="p">[</span><span class="n">pc</span><span class="p">];</span>
+  <span class="k">switch</span> <span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">rtype</span><span class="p">.</span><span class="n">op</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">case</span> <span class="mi">0</span><span class="nl">b0000</span><span class="p">:</span> <span class="p">{</span> <span class="n">RTYPE</span><span class="p">(</span><span class="n">cur</span><span class="p">);</span> <span class="n">R</span><span class="p">[</span><span class="n">rt</span><span class="p">]</span>   <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">rs</span><span class="p">];</span>   <span class="n">pc</span><span class="o">++</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span> <span class="p">}</span>
+  <span class="k">case</span> <span class="mi">0</span><span class="nl">b0001</span><span class="p">:</span> <span class="p">{</span> <span class="n">RTYPE</span><span class="p">(</span><span class="n">cur</span><span class="p">);</span> <span class="n">R</span><span class="p">[</span><span class="n">rt</span><span class="p">]</span>  <span class="o">+=</span> <span class="n">R</span><span class="p">[</span><span class="n">rs</span><span class="p">];</span>   <span class="n">pc</span><span class="o">++</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span> <span class="p">}</span>
+  <span class="k">case</span> <span class="mi">0</span><span class="nl">b1110</span><span class="p">:</span> <span class="p">{</span> <span class="n">MTYPE</span><span class="p">(</span><span class="n">cur</span><span class="p">);</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>    <span class="o">=</span> <span class="n">M</span><span class="p">[</span><span class="n">addr</span><span class="p">];</span> <span class="n">pc</span><span class="o">++</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span> <span class="p">}</span>
+  <span class="k">case</span> <span class="mi">0</span><span class="nl">b1111</span><span class="p">:</span> <span class="p">{</span> <span class="n">MTYPE</span><span class="p">(</span><span class="n">cur</span><span class="p">);</span> <span class="n">M</span><span class="p">[</span><span class="n">addr</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>    <span class="n">pc</span><span class="o">++</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span> <span class="p">}</span>
+  <span class="k">default</span><span class="o">:</span> <span class="n">assert</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 
 <section>
@@ -324,7 +333,8 @@ void execute() {
 <section>
 <div class="slide-container"><div class=""><h1 id="c">C语言：滥用</h1>
 <p>各种Hacking：展示智力/技术的时刻(<a href="http://ioccc.org">IOCCC</a>)</p>
-<pre class="codehilite"><code class="language-c">main(){char q=34,n=10,*a="main(){char q=34,n=10,*a=%c%s%c;printf(a,q,a,q,n);}%c";printf(a,q,a,q,n);}</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">main</span><span class="p">(){</span><span class="kt">char</span> <span class="n">q</span><span class="o">=</span><span class="mi">34</span><span class="p">,</span><span class="n">n</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span><span class="o">*</span><span class="n">a</span><span class="o">=</span><span class="s">"main(){char q=34,n=10,*a=%c%s%c;printf(a,q,a,q,n);}%c"</span><span class="p">;</span><span class="n">printf</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">q</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">q</span><span class="p">,</span><span class="n">n</span><span class="p">);}</span>
+</pre></div>
 
 <p>任何Turing-Complete的语言都有这样的fixed-point。</p>
 <div class="fragment">

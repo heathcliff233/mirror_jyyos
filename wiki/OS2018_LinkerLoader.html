@@ -51,9 +51,10 @@
 <div class="fenced fenced-green">
 <h4 id="_2">保研/工作面试题</h4>
 <p>我承认这个题有点难：</p>
-<pre class="codehilite"><code class="language-c">int main() {
-  printf(&quot;Hello, World!\n&quot;);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello, World!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这个程序的执行，从软件到硬件，都发生了什么？你作为计算机系的学生，一定非常渴望能回答这样的问题——如果这都回答不了，计算机系是不是有白上了的感觉？</p>
@@ -65,10 +66,11 @@
 </blockquote>
 <p>要想回答这个问题，求助我们的老朋友：gdb就好啦。然后你发现不运行程序不能<code>si</code>；想打个断点也不知道打在哪。当然，既然你能想到，肯定有办法解决——去网上搜索就好啦。我才不会告诉你用什么关键字呢(多试试！不要用中文关键字和百度哦)。</p>
 <p>然后你看到了类似如下的stack trace：</p>
-<pre class="codehilite"><code class="language-text">#0  0x00007ffff7dd7c33 in _start () from /lib64/ld-linux-x86-64.so.2
+<div class="codehilite"><pre><span></span>#0  0x00007ffff7dd7c33 in _start () from /lib64/ld-linux-x86-64.so.2
 #1  0x0000000000000001 in ?? ()
 #2  0x00007fffffffe70e in ?? ()
-#3  0x0000000000000000 in ?? ()</code></pre>
+#3  0x0000000000000000 in ?? ()
+</pre></div>
 
 
 <p>看起来找到了第一条指令——在<code>ld-linux.so</code>：链接器里。链接器会做一系列的事情(就如你在strace中看到的)，读取动态链接库的信息(解析ELF文件)，然后把ELF文件映射到内存中的位置上。</p>
@@ -81,17 +83,19 @@
 <p>解决这个问题的办法是告诉gcc，不要假设有任何标准库的存在。我们编译操作系统内核时也用了同样的编译选项。</p>
 </div>
 <p>下一个问题是<code>&lt;puts@plt&gt;</code>是什么？在我们的印象中，如果我们在程序里定义一个函数，比如</p>
-<pre class="codehilite"><code class="language-c">int myprintf(const char *fmt, ...) {
-  ...
-}
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">myprintf</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fmt</span><span class="p">,</span> <span class="p">...)</span> <span class="p">{</span>
+  <span class="p">...</span>
+<span class="p">}</span>
 
-int main() {
-  myprintf(&quot;Hello, World\n&quot;);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">myprintf</span><span class="p">(</span><span class="s">&quot;Hello, World</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在没有inline优化的前提下，会被编译成一条<code>call</code>指令，在准备好参数之后直接跳转到<code>myprintf</code>的地址执行，就好比：</p>
-<pre class="codehilite"><code class="language-text">40059e:  e8 83 ff ff ff    callq  400526 &lt;myprintf&gt;</code></pre>
+<div class="codehilite"><pre><span></span>40059e:  e8 83 ff ff ff    callq  400526 &lt;myprintf&gt;
+</pre></div>
 
 
 <p>但这次，我们调用的并不是<code>puts</code>的代码，而是一个神奇的和<code>puts</code>有关的<code>&lt;puts@plt&gt;</code>。为什么会这样呢？</p>

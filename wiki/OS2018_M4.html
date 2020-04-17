@@ -62,13 +62,14 @@
 <h2 id="_4">实验描述</h2>
 <h3 id="_5">总览</h3>
 <p>实现用于内存分配的C函数(系统里已经有实现好的<code>malloc</code>和<code>free</code>了，而且表现很正确)。</p>
-<pre class="codehilite"><code class="language-c">void* do_malloc(size_t size) {
-    return malloc(size);
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span><span class="o">*</span> <span class="nf">do_malloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="p">}</span>
 
-void do_free(void *ptr) {
-    free(ptr);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">do_free</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <h3 id="_6">描述</h3>
@@ -97,17 +98,18 @@ void do_free(void *ptr) {
 </div>
 <h2 id="_10">实现线程安全</h2>
 <p>这个实验看起来挺简单的，CSAPP就有这么个习题，而且网上有大把大把的代码，即便我不抄代码，看一下这些代码的实现思路也是不错的。要实现线程安全的内存分配也不难，上课已经讲过互斥锁了，我们直接用POSIX线程库里提供的就行：</p>
-<pre class="codehilite"><code class="language-c">void *do_malloc(size_t size) {
-  pthread_mutex_lock(&amp;mutex); // 上锁
-  malloc_unsafe(size); // 具体实现分配的算法
-  pthread_mutex_unlock(&amp;mutex); // 解锁
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">do_malloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span> <span class="c1">// 上锁</span>
+  <span class="n">malloc_unsafe</span><span class="p">(</span><span class="n">size</span><span class="p">);</span> <span class="c1">// 具体实现分配的算法</span>
+  <span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span> <span class="c1">// 解锁</span>
+<span class="p">}</span>
 
-void do_free(void *ptr) {
-  pthread_mutex_lock(&amp;mutex); // 上锁
-  free_unsafe(ptr); // 具体实现释放的算法
-  pthread_mutex_unlock(&amp;mutex); // 解锁
-}</code></pre>
+<span class="kt">void</span> <span class="nf">do_free</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span> <span class="c1">// 上锁</span>
+  <span class="n">free_unsafe</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span> <span class="c1">// 具体实现释放的算法</span>
+  <span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span> <span class="c1">// 解锁</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但<code>lock</code>/<code>unlock</code>带来非常严重的问题：在多处理器计算机上，如果多个处理器核心同时请求分配内存，它们就被迫只能一个一个进行(由锁保证)了。回顾一下课上讲过的内容，在实际中，互斥锁(mutex lock)的实现会包含两部分：</p>

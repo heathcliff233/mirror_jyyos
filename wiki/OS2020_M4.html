@@ -51,7 +51,8 @@
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">截止日期</h4>
 <p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
-<pre class="codehilite"><code>git pull origin M4</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin M4</span>
+</pre></div>
 
 
 <p>Soft Deadline: 2020 年 4 月 26 日 23:59:59。</p>
@@ -95,25 +96,28 @@
 <h3 id="_2">描述</h3>
 <p>解释执行每一行标准输入中的 C <span class="red">“单行”</span> 代码 (假设我们只使用 <code>int</code> 类型，即所有输入的表达式都是整数；定义函数的返回值也永远是整数)，分如下两种情况：</p>
 <ul>
-<li><strong>函数</strong>总是以 <code>int</code> 开头，例如<pre class="codehilite"><code>int fib(int n) { if (n &lt;= 1) return 1; return fib(n - 1) + fib(n - 2); }</code></pre>
+<li><strong>函数</strong>总是以 <code>int</code> 开头，例如<div class="codehilite"><pre><span></span><span class="err">int fib(int n) { if (n &lt;= 1) return 1; return fib(n - 1) + fib(n - 2); }</span>
+</pre></div>
 
 
 </li>
 </ul>
 <p>函数接收若干 <code>int</code> 类型的参数，返回一个 <code>int</code> 数值。如果一行是一个函数，我们希望它将会经过 gcc 编译，并被加载到当前进程的地址空间中。函数可以引用之前定义过的函数。</p>
 <ul>
-<li>如果一行不是以 <code>int</code> 开头，我们认为这一行是一个 C 语言的<strong>表达式</strong>，其类型为 <code>int</code>，例如<pre class="codehilite"><code>1 + 2 || (fib(3) * fib(4))</code></pre>
+<li>如果一行不是以 <code>int</code> 开头，我们认为这一行是一个 C 语言的<strong>表达式</strong>，其类型为 <code>int</code>，例如<div class="codehilite"><pre><span></span><span class="err">1 + 2 || (fib(3) * fib(4))</span>
+</pre></div>
 
 
 </li>
 </ul>
-<p><strong>函数和表达式均可以调用之前定义过的函数</strong>，但不允许访问全局的状态 (变量) 或调用标准 C 中的函数。如果一行既不是合法的函数，也不是合法的表达式，<code>crepl</code> 可以不保证它们执行的结果 (但你的程序要尽量不会 crash)；重复定义重名函数行为未定义。</p>
+<p><strong>函数和表达式均可以调用之前定义过的函数</strong>，但不允许访问全局的状态 (变量) 或调用标准 C 中的函数。如果一行既不是合法的函数 (例如调用了不允许调用的函数)，也不是合法的表达式，<code>crepl</code> 可以不保证它们执行的结果 (不一定要报告错误，例如你的程序依然可以照常编译或执行，但你的程序要尽量不会 crash)；重复定义重名函数你也可以当做 undefined behavior 不必做出过多处理——我们的测试用例中没有这样的情况。</p>
 <p>和之前的实验一样，我们并不严格限制你的输出格式，你只要你为每一个函数或表达式输出一行即可，例如以下程序实现也是完全没问题的：</p>
-<pre class="codehilite"><code class="language-text">$ ./crepl-64
+<div class="codehilite"><pre><span></span>$ ./crepl-64
 int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }
 OK.
 gcd(256, 144) * gcd(56, 84)
-= 448.</code></pre>
+= 448.
+</pre></div>
 
 
 <p>看起来很好玩吧，从前可能大家都觉得只有解释型的语言能这么做。但实际上，编译和解释并没有明确的边界——在 OpenJDK 的实现中，即便是 “解释器” 也是编译的 (只是没有经过优化)；而传统的所谓解释型的语言，Python, JavaScript, ……都有编译到机器代码的过程。</p>
@@ -139,17 +143,18 @@ gcd(256, 144) * gcd(56, 84)
 <h2 id="4">4. 实验指南</h2>
 <h3 id="41">4.1 解析读入的命令</h3>
 <p>框架代码里已经包含了读入命令的循环 (看起来像是一个小 shell)，它打印出一个提示符，然后接受输入并解析：</p>
-<pre class="codehilite"><code class="language-c">int main(int argc, char *argv[]) {
-  static char line[4096];
-  while (1) {
-    printf("crepl&gt; ");
-    fflush(stdout);
-    if (!fgets(line, sizeof(line), stdin)) {
-      break;
-    }
-    printf("Got %zu chars.\n", strlen(line)); // WTF?
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+  <span class="k">static</span> <span class="kt">char</span> <span class="n">line</span><span class="p">[</span><span class="mi">4096</span><span class="p">];</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"crepl&gt; "</span><span class="p">);</span>
+    <span class="n">fflush</span><span class="p">(</span><span class="n">stdout</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">fgets</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">line</span><span class="p">),</span> <span class="n">stdin</span><span class="p">))</span> <span class="p">{</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"Got %zu chars.</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">line</span><span class="p">));</span> <span class="c1">// WTF?</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>当你在终端里按下 Ctrl-d，会结束 stdin 输入流，fgets 会得到 <code>NULL</code>。</p>
@@ -157,7 +162,8 @@ gcd(256, 144) * gcd(56, 84)
 <p>回到实验，在上面的代码里，如果读入的字符串以 <code>int</code> 开头，你就可以假设是一个函数；否则就可以假设是一个表达式。</p>
 <h3 id="42">4.2 把函数编译成共享库</h3>
 <p>对于一个一行的函数，比如</p>
-<pre class="codehilite"><code class="language-c">int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">gcd</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">b</span> <span class="o">?</span> <span class="n">gcd</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span> <span class="o">:</span> <span class="n">a</span><span class="p">;</span> <span class="p">}</span>
+</pre></div>
 
 
 <p>如何把它编译成共享库？我们在课堂上讲解过编译成共享库 (shared object, so) 的代码，我们的 M2 (libco) 也实现了共享库。我们只需要把这个文件保存到临时文件里，例如 <code>a.c</code> 中，然后使用正确的选项调用 gcc 即可。</p>
@@ -167,15 +173,17 @@ gcd(256, 144) * gcd(56, 84)
 </div></div></div>
 
 <p>除了编译和命名的问题，大家可能会感到困惑是，如果我的函数调用了其他函数怎么办？</p>
-<pre class="codehilite"><code class="language-c">int foo() { return bar() + baz(); }</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">bar</span><span class="p">()</span> <span class="o">+</span> <span class="n">baz</span><span class="p">();</span> <span class="p">}</span>
+</pre></div>
 
 
 <p>你不妨试着编译这个程序……它竟然可以被编译！所以忽略所有的 warnings 就好了！最后，为了巩固大家在上一个实验中学过的知识，我们限制你不能使用 libc 中的 system 和 popen——它们会让实验变得有些过于简单。</p>
 <h3 id="43">4.3 把表达式编译成共享库</h3>
 <p>把函数编译成共享库是常规操作——库函数主要就是为我们提供函数的。但表达式怎么办？又用到我们这门课里反复用的小技巧了：我们可以做一个 wrapper 呀！每当我们收到一个表达式，例如 <code>gcd(256, 144)</code> 的时候，我们都可以 “人工生成” 一段 C 代码</p>
-<pre class="codehilite"><code class="language-c">int __expr_wrapper_4() {
-  return gcd(256, 144);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">__expr_wrapper_4</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="n">gcd</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">144</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>注意到函数名里的数字——我们通过加上数字为表达式生成不一样的名字。我们的表达式变成一个函数，我们就可以把它编译成共享库了。把动态库加载到地址空间并得到 <code>__expr_wrapper_4</code> 的地址，直接进行函数调用就能得到表达式的值了。</p>

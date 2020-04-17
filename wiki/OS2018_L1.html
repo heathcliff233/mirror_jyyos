@@ -51,15 +51,16 @@
 <div class="fenced fenced-red">
 <h4 id="bug">框架代码的bug</h4>
 <p>框架代码的Makefile里有一个巨大的bug：提交的目录错了，会导致打包oslab0的目录：</p>
-<pre class="codehilite"><code class="language-diff">@@ -21,7 +21,7 @@ clean:
+<div class="codehilite"><pre><span></span><span class="gu">@@ -21,7 +21,7 @@ clean:</span>
         rm -rf build
 
  submit:
--       cd .. &amp;&amp; tar cj oslab0 &gt; submission.tar.bz2
-+       cd .. &amp;&amp; tar cj oslab1 &gt; submission.tar.bz2
+<span class="gd">-       cd .. &amp;&amp; tar cj oslab0 &gt; submission.tar.bz2</span>
+<span class="gi">+       cd .. &amp;&amp; tar cj oslab1 &gt; submission.tar.bz2</span>
         curl -F &quot;task=L1&quot; -F &quot;id=$(STUID)&quot; -F &quot;name=$(STUNAME)&quot; -F &quot;submission=@../submission.tar.bz2&quot; 114.212.81.90:5000/upload
 
- build/kernel: $(OBJS)</code></pre>
+ build/kernel: $(OBJS)
+</pre></div>
 
 
 <p>请大家执行<code>git pull origin master</code>(或手动)更新代码。</p>
@@ -111,33 +112,34 @@
 <h2 id="_7">实验指南</h2>
 <h3 id="api">实现API</h3>
 <p>你所要做的就是实现<code>kernel.h</code>里的所有API，其中用到的结构体(<code>thread_t</code>, <code>spinlock_t</code>和<code>sem_t</code>)定义在<code>os.h</code>中，我们的测试代码会引用<code>os.h</code>，并且定义相关的结构体。</p>
-<pre class="codehilite"><code class="language-c">MODULE {
-  void (*init)();
-  void (*run)();
-  _RegSet *(*interrupt)(_Event ev, _RegSet *regs);
-} MOD_NAME(os);
+<div class="codehilite"><pre><span></span><span class="n">MODULE</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">run</span><span class="p">)();</span>
+  <span class="n">_RegSet</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">interrupt</span><span class="p">)(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_RegSet</span> <span class="o">*</span><span class="n">regs</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">MOD_NAME</span><span class="p">(</span><span class="n">os</span><span class="p">);</span>
 
-MODULE {
-  void (*init)();
-  void *(*alloc)(size_t size);
-  void (*free)(void *ptr);
-} MOD_NAME(pmm);
+<span class="n">MODULE</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">alloc</span><span class="p">)(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">free</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">MOD_NAME</span><span class="p">(</span><span class="n">pmm</span><span class="p">);</span>
 
-typedef struct thread thread_t;
-typedef struct spinlock spinlock_t;
-typedef struct semaphore sem_t;
-MODULE {
-  void (*init)();
-  int (*create)(thread_t *thread, void (*entry)(void *arg), void *arg);
-  void (*teardown)(thread_t *thread);
-  thread_t *(*schedule)();
-  void (*spin_init)(spinlock_t *lk, const char *name);
-  void (*spin_lock)(spinlock_t *lk);
-  void (*spin_unlock)(spinlock_t *lk);
-  void (*sem_init)(sem_t *sem, const char *name, int value);
-  void (*sem_wait)(sem_t *sem);
-  void (*sem_signal)(sem_t *sem);
-} MOD_NAME(kmt);</code></pre>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="kr">thread</span> <span class="n">thread_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">spinlock</span> <span class="n">spinlock_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">semaphore</span> <span class="n">sem_t</span><span class="p">;</span>
+<span class="n">MODULE</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">create</span><span class="p">)(</span><span class="n">thread_t</span> <span class="o">*</span><span class="kr">thread</span><span class="p">,</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">),</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">teardown</span><span class="p">)(</span><span class="n">thread_t</span> <span class="o">*</span><span class="kr">thread</span><span class="p">);</span>
+  <span class="n">thread_t</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">schedule</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_init</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_lock</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_unlock</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_init</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">int</span> <span class="n">value</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_wait</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_signal</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">MOD_NAME</span><span class="p">(</span><span class="n">kmt</span><span class="p">);</span>
+</pre></div>
 
 
 <p>其中线程管理部分：</p>
@@ -172,22 +174,23 @@ MODULE {
 <h3 id="_9">实验指南</h3>
 <p>框架代码已经提供了一个最小的中断处理函数。你所要做的首先是把Lab0中的一些库函数(例如<code>printf</code>)移植到Lab1中，这样你可以在中断处理程序中打印出很多有用的信息(例如事件是什么、寄存器的数值等等)。</p>
 <p>接下来你就可以实现这些API了。在<code>os-&gt;run()</code>里可以插入一些测试代码，例如：</p>
-<pre class="codehilite"><code class="language-c">static void f(void *arg) {
-  while (1) {
-    _putc((char)arg);
-  }
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">f</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">_putc</span><span class="p">((</span><span class="kt">char</span><span class="p">)</span><span class="n">arg</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-static void test_run() {
-  kmt-&gt;create(&amp;t1, f, (void *)'a');
-  kmt-&gt;create(&amp;t2, f, (void *)'b');
-}
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">test_run</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t1</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="sc">&#39;a&#39;</span><span class="p">);</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t2</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="sc">&#39;b&#39;</span><span class="p">);</span>
+<span class="p">}</span>
 
-static void os_run() {
-  ...
-  test_run();
-  ...
-}</code></pre>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">os_run</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">test_run</span><span class="p">();</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>如果实现正确，你就能看到线程切换啦！很酷吧，这就有点真正“操作系统”的味道了。当然最后提交的时候不要忘记把测试代码去掉——记得把<code>test_run</code>注释掉再提交。</p>
@@ -196,28 +199,29 @@ static void os_run() {
 <p>如果你只是“实现”这些API，然后把代码贴给别人看看，这个实验也许很简单。但是如果你想象你写的操作系统有朝一日将会运行在飞机、火箭上，一旦出现问题就可能伤人性命，你还敢提交这样的代码吗？即便这只是课程作业，你也应该尽力让你提交的代码正确，至少充分地测试它。</p>
 </div>
 <p>在有了最简单的测试之后，不妨试一试用信号量解决生产者-消费者问题，正好复习一下课堂学习的知识，顺便测试一下代码的正确性。</p>
-<pre class="codehilite"><code class="language-c">sem_t empty, fill;
+<div class="codehilite"><pre><span></span><span class="n">sem_t</span> <span class="n">empty</span><span class="p">,</span> <span class="n">fill</span><span class="p">;</span>
 
-static void producer(void *arg) {
-  while (1) {
-    kmt-&gt;sem_wait(&amp;empty);
-    // produce
-    kmt-&gt;sem_signal(&amp;fill);
-  }
-}
-static void consumer(void *arg) {
-  while (1) {
-    kmt-&gt;sem_wait(&amp;fill);
-    // consume
-    kmt-&gt;sem_signal(&amp;empty);
-  }
-}
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">producer</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_wait</span><span class="p">(</span><span class="o">&amp;</span><span class="n">empty</span><span class="p">);</span>
+    <span class="c1">// produce</span>
+    <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_signal</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fill</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">consumer</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_wait</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fill</span><span class="p">);</span>
+    <span class="c1">// consume</span>
+    <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_signal</span><span class="p">(</span><span class="o">&amp;</span><span class="n">empty</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-static void test_run() {
-  kmt-&gt;sem_init(&amp;empty, &quot;empty&quot;, BUF_SIZE);
-  kmt-&gt;sem_init(&amp;fill, &quot;fill&quot;, 0);
-  // create producers and consumers
-}</code></pre>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">test_run</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">empty</span><span class="p">,</span> <span class="s">&quot;empty&quot;</span><span class="p">,</span> <span class="n">BUF_SIZE</span><span class="p">);</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fill</span><span class="p">,</span> <span class="s">&quot;fill&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="c1">// create producers and consumers</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>然后你会考虑一些更复杂的情况：</p>
@@ -238,54 +242,57 @@ static void test_run() {
 <li><code>_intr_read</code>和<code>_intr_write</code>用来读取中断的状态和开/关中断。</li>
 <li><code>_yield</code>用来产生一个中断，在x86下的实现非常简单，只需要一行内嵌汇编：</li>
 </ul>
-<pre class="codehilite"><code class="language-c">asm volatile(&quot;int $0x80&quot; : : &quot;a&quot;(-1));</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">asm</span> <span class="nf">volatile</span><span class="p">(</span><span class="s">&quot;int $0x80&quot;</span> <span class="o">:</span> <span class="o">:</span> <span class="s">&quot;a&quot;</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">));</span>
+</pre></div>
 
 
 <p>嗯，没错，就是调用中断指令陷入内核。<code>_yield()</code>会让中断处理程序收到一个<code>_EVENT_YIELD</code>的事件。</p>
 <p>接下来就只剩下两个函数了，首先是<code>_asye_init</code>，它实现了“注册中断处理程序”的功效。你只需要知道在这里注册的处理程序每次在中断到来时都会被调用就行了。目前在x86中，它的实现是这样的：</p>
-<pre class="codehilite"><code class="language-c">// TrapFrame类似xv6，由汇编代码保存
-void irq_handle(struct TrapFrame *tf) {
-  _RegSet regs = {
-    .eax = tf-&gt;eax, .ebx = tf-&gt;ebx, .ecx = tf-&gt;ecx, .edx = tf-&gt;edx,
-    .esi = tf-&gt;esi, .edi = tf-&gt;edi, .ebp = tf-&gt;ebp, .esp3 = 0,
-    .eip = tf-&gt;eip, .eflags = tf-&gt;eflags,
-    .cs = tf-&gt;cs, .ds = tf-&gt;ds, .es = tf-&gt;es, .ss = 0,
-    .ss0 = 0, .esp0 = 0,
-  };
+<div class="codehilite"><pre><span></span><span class="c1">// TrapFrame类似xv6，由汇编代码保存</span>
+<span class="kt">void</span> <span class="nf">irq_handle</span><span class="p">(</span><span class="k">struct</span> <span class="n">TrapFrame</span> <span class="o">*</span><span class="n">tf</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">_RegSet</span> <span class="n">regs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">eax</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">eax</span><span class="p">,</span> <span class="p">.</span><span class="n">ebx</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">ebx</span><span class="p">,</span> <span class="p">.</span><span class="n">ecx</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">ecx</span><span class="p">,</span> <span class="p">.</span><span class="n">edx</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">edx</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">esi</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">esi</span><span class="p">,</span> <span class="p">.</span><span class="n">edi</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">edi</span><span class="p">,</span> <span class="p">.</span><span class="n">ebp</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">ebp</span><span class="p">,</span> <span class="p">.</span><span class="n">esp3</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">eip</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">eip</span><span class="p">,</span> <span class="p">.</span><span class="n">eflags</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">eflags</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">cs</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">cs</span><span class="p">,</span> <span class="p">.</span><span class="n">ds</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">ds</span><span class="p">,</span> <span class="p">.</span><span class="n">es</span> <span class="o">=</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">es</span><span class="p">,</span> <span class="p">.</span><span class="n">ss</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">ss0</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="p">.</span><span class="n">esp0</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="p">};</span>
 
-  if (tf-&gt;irq &gt;= 32 &amp;&amp; tf-&gt;irq &lt; 64) {
-    lapic_eoi(); // 硬件相关，你可以忽略
-  }
+  <span class="k">if</span> <span class="p">(</span><span class="n">tf</span><span class="o">-&gt;</span><span class="n">irq</span> <span class="o">&gt;=</span> <span class="mi">32</span> <span class="o">&amp;&amp;</span> <span class="n">tf</span><span class="o">-&gt;</span><span class="n">irq</span> <span class="o">&lt;</span> <span class="mi">64</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">lapic_eoi</span><span class="p">();</span> <span class="c1">// 硬件相关，你可以忽略</span>
+  <span class="p">}</span>
 
-  _Event ev;
-  // 若干行代码设置ev的值
+  <span class="n">_Event</span> <span class="n">ev</span><span class="p">;</span>
+  <span class="c1">// 若干行代码设置ev的值</span>
 
-  _RegSet *ret = &amp;regs;
-  if (H) { // H就是asye_init时的中断处理程序
-    _RegSet *next = H(ev, &amp;regs); // 终于在这里调用了
-    if (next != NULL) {
-      ret = next;
-    }
-  }
+  <span class="n">_RegSet</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">regs</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">H</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// H就是asye_init时的中断处理程序</span>
+    <span class="n">_RegSet</span> <span class="o">*</span><span class="n">next</span> <span class="o">=</span> <span class="n">H</span><span class="p">(</span><span class="n">ev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">regs</span><span class="p">);</span> <span class="c1">// 终于在这里调用了</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">next</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">ret</span> <span class="o">=</span> <span class="n">next</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
 
-  // 内嵌汇编，将ret寄存器现场装入处理器执行
-}</code></pre>
+  <span class="c1">// 内嵌汇编，将ret寄存器现场装入处理器执行</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>比较神秘的是<code>_make</code>: 给定一个堆栈<code>kstack</code>，它能创建一个新的寄存器现场，寄存器现场在<code>kstack</code>中分配，目前的实现是这样的：</p>
-<pre class="codehilite"><code class="language-c">_RegSet *_make(_Area stack, void (*entry)(void *), void *arg) {
-  _RegSet *regs = (_RegSet *)stack.start;
-  regs-&gt;eax = regs-&gt;ebx = regs-&gt;ecx = regs-&gt;edx = 0;
-  ... // 各种设置寄存器现场的值
-  regs-&gt;cs = KSEL(SEG_KCODE);
-  regs-&gt;eip = (uint32_t)entry;
-  regs-&gt;eflags = FL_IF; // IF = 1
+<div class="codehilite"><pre><span></span><span class="n">_RegSet</span> <span class="o">*</span><span class="nf">_make</span><span class="p">(</span><span class="n">_Area</span> <span class="n">stack</span><span class="p">,</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="p">),</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">_RegSet</span> <span class="o">*</span><span class="n">regs</span> <span class="o">=</span> <span class="p">(</span><span class="n">_RegSet</span> <span class="o">*</span><span class="p">)</span><span class="n">stack</span><span class="p">.</span><span class="n">start</span><span class="p">;</span>
+  <span class="n">regs</span><span class="o">-&gt;</span><span class="n">eax</span> <span class="o">=</span> <span class="n">regs</span><span class="o">-&gt;</span><span class="n">ebx</span> <span class="o">=</span> <span class="n">regs</span><span class="o">-&gt;</span><span class="n">ecx</span> <span class="o">=</span> <span class="n">regs</span><span class="o">-&gt;</span><span class="n">edx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">...</span> <span class="c1">// 各种设置寄存器现场的值</span>
+  <span class="n">regs</span><span class="o">-&gt;</span><span class="n">cs</span> <span class="o">=</span> <span class="n">KSEL</span><span class="p">(</span><span class="n">SEG_KCODE</span><span class="p">);</span>
+  <span class="n">regs</span><span class="o">-&gt;</span><span class="n">eip</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">entry</span><span class="p">;</span>
+  <span class="n">regs</span><span class="o">-&gt;</span><span class="n">eflags</span> <span class="o">=</span> <span class="n">FL_IF</span><span class="p">;</span> <span class="c1">// IF = 1</span>
 
-  uint32_t **esp = (uint32_t **)&amp;regs-&gt;esp0;
-  *(*esp -= 1) = (uint32_t)arg; // 根须x86 calling convention
-  *(*esp -= 1) = 0;             // 把参数存入堆栈，假设永不返回
-  return regs;
-}</code></pre>
+  <span class="kt">uint32_t</span> <span class="o">**</span><span class="n">esp</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint32_t</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">esp0</span><span class="p">;</span>
+  <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">esp</span> <span class="o">-=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span> <span class="c1">// 根须x86 calling convention</span>
+  <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">esp</span> <span class="o">-=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>             <span class="c1">// 把参数存入堆栈，假设永不返回</span>
+  <span class="k">return</span> <span class="n">regs</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>也就是说，新创建的寄存器现场会执行<code>entry</code>地址的代码，并且传入参数<code>arg</code>。特别值得注意的是EFLAGS寄存器的初始值为<code>FL_IF</code>，也就是中断处于打开状态。</p>
@@ -302,10 +309,11 @@ void irq_handle(struct TrapFrame *tf) {
 <div class="fenced fenced-green">
 <h4 id="_14">中断处理程序到底保存了什么？</h4>
 <p><code>_RegSet</code>是体系结构相关的数据结构，不同的处理器有不同的寄存器现场。你可以在中断时打印x86的寄存器现场，例如</p>
-<pre class="codehilite"><code class="language-c">void regs_dump_x86(_RegSet *regs) {
-  printf(&quot;CS:EIP = %04x:%08x\n&quot;, regs-&gt;cs, regs-&gt;eip);
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">regs_dump_x86</span><span class="p">(</span><span class="n">_RegSet</span> <span class="o">*</span><span class="n">regs</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;CS:EIP = %04x:%08x</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">regs</span><span class="o">-&gt;</span><span class="n">cs</span><span class="p">,</span> <span class="n">regs</span><span class="o">-&gt;</span><span class="n">eip</span><span class="p">);</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但要小心，这部分代码不能被移植到其他体系结构。如果你希望你的程序未来可以跑在其他处理器上，请你管理好这些不可移植的代码，确保在它们不存在时操作系统仍然可以运行。</p>
@@ -313,45 +321,49 @@ void irq_handle(struct TrapFrame *tf) {
 <p>总的来说，我们的AM实现已经帮你干完了绝大部分的脏活，这些脏活如何实现可以参考xv6的代码(<code>vectors.pl</code>, <code>trapasm.S</code>, <code>trap.c</code>)。</p>
 <h3 id="hello-os-world">Hello, OS World</h3>
 <p>实验需要实现三个基础内核模块的代码：<code>os</code> (操作系统的主循环)、<code>pmm</code> (物理内存管理)和<code>kmt</code> (内核多线程)。那内核模块是个什么玩意？</p>
-<pre class="codehilite"><code class="language-c">// Statically-linked Kernel Modules (see defs in kernel.h)
-#define MODULE typedef struct
-#define MOD_NAME(name) \
-  mod_##name##_t; \
-  extern mod_##name##_t *name
-#define MOD_DEF(name) \
-  extern mod_##name##_t __##name##_obj; \
-  mod_##name##_t *name = &amp;__##name##_obj; \
-  mod_##name##_t __##name##_obj = </code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// Statically-linked Kernel Modules (see defs in kernel.h)</span>
+<span class="cp">#define MODULE typedef struct</span>
+<span class="cp">#define MOD_NAME(name) \</span>
+<span class="cp">  mod_##name##_t; \</span>
+<span class="cp">  extern mod_##name##_t *name</span>
+<span class="cp">#define MOD_DEF(name) \</span>
+<span class="cp">  extern mod_##name##_t __##name##_obj; \</span>
+<span class="cp">  mod_##name##_t *name = &amp;__##name##_obj; \</span>
+<span class="cp">  mod_##name##_t __##name##_obj = </span>
+</pre></div>
 
 
 <p>把宏展开，以<code>os</code>模块为例，就得到了：</p>
-<pre class="codehilite"><code class="language-c">typedef struct {
-  void (*init)();
-  void (*run)();
-  _RegSet *(*interrupt)(_Event ev, _RegSet *regs);
-} mod_os_t;
-extern mod_os_t *os;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">run</span><span class="p">)();</span>
+  <span class="n">_RegSet</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">interrupt</span><span class="p">)(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_RegSet</span> <span class="o">*</span><span class="n">regs</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">mod_os_t</span><span class="p">;</span>
+<span class="k">extern</span> <span class="n">mod_os_t</span> <span class="o">*</span><span class="n">os</span><span class="p">;</span>
+</pre></div>
 
 
 <p>因此，你需要在你的内核中定义<code>os</code>，这可以通过<code>MOD_DEF</code>实现。<code>MOD_DEF(os)</code>的宏展开：</p>
-<pre class="codehilite"><code class="language-c">extern mod_os_t __os_obj;
-mod_os_t *os = &amp;__os_obj;
-mod_os_t __os_obj = </code></pre>
+<div class="codehilite"><pre><span></span><span class="k">extern</span> <span class="n">mod_os_t</span> <span class="n">__os_obj</span><span class="p">;</span>
+<span class="n">mod_os_t</span> <span class="o">*</span><span class="n">os</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">__os_obj</span><span class="p">;</span>
+<span class="n">mod_os_t</span> <span class="n">__os_obj</span> <span class="o">=</span> 
+</pre></div>
 
 
 <p>所以你可以写：</p>
-<pre class="codehilite"><code class="language-c">static void os_init() { ... }
-static void os_run() { ...}
-static _RegSet *os_interrupt(_Event ev, _RegSet *regs) { ... }
-MOD_DEF(os) {
-// 等效于：
-// extern mod_os_t __os_obj;
-// mod_os_t *os = &amp;__os_obj;
-// mod_os_t __os_obj = {
-    .init = os_init,
-    .run = os_run,
-    .interrupt = os_interrupt,
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">os_init</span><span class="p">()</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">os_run</span><span class="p">()</span> <span class="p">{</span> <span class="p">...}</span>
+<span class="k">static</span> <span class="n">_RegSet</span> <span class="o">*</span><span class="nf">os_interrupt</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_RegSet</span> <span class="o">*</span><span class="n">regs</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<span class="n">MOD_DEF</span><span class="p">(</span><span class="n">os</span><span class="p">)</span> <span class="p">{</span>
+<span class="c1">// 等效于：</span>
+<span class="c1">// extern mod_os_t __os_obj;</span>
+<span class="c1">// mod_os_t *os = &amp;__os_obj;</span>
+<span class="c1">// mod_os_t __os_obj = {</span>
+    <span class="p">.</span><span class="n">init</span> <span class="o">=</span> <span class="n">os_init</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">run</span> <span class="o">=</span> <span class="n">os_run</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">interrupt</span> <span class="o">=</span> <span class="n">os_interrupt</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>其中<code>os_init</code>, <code>os_run</code>, <code>os_interrupt</code>是函数的名称，例如：</p>
@@ -362,10 +374,11 @@ MOD_DEF(os) {
 <li>调用<code>os-&gt;run()</code>运行操作系统，操作系统打开中断，真正开始执行。</li>
 </ul>
 <p>所以最简单的实现就是这些模块都不做任何事，而<code>os-&gt;run</code>打印Hello World：</p>
-<pre class="codehilite"><code class="language-c">static void os_run() {
-  printf(&quot;Hello, OS World!\n&quot;);
-  while (1);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">os_run</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello, OS World!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>如果一切顺利，你就能看到控制台上打印出的<code>Hello, OS World!</code>，开始操作系统实验的旅程吧！</p>
@@ -376,24 +389,26 @@ MOD_DEF(os) {
 <h3 id="_16">调试操作系统内核</h3>
 <p>很快写着写着你就会发现自己的代码出bug了，有可能是并发的，有可能只是顺序的逻辑实现错了。如果出现了莫名其妙的异常、虚拟机神秘重启等情况不要惊慌，<strong>机器永远是对的</strong>，坐下来调代码吧。</p>
 <p>要想快速知道代码出了什么问题，实现<code>printf</code>和<code>assert</code>就是非常重要的：</p>
-<pre class="codehilite"><code class="language-c">#ifdef NDEBUG
-  #define assert(ignore) ((void)0)
-#else
-  #define assert(cond) \
-    do { \
-      if (!(cond)) { \
-        printf(&quot;Assertion fail at %s:%d\n&quot;, __FILE__, __LINE__); \
-        _halt(1); \
-      } \
-    } while (0)
-#endif</code></pre>
+<div class="codehilite"><pre><span></span><span class="cp">#ifdef NDEBUG</span>
+  <span class="cp">#define assert(ignore) ((void)0)</span>
+<span class="cp">#else</span>
+  <span class="cp">#define assert(cond) \</span>
+<span class="cp">    do { \</span>
+<span class="cp">      if (!(cond)) { \</span>
+<span class="cp">        printf(&quot;Assertion fail at %s:%d\n&quot;, __FILE__, __LINE__); \</span>
+<span class="cp">        _halt(1); \</span>
+<span class="cp">      } \</span>
+<span class="cp">    } while (0)</span>
+<span class="cp">#endif</span>
+</pre></div>
 
 
 <p>以及<code>panic</code>能帮你及时检测操作系统中不预期出现的状态：</p>
-<pre class="codehilite"><code class="language-c">void *ptr = pmm-&gt;alloc(size);
-if (!ptr) {
-  panic(&quot;memory allocation failed&quot;);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">panic</span><span class="p">(</span><span class="s">&quot;memory allocation failed&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在适当的地方加上printf和assert能帮助你快速定位到程序中出错的状态(比如在中断到来时打印寄存器的现场，能快速帮你定位出现异常的位置)，缩小bug的检查范围。</p>
@@ -401,22 +416,23 @@ if (!ptr) {
 <h4 id="printf">更好的<code>printf</code>方式</h4>
 <p>相信大家都有过不停地加<code>printf</code>, 删掉<code>printf</code>的调试体验吧。这感觉可不太好，找了一大圈，最后发现一开始删掉的<code>printf</code>打印的信息才是最有用的，不过一整天就已经过去了。</p>
 <p>下面的记录模式也许能帮到你：</p>
-<pre class="codehilite"><code>#define TRACEME
+<div class="codehilite"><pre><span></span><span class="n">#define</span><span class="w"> </span><span class="n">TRACEME</span><span class="w"></span>
 
-// #include &lt;trace.h&gt;
-#ifdef TRACEME
-  #define TRACE_ENTRY printf(&quot;[trace] %s:entry\n&quot;, __func__)
-  #define TRACE_EXIT printf(&quot;[trace] %s:exit\n&quot;, __func__)
-#else
-  #define TRACE_ENTRY ((void)0)
-  #define TRACE_EXIT ((void)0)
-#endif
+<span class="o">//</span><span class="w"> </span><span class="n">#include</span><span class="w"> </span><span class="o">&lt;</span><span class="n">trace</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span><span class="w"></span>
+<span class="n">#ifdef</span><span class="w"> </span><span class="n">TRACEME</span><span class="w"></span>
+<span class="w">  </span><span class="n">#define</span><span class="w"> </span><span class="n">TRACE_ENTRY</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="ss">&quot;[trace] %s:entry\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">__func__</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">#define</span><span class="w"> </span><span class="n">TRACE_EXIT</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="ss">&quot;[trace] %s:exit\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">__func__</span><span class="p">)</span><span class="w"></span>
+<span class="n">#else</span><span class="w"></span>
+<span class="w">  </span><span class="n">#define</span><span class="w"> </span><span class="n">TRACE_ENTRY</span><span class="w"> </span><span class="p">((</span><span class="n">void</span><span class="p">)</span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">#define</span><span class="w"> </span><span class="n">TRACE_EXIT</span><span class="w"> </span><span class="p">((</span><span class="n">void</span><span class="p">)</span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="n">#endif</span><span class="w"></span>
 
-void f() {
-  TRACE_ENTRY;
-  printf(&quot;This is f.\n&quot;);
-  TRACE_EXIT;
-}</code></pre>
+<span class="n">void</span><span class="w"> </span><span class="n">f</span><span class="p">()</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">TRACE_ENTRY</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="ss">&quot;This is f.\n&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="n">TRACE_EXIT</span><span class="p">;</span><span class="w"></span>
+<span class="err">}</span><span class="w"></span>
+</pre></div>
 
 
 <p>可以在重要的函数上面加上这些日志，通过<code>TRACEME</code>宏来决定到底是否打印日志。</p>
@@ -435,22 +451,24 @@ void f() {
 <p>总的来说，如果只是写几十上百行的OJ程序，无论你习惯多么的坏，多多少少总是能调试出来的。但如果要维护更大的程序，用上<strong>正确的工具</strong>就能帮上大忙了。</p>
 <h3 id="_18">保护自己不受伤害</h3>
 <p>有些bug可能会非常难调试，这里举一个例子：栈溢出。也许已经有同学在Lab 0的时候吃过苦头了：栈空间不是无限大的，而如果我们带着很大的局部变量或者递归很多层，栈就悄悄溢出了……在操作系统内核中，内核线程栈的溢出就显得更危险了，因为你可能会定义：</p>
-<pre class="codehilite"><code class="language-c">struct thread_t {
-  int32_t id;
-  ...
-  uint8_t stack[STK_SZ];
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">thread_t</span> <span class="p">{</span>
+  <span class="kt">int32_t</span> <span class="n">id</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="kt">uint8_t</span> <span class="n">stack</span><span class="p">[</span><span class="n">STK_SZ</span><span class="p">];</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>而栈溢出(x86的栈从高地址向低地址生长)的后果就是线程的信息可能被覆盖，出现各种诡异(难以理解)的情况，而且有可能bug若隐若现，加一条<code>printf</code>也许就不触发了。</p>
 <p>如果想避免这种情况的发生，可以给栈的前后加一些栅栏缓冲(fences)：</p>
-<pre class="codehilite"><code class="language-c">struct thread_t {
-  int32_t id;
-  ...
-  uint8_t fence1[32];
-  uint8_t stack[STK_SZ];
-  uint8_t fence2[32];
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">thread_t</span> <span class="p">{</span>
+  <span class="kt">int32_t</span> <span class="n">id</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="kt">uint8_t</span> <span class="n">fence1</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+  <span class="kt">uint8_t</span> <span class="n">stack</span><span class="p">[</span><span class="n">STK_SZ</span><span class="p">];</span>
+  <span class="kt">uint8_t</span> <span class="n">fence2</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>然后给这些fences赋上一些“magic numbers”，比如<code>0xcc</code>。随时我们检查这些fences是否被修改过(刚好全部写入相同数值的可能性几乎为0)，就能知道有没有栈溢出(under/overflow)了。</p>

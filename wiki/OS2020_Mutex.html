@@ -59,58 +59,62 @@
 <h2 id="_1">“互斥” 的含义</h2>
 <h3 id="_2">互斥的直观解释</h3>
 <p>为了控制并发性，防止我们不想并发的代码并发，例如防止以下代码在并发执行的时候发生 “金钱溢出”：</p>
-<pre class="codehilite"><code class="language-c">int pay(unsigned int money) {
-  if (deposit &gt;= money) {
-    deposit -= money;
-    return SUCCESS;
-  } else {
-    return FAIL;
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">pay</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">deposit</span> <span class="o">&gt;=</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">deposit</span> <span class="o">-=</span> <span class="n">money</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">SUCCESS</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">FAIL</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>我们希望能设计一组能够 “阻止并发” 的 API:</p>
-<pre class="codehilite"><code class="language-c">typedef struct {
-  ...
-} lock_t;
-void lock(lock_t *lk);   // 试图获得锁的独占访问，成功获得后返回
-void unlock(lock_t *lk); // 释放锁的独占访问</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+  <span class="p">...</span>
+<span class="p">}</span> <span class="n">lock_t</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>   <span class="c1">// 试图获得锁的独占访问，成功获得后返回</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span> <span class="c1">// 释放锁的独占访问</span>
+</pre></div>
 
 
 <p>共享内存中的 <code>lock_t</code> 是一个 “锁对象”，类似于厕所里的 “包间”——一旦我们 (线程) 进入，其他人就不得再进入。更恰当的比方 (系统中可以有很多锁对象) 是每一把锁都是系统中唯一的一份 “许可”。当有多个人 (先后或同时) 想要获得许可时，只有一个人能得到它，得到的人可以继续，而其他想要许可的人则必须等待，直到得到许可的人将许可归还。</p>
 <p>使用互斥锁，我们可以改写 <code>pay</code>:</p>
-<pre class="codehilite"><code class="language-c">int pay(unsigned int money) {
-  int ret;
-  lock(&pay_lock);
-  if (deposit &gt;= money) {
-    deposit -= money;
-    ret = SUCCESS;
-  } else {
-    ret = FAIL;
-  }
-  unlock(&play_lock);
-  return ret;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">pay</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">pay_lock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">deposit</span> <span class="o">&gt;=</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">deposit</span> <span class="o">-=</span> <span class="n">money</span><span class="p">;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">SUCCESS</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">FAIL</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">play_lock</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>使 “判断余额” 和 “扣减余额” 被保护起来，不能并发。</p>
 <p>更严谨地说，对于一个锁对象，在任何可能的线程调度下，若某个线程持有锁 (<code>lock(lk)</code> 返回且未释放)，则任何其他线程的 <code>lock(lk)</code> 都不能返回。从状态机的视角，假设系统每次选择一个线程执行一条指令 (虽然这个假设并不严格成立)，我们认为 <code>lock(lk)</code> 返回时，线程就进入了 “持有 <code>lk</code>” 的状态。而从初始状态开始，不存在任何状态机的执行路径，使得两个线程同时持有 <code>lk</code>。</p>
 <h3 id="_3">实现互斥的挑战</h3>
 <p>回顾之前我们反复提到的例子：</p>
-<pre class="codehilite"><code class="language-c">int x = 0, y = 0;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void thread1() {
-  store(x, 1);
-  t = load(y);
-  printf("y = %d\n", t);
-}
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">store</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+  <span class="n">t</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">y</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"y = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">t</span><span class="p">);</span>
+<span class="p">}</span>
 
-void thread2() {
-  store(y, 1);
-  t = load(x);
-  printf("x = %d\n", t);
-}
-// Got: x = 0, y = 0</code></pre>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">store</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+  <span class="n">t</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"x = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">t</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="c1">// Got: x = 0, y = 0</span>
+</pre></div>
 
 
 <p>由于现代处理器比我们想象中要复杂，一个处理器上的写操作可能被缓存在本地而其他处理器不可见，加上处理器中指令执行的乱序，导致了甚至单条指令顺序、原子性、可见性的丧失。下图是符合 x86 处理器实际行为的一个模型 (有兴趣的同学可以参考 x86-TSO 的论文 “<a href="https://cacm.acm.org/magazines/2010/7/95048-x86-tso-a-rigorous-and-usable-programmers-model-for-x86-multiprocessors/fulltext">x86-TSO: A rigorous and ­usable programmer's model for x86 multiprocessors</a>”)：</p>
@@ -157,13 +161,14 @@ void thread2() {
 </div></div></div>
 
 <p>所谓 “竞争”，两个可以同时发生的共享内存访问可能发生 “赛跑”：</p>
-<pre class="codehilite"><code class="language-c">// x = 0;
-void thread1() {
-  t = load(x);
-}
-void thread2() {
-  store(x, 1);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// x = 0;</span>
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">t</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">store</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>根据两个线程共享内存访问 “向前跑” 的速度，跑得快的访问将先被执行。因此：</p>
@@ -173,10 +178,11 @@ void thread2() {
 </ul>
 <p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/race.jpg" width="400px"></img></p>
 <p>通常，我们的程序中都不会只进行一次内存访问，而是：</p>
-<pre class="codehilite"><code class="language-c">void pay(unsigned int money) {
-  t = load(deposit);
-  if (t &gt;= money) {
-    ...</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">pay</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">t</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">deposit</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;=</span> <span class="n">money</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+</pre></div>
 
 
 <p>也就是一段代码可能被打断并存在 “多种运行结果”，加上处理器可能乱序执行内存访问，数据竞争的后果是非常危险的。</p>

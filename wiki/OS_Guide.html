@@ -66,54 +66,57 @@
 <h3 id="xv6-os-labs">操作系统实现：xv6 和 OS Labs</h3>
 <p>Linux 系统的实现 (尤其是今天的实现) 对于刚入门的新手来说的确不太合适。因此我们在课堂上选用 <a href="http://pdos.csail.mit.edu/6.828/xv6">xv6</a> 作为讲解操作系统的例子 (最新的代码已经迁移到 RISC-V；但考虑到大家《计算机系统基础》的课程背景，我们仍然讲解 i386 的 xv6 代码)。同时，大家也需要在 Operating system labs 中，大家从 “裸机” (bare-metal) 编程开始，自底向上实现一个支持多处理器、文件系统、虚拟存储的迷你操作系统内核。 </p>
 <p>不必对 “写一个操作系统” 感到惊讶。操作系统也是普通的 C 代码。如果对硬件机制做一定的封装 (例如本学期使用的 AbstractMachine)，你也可以用几行代码轻松地实现 “操作系统”：</p>
-<pre class="codehilite"><code class="language-c">#include &lt;am.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;am.h&gt;</span><span class="cp"></span>
 
-_Context *on_interrupt(Event ev, _Context *ctx) {
-  // “操作系统完成初始化后，就是一个中断处理程序”
-}
+<span class="n">_Context</span> <span class="o">*</span><span class="nf">on_interrupt</span><span class="p">(</span><span class="n">Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// “操作系统完成初始化后，就是一个中断处理程序”</span>
+<span class="p">}</span>
 
-void percpu_entry() {
-  _intr_write(1); // 在当前CPU上开启中断
-  _yield();       // 执行后不会返回
-}
+<span class="kt">void</span> <span class="nf">percpu_entry</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">_intr_write</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span> <span class="c1">// 在当前CPU上开启中断</span>
+  <span class="n">_yield</span><span class="p">();</span>       <span class="c1">// 执行后不会返回</span>
+<span class="p">}</span>
 
-int main(const char *args) {
-  _cte_init(on_interrupt);
-  _mpe_init(percpu_entry); // 启动所有处理器
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">_cte_init</span><span class="p">(</span><span class="n">on_interrupt</span><span class="p">);</span>
+  <span class="n">_mpe_init</span><span class="p">(</span><span class="n">percpu_entry</span><span class="p">);</span> <span class="c1">// 启动所有处理器</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <h2 id="_3">操作系统课中的代码</h2>
 <h3 id="c">C 语言</h3>
 <p>没有惊喜——这门课还是用 C 语言，没有你喜欢的 C++/Go/Rust/...这基本上等于<strong>把你的手脚捆起来</strong>编程。原因很简单：操作系统是与机器打交道的。用 C 能让你很明白地知道在机器层面发生了什么。</p>
 <p>C 不但简单 (如果你没有学好，用几周的时间补上应该也没问题)，而且透过对 C 语言的深入理解，可以更好地揭示更高级语言工作的原理。一个例子是 “面向对象”，我们在 C 里也可以实现：</p>
-<pre class="codehilite"><code class="language-c">struct foo {
-  int (*bar)(struct foo *this, int a, int b); // 函数指针
-};
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">foo</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">bar</span><span class="p">)(</span><span class="k">struct</span> <span class="n">foo</span> <span class="o">*</span><span class="n">this</span><span class="p">,</span> <span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span> <span class="c1">// 函数指针</span>
+<span class="p">};</span>
 
-void baz() {
-  struct foo *ptr = fetch_object();
-  ptr-&gt;bar(ptr, 3, 4);
-  // 等效于C++: ptr-&gt;bar(3, 4)
-}</code></pre>
+<span class="kt">void</span> <span class="nf">baz</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">foo</span> <span class="o">*</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">fetch_object</span><span class="p">();</span>
+  <span class="n">ptr</span><span class="o">-&gt;</span><span class="n">bar</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+  <span class="c1">// 等效于C++: ptr-&gt;bar(3, 4)</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>而 C++ 里的对象，的确也是这样 (类似) 实现的。如果要实现动态绑定 (用父类的指针调用子类的方法)，我们只需把虚函数的入口放到一张表中，通过查表得到函数实际的入口地址：</p>
-<pre class="codehilite"><code class="language-c">struct object_header {
-  void **vptr;
-};
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">object_header</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="o">**</span><span class="n">vptr</span><span class="p">;</span>
+<span class="p">};</span>
 
-struct foo {
-  struct object_header header;
-  ...
-};
+<span class="k">struct</span> <span class="n">foo</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">object_header</span> <span class="n">header</span><span class="p">;</span>
+  <span class="p">...</span>
+<span class="p">};</span>
 
-void baz {
-  struct foo *ptr = fetch_object();
-  // ptr-&gt;bar(3, 4), dynamic binding
-  // INDEX_OF_BAR在编译时由编译器确定
-  (int (*)(void *, int, int)) (ptr-&gt;header.vptr[INDEX_OF_BAR]) (ptr, 3, 4);
-}</code></pre>
+<span class="kt">void</span> <span class="n">baz</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">foo</span> <span class="o">*</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">fetch_object</span><span class="p">();</span>
+  <span class="c1">// ptr-&gt;bar(3, 4), dynamic binding</span>
+  <span class="c1">// INDEX_OF_BAR在编译时由编译器确定</span>
+  <span class="p">(</span><span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="p">,</span> <span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">))</span> <span class="p">(</span><span class="n">ptr</span><span class="o">-&gt;</span><span class="n">header</span><span class="p">.</span><span class="n">vptr</span><span class="p">[</span><span class="n">INDEX_OF_BAR</span><span class="p">])</span> <span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>能理解上述的例子，说明你已经有相当扎实的 C 语言基础了。如果不能，建议大家阅读参考书中推荐的 “The C programming language”。</p>

@@ -57,8 +57,9 @@
 <div class="fenced fenced-blue">
 <h4 id="_3">引子</h4>
 <p>一个Makefile引发的血案：在某个月黑风高的夜晚，修改了代码，以为<code>OBJ_DIR</code>这个变量不再使用，遂删除。结果没有料到，Makefile里还留了这么一手：</p>
-<pre class="codehilite"><code>clean:
-    rm -rf ... $(OBJ_DIR)/* ...</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">clean</span><span class="o">:</span>
+    <span class="n">rm</span> <span class="o">-</span><span class="n">rf</span> <span class="o">...</span> <span class="n">$</span><span class="o">(</span><span class="n">OBJ_DIR</span><span class="o">)/*</span> <span class="o">...</span>
+</pre></div>
 
 
 <p>在另一个月黑风高的夜晚，<code>make clean</code>之后，<code>rm -rf /*</code>开始了……</p>
@@ -78,12 +79,13 @@
 <p>对于HDD上的文件系统，通常这样的“文件粉碎”就是相当安全的。但随着存储技术的发展，底层的文件系统(甚至是闪存硬件)可能采用copy-on-right方式保存数据，从而在硬件上保留文件的拷贝。虽然恢复它们需要很大的代价，但安全的“文件粉碎”变得更加困难。使用加密的文件系统是更好的办法。</p>
 </div>
 <p>为了验证上述猜想，我们试着在磁盘上写入一个很大的文件，然后把它删除：</p>
-<pre class="codehilite"><code class="language-text">$ dd if=/dev/zero of=a.img count=4194304 bs=4096
+<div class="codehilite"><pre><span></span>$ dd if=/dev/zero of=a.img count=4194304 bs=4096
 ...
 17179869184 bytes (17 GB, 16 GiB) copied, 14.2317 s, 1.2 GB/s
-$ time bash -c 'rm a.img &amp;&amp; sync'
+$ time bash -c &#39;rm a.img &amp;&amp; sync&#39;
 ...
-0.694 total</code></pre>
+0.694 total
+</pre></div>
 
 
 <p>写入文件花去了14s，而删除 + 全局文件系统同步(等待输入到达磁盘)仅用去不到1s。因此，我们知道文件系统中的文件即便被<strong>删除</strong>，文件的内容只要不被覆盖，则仍然可能从磁盘中读出。在这个实验中，我们模拟如下场景 (但做出相当的简化)：</p>
@@ -96,7 +98,8 @@ $ time bash -c 'rm a.img &amp;&amp; sync'
 <h4 id="_8">获取实验代码与提交</h4>
 <p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
 <p>在你原先的os-workbench基础上，执行</p>
-<pre class="codehilite"><code class="language-bash">git pull origin M5</code></pre>
+<div class="codehilite"><pre><span></span>git pull origin M5
+</pre></div>
 
 
 <p>将本实验的框架代码下载到本地。实验相关的文件/数据在<code>frecov</code>下。</p>
@@ -104,10 +107,11 @@ $ time bash -c 'rm a.img &amp;&amp; sync'
 <p>实现<code>frecov</code>工具，给定一个FAT32文件系统镜像，请你尽可能地从文件系统中恢复出BMP格式的完整图片文件。命令行工具使用：</p>
 <p><center>frecov <u>FILE</u></center></p>
 <p>输入一个FAT32文件系统镜像文件FILE，试图恢复尽可能多的图片文件。每恢复一张图片文件(完整的文件，包含BMP头和所有数据)，调用系统中的<code>sha1sum</code>命令获得它的校验和，在标准输出中逐行输出图片文件的校验和以及你恢复出的文件名。只有校验和与文件名<strong>都恢复正确且一致</strong>，才能获得这个图片的分数，例如：</p>
-<pre class="codehilite"><code>206e31b7ad95b2b980d4d5afebc57c56f3663b6e  huangtu-1.bmp
-620e1f842d7dbd1a60fd011fb30dac61d644e37a  huangtu-2.bmp
-211beccd79721f296f93285a81bd5e9c21b1f8f5  fuli.bmp
-...</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">206e31b7ad95b2b980d4d5afebc57c56f3663b6e  huangtu-1.bmp</span>
+<span class="err">620e1f842d7dbd1a60fd011fb30dac61d644e37a  huangtu-2.bmp</span>
+<span class="err">211beccd79721f296f93285a81bd5e9c21b1f8f5  fuli.bmp</span>
+<span class="err">...</span>
+</pre></div>
 
 
 <div class="fenced fenced-red">
@@ -130,7 +134,7 @@ $ time bash -c 'rm a.img &amp;&amp; sync'
 </ul>
 </div>
 <p>我们对这个问题做了相当的简化，首先，我们保证我们用<code>mkfs.fat</code>的如下参数创建文件系统镜像：</p>
-<pre class="codehilite"><code class="language-text">$ cat /dev/zero | head -c $(( 1024 * 1024 * 64 )) &gt; filesystem.img # 创建一个64MB的空文件
+<div class="codehilite"><pre><span></span>$ cat /dev/zero | head -c $(( 1024 * 1024 * 64 )) &gt; filesystem.img # 创建一个64MB的空文件
 $ mkfs.fat -v -F 32 -S 512 filesystem.img # 在空文件上创建FAT32文件系统
 mkfs.fat 4.1 (2017-01-24)
 fs.img has 64 heads and 32 sectors per track,
@@ -143,7 +147,8 @@ FAT size is 1009 sectors, and provides 129022 clusters.
 There are 32 reserved sectors.
 Volume ID is 60fb68c4, no volume label.
 $ mount filesystem.img /mnt/ # 挂载文件系统
-$ mkdir /mnt/DCIM # 创建DCIM目录</code></pre>
+$ mkdir /mnt/DCIM # 创建DCIM目录
+</pre></div>
 
 
 <p>上述是64MB镜像的例子，是一个“干净”的FAT文件系统镜像，包含一个根目录下的“DCIM”目录，然后我们会进行很多次如下的文件操作(图片文件分辨率、大小可能不同，但都<strong>保证是真实世界中有意义的图片</strong>)：</p>
@@ -157,7 +162,8 @@ $ mkdir /mnt/DCIM # 创建DCIM目录</code></pre>
 <p><code>mkfs.fat -v -F 32 -S 512 filesystem.img</code></p>
 <p>模拟一次格式化的过程，之后得到待恢复的文件系统镜像。测试程序中包含不同workload生成的不同大小的镜像——jyy才不会告诉你，有一个测试用例就是一个文件系统里有一个顺序存储的bmp文件，能恢复出来就给分。</p>
 <p>关于BMP文件，我们是使用convert (ImageMagick)工具生成的24位图片，例如使用<code>file</code>查看<code>fuli.bmp</code>得到的结果：</p>
-<pre class="codehilite"><code>fuli.bmp: PC bitmap, Windows 98/2000 and newer format, 403 x 350 x 24</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">fuli.bmp: PC bitmap, Windows 98/2000 and newer format, 403 x 350 x 24</span>
+</pre></div>
 
 
 <h3 id="_12">参考镜像</h3>
@@ -168,18 +174,20 @@ $ mkdir /mnt/DCIM # 创建DCIM目录</code></pre>
 <li>在磁盘中寻找所有与这个像素相同的数据块，即恢复出一个BMP文件。</li>
 </ul>
 <p>参考镜像DCIM目录中的文件大约是这样的：</p>
-<pre class="codehilite"><code>DCIM/
-  huangtu-1.bmp
-  huangtu-23.bmp
-  ...
-  fuli.bmp</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">DCIM/</span>
+<span class="err">  huangtu-1.bmp</span>
+<span class="err">  huangtu-23.bmp</span>
+<span class="err">  ...</span>
+<span class="err">  fuli.bmp</span>
+</pre></div>
 
 
 <p>除了“黄色”图片外，还有<strong>一张</strong>福利图片(非黄色图片)。你如果文件恢复的成功，就能正确看到图片了。那么聪明的你，看到什么图片了呢？？？</p>
 <h3 id="sha1sum">sha1sum</h3>
 <p>在这个实验中，你需要调用外部工具sha1sum计算校验和。为此，你需要像sperf实验中类似的那样，和sha1sum建立管道连接(或者创建临时文件，但不推荐)，然后获取sha1sum的输出结果，和你恢复出的文件名一起打印出来：</p>
-<pre class="codehilite"><code class="language-text">$ echo &quot;Hello, World&quot; | sha1sum
-4ab299c8ad6ed14f31923dd94f8b5f5cb89dfb54  -</code></pre>
+<div class="codehilite"><pre><span></span>$ echo &quot;Hello, World&quot; | sha1sum
+4ab299c8ad6ed14f31923dd94f8b5f5cb89dfb54  -
+</pre></div>
 
 
 <p>sha1sum是一种计算文件“指纹”的算法。指纹(fingerprint)也称为校验和(checksum)，它是一个单向的hash function <math>H</math>，能把一个很大空间里的字符串映射到很小的空间中(计算<math>H(x)</math>)，并且目前而言，给定一个fingerprint后的字符串 <math>t</math>，人类很难计算出一个字符串 <math>x</math> 满足 <math>H(x)=t</math>。指纹能在不传输整个文件的前提下，快速比较两个文件是否相等。除了校验文件的完整性之外，指纹还可以用来做数据的去重——例如大家在即时通信软件中传送文件(例如QQ)时，服务器会用校验和检查是否已经存在文件的副本，如果是就可以立即结束传输。</p>

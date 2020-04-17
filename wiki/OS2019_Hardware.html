@@ -66,37 +66,40 @@
 <p>AbstractMachine的MPE会谨慎地启动系统中的各个处理器，并且让它们都调用同一个函数。CTE中的<code>intr_write()</code>函数可以保证当前处理器执行的代码不被中断，但编译器和多处理器仍然导致顺序、原子性和可见性的丧失。硬件必须为我们提供机制保证这三点。</p>
 <h2 id="_3">硬件原子操作</h2>
 <p>计算机硬件的原子操作同时提供了顺序、原子性和可见性——基于原子操作，我们就能愉快地写出正确的并发程序了。所谓原子操作，它执行起来大概就是这么个感觉：</p>
-<pre class="codehilite"><code class="language-c">void atomic_operation() {
-  stop_the_world();
-  // do some stuffs
-  resume_the_world(); // everything before is visible
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">atomic_operation</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">stop_the_world</span><span class="p">();</span>
+  <span class="c1">// do some stuffs</span>
+  <span class="n">resume_the_world</span><span class="p">();</span> <span class="c1">// everything before is visible</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这同时得到了顺序、原子性和可见性：不同的“stuff”因为stop the world的缘故，它们总有一个先后发生的顺序，并且因为世界停止，<code>atomic_operation</code>的原子性也得到了保证。此外，原子操作给我们另一个额外的保证是原子操作前所有的内存写，在原子操作后都被其他线程可见。</p>
 <p>x86为我们提供了LOCK指令前缀，实现原子的指令，即便一条指令中包含不止一个内存操作：</p>
-<pre class="codehilite"><code class="language-c">void do_sum_nonatomic() {
-  for (int i = 0; i &lt; 100000000; i++) {
-    asm volatile(&quot;addq $1, %0&quot;     : &quot;=m&quot;(sum));
-  }
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">do_sum_nonatomic</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">100000000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">&quot;addq $1, %0&quot;</span>     <span class="o">:</span> <span class="s">&quot;=m&quot;</span><span class="p">(</span><span class="n">sum</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void do_sum_atomic() {
-  for (int i = 0; i &lt; 100000000; i++) {
-    asm volatile(&quot;lock addq $1, %0&quot;: &quot;=m&quot;(sum));
-  }
-}</code></pre>
+<span class="kt">void</span> <span class="nf">do_sum_atomic</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">100000000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">&quot;lock addq $1, %0&quot;</span><span class="o">:</span> <span class="s">&quot;=m&quot;</span><span class="p">(</span><span class="n">sum</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>我们的课堂上已经演示过，使用lock的加法指令能得到正确的数值，但速度慢了几十倍！有兴趣的同学请阅读<a href="https://preshing.com/20130618/atomic-vs-non-atomic-operations/">材料</a>。我们提供了原子交换(exchange)的封装：</p>
-<pre class="codehilite"><code class="language-c">intptr_t atomic_xchg(volatile intptr_t *addr,
-                              intptr_t newval) {
-  // swap(*addr, newval);
-  intptr_t result;
-  asm volatile (&quot;lock xchg %0, %1&quot;:
-    &quot;+m&quot;(*addr), &quot;=a&quot;(result) : &quot;1&quot;(newval) : &quot;cc&quot;);
-  return result;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">intptr_t</span> <span class="nf">atomic_xchg</span><span class="p">(</span><span class="k">volatile</span> <span class="kt">intptr_t</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span>
+                              <span class="kt">intptr_t</span> <span class="n">newval</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// swap(*addr, newval);</span>
+  <span class="kt">intptr_t</span> <span class="n">result</span><span class="p">;</span>
+  <span class="k">asm</span> <span class="k">volatile</span> <span class="p">(</span><span class="s">&quot;lock xchg %0, %1&quot;</span><span class="o">:</span>
+    <span class="s">&quot;+m&quot;</span><span class="p">(</span><span class="o">*</span><span class="n">addr</span><span class="p">),</span> <span class="s">&quot;=a&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">:</span> <span class="s">&quot;1&quot;</span><span class="p">(</span><span class="n">newval</span><span class="p">)</span> <span class="o">:</span> <span class="s">&quot;cc&quot;</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>关于互斥的实现，请阅读教科书28章。</p>

@@ -77,24 +77,26 @@
 <p>Many operating systems utilized a single lock when first transitioning to multiprocessors, including Sun OS and Linux. In the latter, this lock even had a name, the big kernel lock (BKL).</p>
 </blockquote>
 <p>实现可串行化的最简单方式就是把所有的访问真正地串行化——记得我们的自旋锁/互斥锁保证了临界区的原子性、顺序、可见性。</p>
-<pre class="codehilite"><code class="language-c">void set_insert(Set *s, int x) {
-  spin_lock(&s-&gt;lock);
-  __set_insert(s, x);
-  spin_unlock(&s-&gt;lock);
-}
-void set_remove(Set *s, int x) {
-  spin_lock(&s-&gt;lock);
-  __set_remove(s, x);
-  spin_unlock(&s-&gt;lock);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">set_insert</span><span class="p">(</span><span class="n">Set</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">int</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+  <span class="n">__set_insert</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">x</span><span class="p">);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">set_remove</span><span class="p">(</span><span class="n">Set</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">int</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+  <span class="n">__set_remove</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">x</span><span class="p">);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在大部分时候，这样的处理都是安全且有效的——只要这个数据结构没有被非常频繁地访问。请大家阅读教课书第 29 章 “locked data structures”。</p>
 <h2 id="mallocfree">实现高性能的 malloc/free</h2>
 <p>如果多个处理器上的线程对数据结构的访问非常频繁，此时再使用锁，就会导致 “一核出力，他人围观” 的情况。提高多处理器上并发数据结构性能的关键之一是减少在锁上拥塞 (contention) 的时间——如果宝贵的时间都花在了 spin 上却没有实质的进展，那就是白白浪费了多处理器的计算力了。更糟糕的是，设计不当的算法甚至有可能让 cache line 在处理器之间来回“弹跳”，导致多处理器下的性能甚至低于单处理器。</p>
 <p>在这里，我们介绍如何分析基于系统调用实现 malloc/free 的问题，设计合理的并发数据结构实现它们。malloc/free 大家是 libc 标准库的一部分：</p>
-<pre class="codehilite"><code class="language-c">void *malloc(size_t size);
-void free(void *ptr);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">malloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">free</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
+</pre></div>
 
 
 <p>请大家阅读手册，温习一下其中的重要细节。</p>
@@ -132,16 +134,17 @@ void free(void *ptr);</code></pre>
 </div></div></div>
 
 <p>那怎么从程序的运行或者基准程序得到workloads呢？课堂上我们给了一个很短的脚本，它把程序的 stdout 丢弃，并且把 ltrace 的输出从 stderr 重定向到 stdout。</p>
-<pre class="codehilite"><code class="language-bash">#!/bin/bash
+<div class="codehilite"><pre><span></span><span class="ch">#!/bin/bash</span>
 
-trace() {
-  # ltrace outputs to stderr, so discard stdout
-  # -f: trace threads/sub-processes
-  # -e 'malloc+free-@libc.so*': only trace malloc/free
-  ltrace -f -e 'malloc+free-@libc.so*' $@ &gt; /dev/null
-}
+trace<span class="o">()</span> <span class="o">{</span>
+  <span class="c1"># ltrace outputs to stderr, so discard stdout</span>
+  <span class="c1"># -f: trace threads/sub-processes</span>
+  <span class="c1"># -e 'malloc+free-@libc.so*': only trace malloc/free</span>
+  ltrace -f -e <span class="s1">'malloc+free-@libc.so*'</span> <span class="nv">$@</span> &gt; /dev/null
+<span class="o">}</span>
 
-trace $@ 2&gt;&1 # move stderr to stdout</code></pre>
+trace <span class="nv">$@</span> <span class="m">2</span>&gt;<span class="p">&</span><span class="m">1</span> <span class="c1"># move stderr to stdout</span>
+</pre></div>
 
 
 <p>它能够输出一个程序 (包含它内部的多个线程) 调用 glibc 中 malloc/free 的序列。你可以观察一下很多 workload 重的应用，它们是如何使用内存的。</p>
@@ -174,18 +177,19 @@ trace $@ 2&gt;&1 # move stderr to stdout</code></pre>
 <li><p>(fast path) 首先试图在线程自己拥有的 page 当中进行分配，分配时不妨为这个 page 上锁 (因为可能有来自其他线程并发的 free；系统允许在一个线程分配的内存在另一个线程回收)。虽然上了锁，但不同的线程的 page 是不同的，因此线程依然可以并行地分配内存。</p>
 <ul>
 <li>相对应的 free 时，获得对象对应页面的锁后回收——如果 page 的分配保证对齐到 page 边界，我们可以直接使用 <code>ptr & (PAGESIZE - 1)</code> 获得页面的首地址。</li>
-<li>这里有一个小技巧，我们可以活用 C 语言提供的特性，定义结构体管理页面。这会使你写出更干净清爽的 L1 代码：<pre class="codehilite"><code class="language-c">typedef union page {
-  struct {
-    spinlock_t lock; // 锁，用于串行化分配和并发的 free
-    int obj_cnt;     // 页面中已分配的对象数，减少到 0 时回收页面
-    list_head list;  // 属于同一个线程的页面的链表
-    ...
-  }; // 匿名结构体
-  struct {
-    uint8_t header[HDR_SIZE];
-    uint8_t data[PAGE_SIZE - HDR_SIZE];
-  } __attribute__((packed));
-} page_t;</code></pre>
+<li>这里有一个小技巧，我们可以活用 C 语言提供的特性，定义结构体管理页面。这会使你写出更干净清爽的 L1 代码：<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">union</span> <span class="n">page</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="p">{</span>
+    <span class="n">spinlock_t</span> <span class="n">lock</span><span class="p">;</span> <span class="c1">// 锁，用于串行化分配和并发的 free</span>
+    <span class="kt">int</span> <span class="n">obj_cnt</span><span class="p">;</span>     <span class="c1">// 页面中已分配的对象数，减少到 0 时回收页面</span>
+    <span class="n">list_head</span> <span class="n">list</span><span class="p">;</span>  <span class="c1">// 属于同一个线程的页面的链表</span>
+    <span class="p">...</span>
+  <span class="p">};</span> <span class="c1">// 匿名结构体</span>
+  <span class="k">struct</span> <span class="p">{</span>
+    <span class="kt">uint8_t</span> <span class="n">header</span><span class="p">[</span><span class="n">HDR_SIZE</span><span class="p">];</span>
+    <span class="kt">uint8_t</span> <span class="n">data</span><span class="p">[</span><span class="n">PAGE_SIZE</span> <span class="o">-</span> <span class="n">HDR_SIZE</span><span class="p">];</span>
+  <span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">));</span>
+<span class="p">}</span> <span class="n">page_t</span><span class="p">;</span>
+</pre></div>
 
 
 </li>

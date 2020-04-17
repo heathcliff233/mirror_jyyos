@@ -102,14 +102,15 @@
 </ul>
 <h3 id="_8">请页调度</h3>
 <p>Demand paging按照进程的实际需要管理内存，更直观的解释是“按需分配”进程所需要的内存。我们考虑以下程序(64位系统)：</p>
-<pre class="codehilite"><code class="language-c">#define N (1L &lt;&lt; 34)
-int a[N]; // 64GB
-int main() {
-  printf(&quot;sizeof of a: %ld MB\n&quot;, sizeof(a) &gt;&gt; 20);
-  a[N - 1] = 1; a[0] = 2; 
-  printf(&quot;sum = %d\n&quot;, a[0] + a[N - 1]);
-  return 0;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="cp">#define N (1L &lt;&lt; 34)</span>
+<span class="kt">int</span> <span class="n">a</span><span class="p">[</span><span class="n">N</span><span class="p">];</span> <span class="c1">// 64GB</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;sizeof of a: %ld MB</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">20</span><span class="p">);</span>
+  <span class="n">a</span><span class="p">[</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> 
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;sum = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span><span class="p">[</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这个程序实际使用的内存只是<code>a[0]</code>和<code>a[N-1]</code>。虽然程序占用的内存很大，但我们实际并不需要在进程启动时就分配那么多内存，这样可以让进程的启动变得非常迅速。</p>
@@ -122,11 +123,12 @@ int main() {
 </ul>
 <p>例如，缺页的地址属于bss段(一个匿名的映射区域，并且初值为0)，那操作系统就会实际分配一页全0的页面，然后更新页面的映射，然后继续执行。</p>
 <p>请页调度不仅可以“按需分配”，而且还能让系统拥有比物理内存更大的内存。我们看一个比较极端的例子，下面的程序用掉了16GB的内存。但如果物理内存只有4GB怎么办呢？</p>
-<pre class="codehilite"><code class="language-c">static uint32_t a[1L &lt;&lt; 32]; // 16GB
-a[0] = a[1] = 1;
-for (int i = 2; i &lt; (1L &lt;&lt; 32); i++) {
-  a[i] = (a[i - 1] + a[i - 2]) % 1000000007;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">uint32_t</span> <span class="n">a</span><span class="p">[</span><span class="mi">1L</span> <span class="o">&lt;&lt;</span> <span class="mi">32</span><span class="p">];</span> <span class="c1">// 16GB</span>
+<span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">1L</span> <span class="o">&lt;&lt;</span> <span class="mi">32</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">2</span><span class="p">])</span> <span class="o">%</span> <span class="mi">1000000007</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在这个程序里，访问过的页面一旦被计算完毕，就<strong>不会再访问</strong>了，所以如果我们有更大的存储设备(或者网络上其他机器还有内存)，例如SSD，就可以把这些内存暂时腾挪到其他地方，然后腾出的空间可以分配新的页面——当内存空间紧张时，我们可以把已经分配的一些页面移动到其他存储介质，从而腾出更多的空间。同理，如果系统中有很多进程，也可以让它们实际使用的内存超过物理内存的上限。这在早期计算机内存非常宝贵的时候是非常重要的特性。</p>
@@ -144,12 +146,13 @@ for (int i = 2; i &lt; (1L &lt;&lt; 32); i++) {
 </div>
 <h3 id="_10">写时复制</h3>
 <p>最后，分页机制还能用来实现高效的<code>fork</code>。实现<code>fork</code>还是有点麻烦的：父子进程拥有完全独立的地址空间：</p>
-<pre class="codehilite"><code class="language-c">int x = 0, pid = fork();
-if (pid == 0) {
-  assert(x == 0);
-} else {
-  x = 1;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pid</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">pid</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">x</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>无论父/子进程按照何种顺序执行，assert都必须成立。</p>

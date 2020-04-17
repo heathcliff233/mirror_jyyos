@@ -86,11 +86,12 @@
 <p><strong>函数和表达式均可以调用之前定义过的函数</strong>，但不访问全局的状态。如果一行既不是函数，也不是表达式，<code>crepl</code>的行为未定义；重复定义重名函数行为未定义。我们没有那样的测试数据。</p>
 <h3 id="_8">解释</h3>
 <p>看例子就很容易知道这个实验是什么啦：</p>
-<pre class="codehilite"><code class="language-bash">$ ./crepl &lt;&lt; EOF
-int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }
-gcd(256, 144) * gcd(56, 84)
-EOF
-&gt;&gt; gcd(256, 144) * gcd(56, 84) = 448.</code></pre>
+<div class="codehilite"><pre><span></span>$ ./crepl <span class="s">&lt;&lt; EOF</span>
+<span class="s">int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }</span>
+<span class="s">gcd(256, 144) * gcd(56, 84)</span>
+<span class="s">EOF</span>
+&gt;&gt; gcd<span class="o">(</span><span class="m">256</span>, <span class="m">144</span><span class="o">)</span> * gcd<span class="o">(</span><span class="m">56</span>, <span class="m">84</span><span class="o">)</span> <span class="o">=</span> <span class="m">448</span>.
+</pre></div>
 
 
 <p>看起来很好玩吧，从前可能大家都觉得只有解释型的语言能这么做。但实际上，编译和解释并没有明确的边界——在openjdk的实现中，即便是“解释器”也是编译的(只是没有经过优化)；而传统的所谓解释型的语言，Python, JavaScript, ……都有编译到机器代码的过程。</p>
@@ -117,7 +118,8 @@ EOF
 </div>
 <h3 id="_12">函数的定义和加载</h3>
 <p>对于一个一行的函数，比如</p>
-<pre class="codehilite"><code class="language-c">int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">gcd</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">b</span> <span class="o">?</span> <span class="n">gcd</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span> <span class="o">:</span> <span class="n">a</span><span class="p">;</span> <span class="p">}</span>
+</pre></div>
 
 
 <p>我们可以把它写到一个临时文件里，比如<code>a.c</code>中，然后在命令行里调用<code>gcc -c a.c</code>，然后就能得到<code>a.o</code>，这里就包含了函数的代码，我们希望<strong>想办法把代码加载到本进程的地址空间中</strong>。</p>
@@ -134,21 +136,24 @@ EOF
 </div>
 <h3 id="_13">表达式的求值</h3>
 <p>对于一个表达式，我们也可以把它变成一个函数嘛！比如我们想求<code>gcd(256, 144)</code>，我们可以定义一个<strong>匿名</strong>的函数(也就是给它一个没有重名的名字)，比如</p>
-<pre class="codehilite"><code class="language-c">int __expr_wrap_123() {
-  return gcd(256, 144);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">__expr_wrap_123</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="n">gcd</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">144</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>换句话说，我们的临时文件好像是一个“模板”：</p>
-<pre class="codehilite"><code class="language-c">int __expr_wrap_XXX() {
-  return (EXPR);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">__expr_wrap_XXX</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">EXPR</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>我们只需要把这个函数编译，加载到当前进程的地址空间里，然后在当前进程里调用：</p>
-<pre class="codehilite"><code class="language-c">int (*func)() = func_lookup(cmd_id); // 查找XXX对应的函数
-int value = func(); // 通过函数指针调用
-printf(&quot;&gt;&gt; %s = %d.\n&quot;, cmd, value);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)()</span> <span class="o">=</span> <span class="n">func_lookup</span><span class="p">(</span><span class="n">cmd_id</span><span class="p">);</span> <span class="c1">// 查找XXX对应的函数</span>
+<span class="kt">int</span> <span class="n">value</span> <span class="o">=</span> <span class="n">func</span><span class="p">();</span> <span class="c1">// 通过函数指针调用</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;&gt;&gt; %s = %d.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+</pre></div>
 
 
 <p>至于<code>func_lookup</code>应该怎么实现呢？还记得每个二进制文件里都有很重要的一部分是<strong>符号表</strong>么？所有的函数都是一个符号，所以应该能根据符号查找到我们所需的内容。因此怎么调用<code>__expr_wrap_123()</code>这个问题就留给大家啦。</p>

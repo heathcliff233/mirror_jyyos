@@ -78,7 +78,7 @@
 <li><code>-S</code> 使 QEMU 在 CPU Reset 之后暂停不再执行指令</li>
 </ul>
 <p>然后，我们按 [某个快捷键] 进入 monitor (请 RTFM/STFW，这个特性对大家非常有用，所以强迫大家读一下手册)，执行 monitor 命令 <code>info registers</code>:</p>
-<pre class="codehilite"><code class="language-text">(qemu) info registers 
+<div class="codehilite"><pre><span></span>(qemu) info registers 
 EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000663
 ESI=00000000 EDI=00000000 EBP=00000000 ESP=00000000
 EIP=0000fff0 EFL=00000002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
@@ -104,11 +104,12 @@ FPR6=0000000000000000 0000 FPR7=0000000000000000 0000
 XMM00=00000000000000000000000000000000 XMM01=00000000000000000000000000000000
 XMM02=00000000000000000000000000000000 XMM03=00000000000000000000000000000000
 XMM04=00000000000000000000000000000000 XMM05=00000000000000000000000000000000
-XMM06=00000000000000000000000000000000 XMM07=00000000000000000000000000000000</code></pre>
+XMM06=00000000000000000000000000000000 XMM07=00000000000000000000000000000000
+</pre></div>
 
 
 <p>此时系统处于 16-bit 模式 (<code>CR0 = 60000010</code>)，并且能看到 32-bit 模式下的一些寄存器。寄存器的初始值已按照手册的要求初始化 (例如 <code>CS:IP = 0xffff0</code>)。这就是 QEMU 眼中 “计算机系统” 除了内存部分以外的状态。如果我们调试进入 64-bit 模式以后的代码，QEMU 可见的寄存器也发生了变化：</p>
-<pre class="codehilite"><code class="language-text">RAX=00000000000048af RBX=0000000000103520 RCX=0000000000000001 RDX=00000000000003f8
+<div class="codehilite"><pre><span></span>RAX=00000000000048af RBX=0000000000103520 RCX=0000000000000001 RDX=00000000000003f8
 RSI=0000000000000001 RDI=0000000000000000 RBP=0000000000103527 RSP=0000000000106f30
 R8 =0000000000000000 R9 =0000000000000000 R10=0000000000000000 R11=0000000000000000
 R12=0000000000000000 R13=0000000000000000 R14=0000000000000000 R15=0000000000000000
@@ -139,7 +140,8 @@ XMM06=00000000000000000000000000000000 XMM07=00000000000000000000000000000000
 XMM08=00000000000000000000000000000000 XMM09=00000000000000000000000000000000
 XMM10=00000000000000000000000000000000 XMM11=00000000000000000000000000000000
 XMM12=00000000000000000000000000000000 XMM13=00000000000000000000000000000000
-XMM14=00000000000000000000000000000000 XMM15=00000000000000000000000000000000</code></pre>
+XMM14=00000000000000000000000000000000 XMM15=00000000000000000000000000000000
+</pre></div>
 
 
 <p>大家不必理解它们的含义，只需知道系统寄存器比 gdb 调试进程时可见的寄存器少得多——操作系统上的进程无权访问其中相当的一部分。假设当前计算机系统的状态是 <math class="inline-math">(M, SR)</math> (<math class="inline-math">SR</math> 是系统中所有的寄存器)。对于一个单处理器系统，它的行为就是按照手册取指令 → 译码 → 执行 → 写回寄存器/内存的状态，得到指令执行完成后的状态 <math class="inline-math">(M', SR')</math>，如此往复——计算机系统就可以看成是一个状态机。</p>
@@ -177,21 +179,23 @@ XMM14=00000000000000000000000000000000 XMM15=00000000000000000000000000000000</c
 <p>我们不妨简化一下问题，从单处理器开始，试着解决操作系统中的互斥问题。</p>
 <h3 id="stop-the-world">单处理器：Stop the World</h3>
 <p>为了实现互斥，我们不妨考虑简单一点的情况——我们只有一个处理器。这时候没有多处理器造成的不确定性，一既然罪魁祸首是中断驱动的上下文切换，不如我们直接关中断了事——关闭中断以后，就不可能再发生上下文切换，整个处理器就和当前执行的线程绑定了 (当然，如果线程死循环，操作系统也直接卡死了。大家可以参考 xv6 的 panic: 处理器在关闭中断后就进入死循环)：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  cli();
-}
-void unlock(lock_t *lk) {
-  sti();
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">cli</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">sti</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>没错，关闭中断就相当于单处理器上的 stop the world，实际上，在老旧的操作系统书上，关中断就是实现互斥的基本方法 (而不是原子指令)。</p>
 <div markdown="1"><div class="fenced fenced-green"><div>
 <h4 id="_1">思考题：何时开中断？</h4>
-<pre class="codehilite"><code class="language-text">lock(&lk1);
+<div class="codehilite"><pre><span></span>lock(&lk1);
 lock(&lk2);
 unlock(&lk2); // 1
-unlock(&lk1); // 2</code></pre>
+unlock(&lk1); // 2
+</pre></div>
 
 
 <p>在什么时候开中断？答案稍后揭晓。</p>
@@ -199,14 +203,15 @@ unlock(&lk1); // 2</code></pre>
 
 <h3 id="stop-the-world_1">多处理器：Stop the World + 自旋</h3>
 <p>我们把关中断和自旋结合起来，就能得到多处理器系统适用的方案了：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  cli();
-  while (atomic_xchg(&lk-&gt;locked, 1)) ;
-}
-void unlock(lock_t *lk) {
-  atomic_xchg(&lk-&gt;locked, 0);
-  sti();
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">cli</span><span class="p">();</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">sti</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-green"><div>
@@ -215,23 +220,24 @@ void unlock(lock_t *lk) {
 </div></div></div>
 
 <p>大家不妨考虑一下这个算法的正确性，并用状态机证明，这里的状态并不多——你只需要假设中断会切换到其他线程执行即可 (也可以用状态机来分析应该先关中断还是先自旋)。在世界上只有一把锁的情况下，算法是没问题的。不过现实世界对锁的使用，要稍微考虑复杂一些的情形：</p>
-<pre class="codehilite"><code class="language-c">void case1() {
-  assert((read_eflags() & FL_IF) == 0);
-  lock(&lk):
-  unlock(&lk);
-  assert((read_eflags() & FL_IF) == 0);
-  // 上锁/解锁前后IF标志位不变，不得随意打开中断
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">case1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">)</span><span class="o">:</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="c1">// 上锁/解锁前后IF标志位不变，不得随意打开中断</span>
+<span class="p">}</span>
 
-void case2() {
-  assert((read_eflags() & FL_IF) != 0); // 初始时中断打开
-  lock(&lk1);
-  lock(&lk2);
-  unlock(&lk2);
-  assert((read_eflags() & FL_IF) == 0); // 持有锁时不得开中断
-  unlock(&lk1);
-  assert((read_eflags() & FL_IF) != 0); // 在释放所有锁后开中断
-}</code></pre>
+<span class="kt">void</span> <span class="nf">case2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 初始时中断打开</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk1</span><span class="p">);</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk2</span><span class="p">);</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk2</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 持有锁时不得开中断</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk1</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 在释放所有锁后开中断</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-green"><div>
@@ -260,41 +266,43 @@ void case2() {
 </div></div></div>
 
 <p>因此，我们希望在进入临界区后允许中断和线程切换，但同时不希望处理器在任何时候 “空转”，即消除自旋。进一步想，假如某个线程执行 <code>lock(&lk)</code> 已经获得了锁正在执行，此时另一个线程执行了 <code>lock(&lk)</code> 但需要等待——这个等待预期的时间会比较长，因此与其不停地自旋，我们不如在自旋失败的时候，主动切换到其他线程执行：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  while (atomic_xchg(&lk-&gt;locked, 1)) {
-    give_up_time_slice_and_yield(); // 切换    
-  }
-}
-void unlock(lock_t *lk) {
-  atomic_xchg(&lk-&gt;locked, 0);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">give_up_time_slice_and_yield</span><span class="p">();</span> <span class="c1">// 切换    </span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但这还是不够好——如果等待锁的线程很多，轮着调度一遍也要花费很多的开销，我们不如做得彻底一点，给每个线程设置状态：<code>BLOCKED</code> (在等待某个锁，此时不能被调度执行)；<code>RUNNABLE</code> (可被调度执行)。由于决定下一个运行的线程完全是在中断处理函数中完成的，因此我们不妨为每一个线程增加一个 <code>status</code> 变量 (在 <code>Task</code> 中)，然后修改我们的调度程序，就可以让 <code>BLOCKED</code> 的线程不再占用处理器执行：</p>
-<pre class="codehilite"><code class="language-c">typedef union task {
-  struct {
-    int status;
-    const char *name;
-    union task *next;
-    _Context   *context;
-  };
-  uint8_t stack[4096];
-} Task;
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">union</span> <span class="n">task</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">status</span><span class="p">;</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>
+    <span class="k">union</span> <span class="n">task</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+    <span class="n">_Context</span>   <span class="o">*</span><span class="n">context</span><span class="p">;</span>
+  <span class="p">};</span>
+  <span class="kt">uint8_t</span> <span class="n">stack</span><span class="p">[</span><span class="mi">4096</span><span class="p">];</span>
+<span class="p">}</span> <span class="n">Task</span><span class="p">;</span>
 
-...
+<span class="p">...</span>
 
-_Context *on_interrupt(_Event ev, _Context *ctx) {
-  if (!current) {
-    current = &tasks[0];
-  } else {
-    current-&gt;context = ctx;
-  }
-  do {
-    current = current-&gt;next;
-  } while ((current - tasks) % _ncpu() != _cpu() \
-         || current-&gt;status != RUNNING ); // 只调度 RUNNING 状态的线程
-  return current-&gt;context;
-}</code></pre>
+<span class="n">_Context</span> <span class="o">*</span><span class="n">on_interrupt</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">current</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="o">&</span><span class="n">tasks</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">current</span><span class="o">-&gt;</span><span class="n">context</span> <span class="o">=</span> <span class="n">ctx</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">do</span> <span class="p">{</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">while</span> <span class="p">((</span><span class="n">current</span> <span class="o">-</span> <span class="n">tasks</span><span class="p">)</span> <span class="o">%</span> <span class="n">_ncpu</span><span class="p">()</span> <span class="o">!=</span> <span class="n">_cpu</span><span class="p">()</span> \
+         <span class="o">||</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">!=</span> <span class="n">RUNNING</span> <span class="p">);</span> <span class="c1">// 只调度 RUNNING 状态的线程</span>
+  <span class="k">return</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">context</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>如此一来，我们就可以实现互斥锁：</p>
@@ -304,30 +312,31 @@ _Context *on_interrupt(_Event ev, _Context *ctx) {
 <li>如果在互斥锁上锁时，锁已经被别的线程持有，则把当前线程放到锁的队列中，然后把当前线程标记为不 <code>RUNNABLE</code>。注意此时不能进入临界区执行，因此互斥锁函数不能立即返回。此时执行 <code>_yield()</code> “自陷” (trap) 进入中断处理程序，触发调度器执行；</li>
 <li>在互斥锁释放时，如果有线程在队列中等待，直接唤醒它即可。如果没有线程在等待，把锁恢复到可用的状态。</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void mutex_lock(mutexlock_t *lk) {
-  int acquired = 0;
-  spin_lock(&lk-&gt;spinlock);
-  if (lk-&gt;locked != 0) {
-    enqueue(lk-&gt;wait_list, current);
-    current-&gt;status = BLOCKED;
-  } else {
-    lk-&gt;locked = 1;
-    acquired = 1;
-  }
-  spin_unlock(&lk-&gt;spinlock);
-  if (!acquired) _yield(); // 主动切换到其他线程执行
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">mutex_lock</span><span class="p">(</span><span class="n">mutexlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">acquired</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">enqueue</span><span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">wait_list</span><span class="p">,</span> <span class="n">current</span><span class="p">);</span>
+    <span class="n">current</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">=</span> <span class="n">BLOCKED</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">acquired</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">acquired</span><span class="p">)</span> <span class="n">_yield</span><span class="p">();</span> <span class="c1">// 主动切换到其他线程执行</span>
+<span class="p">}</span>
 
-void mutex_unlock(mutexlock_t *lk) {
-  spin_lock(&lk-&gt;spinlock);
-  if (!empty(lk-&gt;wait_list)) {
-    struct task_t *task = dequeue(lk-&gt;wait_list);
-    task-&gt;status = RUNNABLE; // 唤醒之前睡眠的线程
-  } else {
-    lk-&gt;locked = 0;
-  }
-  spin_unlock(&lk-&gt;spinlock);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">mutex_unlock</span><span class="p">(</span><span class="n">mutexlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">empty</span><span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">wait_list</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">task_t</span> <span class="o">*</span><span class="n">task</span> <span class="o">=</span> <span class="n">dequeue</span><span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">wait_list</span><span class="p">);</span>
+    <span class="n">task</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">=</span> <span class="n">RUNNABLE</span><span class="p">;</span> <span class="c1">// 唤醒之前睡眠的线程</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>理解这些算法时，我们不妨再次使用我们反复提到的工具：</p>

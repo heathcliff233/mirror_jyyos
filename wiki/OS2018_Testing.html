@@ -67,16 +67,17 @@
 </blockquote>
 <p>阅读这篇论文需要一些符号执行的背景。为了更有效地测试程序，生成能够覆盖它所有代码的测试数据是非常重要的(如果一行代码里有bug，但它却没有被任何测试用例执行到，当然不能指望它被test oracle找出来)。</p>
 <p>符号执行就是一种枚举所有程序执行路径的方法。例如</p>
-<pre class="codehilite"><code class="language-c">int f(int x) { return 2 * x; }
-int h(int x, int y) {
-  if (x != y) {
-    int t = f(x);
-    if (t == x + 10) {
-      bug();
-    }
-  }
-  return 0;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">f</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x</span><span class="p">;</span> <span class="p">}</span>
+<span class="kt">int</span> <span class="nf">h</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">!=</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">t</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">==</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">10</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">bug</span><span class="p">();</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>假设<math>x</math>, <math>y</math>都是来自外部的输入，我们希望测试<math>h(x,y)</math>，那么，如果<code>if (x != y)</code>成立，我们一定知道<code>if</code>语句里的条件成立，这时候我们可以把条件写成一个表达式：</p>

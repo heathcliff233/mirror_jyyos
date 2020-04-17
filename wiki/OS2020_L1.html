@@ -56,7 +56,8 @@
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">截止日期</h4>
 <p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
-<pre class="codehilite"><code>git pull origin L1</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin L1</span>
+</pre></div>
 
 
 <p>Soft Deadline: 2020 年 4 月 12 日 23:59:59。</p>
@@ -101,13 +102,14 @@
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="1">实验要求 1：实现多处理器安全的内存分配和回收</h4>
 <p>类似于 malloc/free，在 bare-metal 上实现内存分配/回收的函数：</p>
-<pre class="codehilite"><code class="language-c">static void *kalloc(size_t size) {
-  // 内存分配
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">kalloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 内存分配</span>
+<span class="p">}</span>
 
-static void kfree(void *ptr) {
-  // 内存释放
-}</code></pre>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">kfree</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 内存释放</span>
+<span class="p">}</span>
+</pre></div>
 
 
 </div></div></div>
@@ -178,7 +180,8 @@ static void kfree(void *ptr) {
 <div markdown="1"><div class="fenced fenced-blue"><div>
 <h4 id="hard-test">Hard Test 很难？</h4>
 <p>如果你觉得能力实在有限，未必一定要搞定所有的 test cases。例如，如果你实在感到困难，可以考虑不实现 kfree:</p>
-<pre class="codehilite"><code class="language-c">static void kfree(void *ptr) {}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">kfree</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{}</span>
+</pre></div>
 
 
 <p>这样 kalloc 的实现就非常简单了——简单到只需要维护一个指针即可，依然能确保有 easy tests 通过，按时提交可以获得 35% 的得分 (实现得稍稍更好一些，就可以获得更多的分数)。我们不严格禁止这样的实现，而且你会发现，如果内存充足，你之后编写的操作系统依然是可以运行的 (只是运行一段时间以后，就会 out of memory 无法再运行下去，会影响后续实验测试用例的得分)。</p>
@@ -187,43 +190,44 @@ static void kfree(void *ptr) {
 <h3 id="32-online-judge">3.2 Online Judge 运行测试代码的方式</h3>
 <p>我们会替换 <code>framework/main.c</code> 的代码，但保持的 <code>src/</code> 目录下的文件不变。因此，你自己的测试用例 (在 <code>os_run()</code> 中) 可以不必修改。测试时，我们会改变 <code>_mpe_init</code> 的入口 (不再从 <code>os-&gt;run</code> 开始执行，而是直接运行测试的 workload)。因此你必须在 <code>os-&gt;init()</code> 中完成所有必要的初始化，例如调用 <code>pmm-&gt;init()</code>。</p>
 <p>以下是一个我们测试代码的例子，它会不断生成随机的 kalloc/kfree 请求 (你可以假设我们的生成器总是生成合法的请求，例如不会发生 double-free 等)，并且检查 kalloc/kfree 返回结果的合法性；当检测到问题后会 assert fail 退出，然后你可能会得到诸如 “Runtime Error (Exit Early)” 这样的错误信息。</p>
-<pre class="codehilite"><code class="language-c">#include &lt;common.h&gt;
-#include &lt;klib.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;common.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;klib.h&gt;</span><span class="cp"></span>
 
-enum ops { OP_ALLOC = 1, OP_FREE };
-struct op {
-  enum ops type;
-  union {
-    size_t alloc_size;
-    void * free_addr;
-  };
-};
+<span class="k">enum</span> <span class="n">ops</span> <span class="p">{</span> <span class="n">OP_ALLOC</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">OP_FREE</span> <span class="p">};</span>
+<span class="k">struct</span> <span class="n">op</span> <span class="p">{</span>
+  <span class="k">enum</span> <span class="n">ops</span> <span class="n">type</span><span class="p">;</span>
+  <span class="k">union</span> <span class="p">{</span>
+    <span class="kt">size_t</span> <span class="n">alloc_size</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="o">*</span> <span class="n">free_addr</span><span class="p">;</span>
+  <span class="p">};</span>
+<span class="p">};</span>
 
-void stress_test() {
-  while (1) {
-    struct op op = random_op();
-    switch (op.type) {
-      case OP_ALLOC:
-        alloc_check(pmm-&gt;alloc(op.alloc_size), op.alloc_size);
-        break;
-      case OP_FREE:
-        free(op.free_addr);
-        break;
-    }
-  }
-}
+<span class="kt">void</span> <span class="nf">stress_test</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">op</span> <span class="n">op</span> <span class="o">=</span> <span class="n">random_op</span><span class="p">();</span>
+    <span class="k">switch</span> <span class="p">(</span><span class="n">op</span><span class="p">.</span><span class="n">type</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">case</span> <span class="nl">OP_ALLOC</span><span class="p">:</span>
+        <span class="n">alloc_check</span><span class="p">(</span><span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="n">op</span><span class="p">.</span><span class="n">alloc_size</span><span class="p">),</span> <span class="n">op</span><span class="p">.</span><span class="n">alloc_size</span><span class="p">);</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="k">case</span> <span class="nl">OP_FREE</span><span class="p">:</span>
+        <span class="n">free</span><span class="p">(</span><span class="n">op</span><span class="p">.</span><span class="n">free_addr</span><span class="p">);</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-int main() {
-  os-&gt;init();
-  _mpe_init(stress_test);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">os</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+  <span class="n">_mpe_init</span><span class="p">(</span><span class="n">stress_test</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <h2 id="4">4. 实验指南</h2>
 <p>这个实验给你的完全是“白板”的代码，不包含任何测试。你必须为你自己的代码负责，自己写好测试，自己说服自己你的代码是正确的——迟早有一天大家需要脱离框架，自己写出正确的代码。</p>
 <h3 id="41">4.1 代码组织与运行</h3>
 <p>实验框架代码由三个目录组成：</p>
-<pre class="codehilite"><code class="language-text">.
+<div class="codehilite"><pre><span></span>.
 ├── framework  -&gt; 框架代码；可以修改，但 Online Judge 评测时将被我们替换
 
 │   ├── kernel.h
@@ -233,44 +237,49 @@ int main() {
 ├── Makefile
 └── src        -&gt; 源文件；可以自由修改/创建文件
     ├── os.c
-    └── pmm.c</code></pre>
+    └── pmm.c
+</pre></div>
 
 
 <p>理解框架代码的编译，最好的办法是看 Makefile 啦。在<a href="OS2020_C2.slides.html">代码课 C2</a> 中，我们已经讲解了如何阅读 Makefile。使用 <code>make run</code> 编译运行，你将会看到一个处理器输出 Hello World：</p>
-<pre class="codehilite"><code class="language-text">$ make run ARCH=x86_64-qemu
+<div class="codehilite"><pre><span></span>$ make run ARCH=x86_64-qemu
 # Building kernel [x86_64-qemu] with AM_HOME {...}
 ...
-Hello World from CPU #0</code></pre>
+Hello World from CPU #0
+</pre></div>
 
 
 <p>如果要启动多个处理器，可以为 <code>make run</code> 传递 <code>smp</code> 环境变量，例如 <code>smp=2</code> 代表启动 2 个处理器；<code>smp=4</code> 代表启动 4 个处理器：</p>
-<pre class="codehilite"><code class="language-text">$ make run ARCH=x86_64 smp=4
+<div class="codehilite"><pre><span></span>$ make run ARCH=x86_64 smp=4
 ...
 Hello World from CPU #1
 Hello World from CPU #2
 Hello World from CPU #3
-Hello World from CPU #0</code></pre>
+Hello World from CPU #0
+</pre></div>
 
 
 <h3 id="42">4.2 框架代码导读</h3>
 <p>框架代码很短，它的 <code>main</code> 函数首先执行 <code>os</code> 的初始化，然后启动多个处理器，每个处理器都跳转到 <code>os-&gt;run</code> 执行：</p>
-<pre class="codehilite"><code class="language-c">int main() {
-  os-&gt;init();
-  _mpe_init(os-&gt;run);
-  return 1;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">os</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+  <span class="n">_mpe_init</span><span class="p">(</span><span class="n">os</span><span class="o">-&gt;</span><span class="n">run</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p><code>os</code> 是一个操作系统的 “模块”，可以看成是我们用 C 实现的面向对象编程，能增加代码的可读性。整个框架代码中唯一有些难以理解的部分就是模块的声明和定义 (<code>framework/kernel.h</code>)：</p>
-<pre class="codehilite"><code class="language-c">#define MODULE(mod) \
-  typedef struct mod_##mod##_t mod_##mod##_t; \
-  extern mod_##mod##_t *mod; \
-  struct mod_##mod##_t
+<div class="codehilite"><pre><span></span><span class="cp">#define MODULE(mod) \</span>
+<span class="cp">  typedef struct mod_##mod##_t mod_##mod##_t; \</span>
+<span class="cp">  extern mod_##mod##_t *mod; \</span>
+<span class="cp">  struct mod_##mod##_t</span>
 
-#define MODULE_DEF(mod) \
-  extern mod_##mod##_t __##mod##_obj; \
-  mod_##mod##_t *mod = &__##mod##_obj; \
-  mod_##mod##_t __##mod##_obj</code></pre>
+<span class="cp">#define MODULE_DEF(mod) \</span>
+<span class="cp">  extern mod_##mod##_t __##mod##_obj; \</span>
+<span class="cp">  mod_##mod##_t *mod = &__##mod##_obj; \</span>
+<span class="cp">  mod_##mod##_t __##mod##_obj</span>
+</pre></div>
 
 
 <p>我们用 <code>MODULE</code> 声明一个模块，用 <code>MODULE_DEF</code> 实际定义它。这个宏的视觉效果很差，为了阅读它，你要在大脑里清楚地知道：</p>
@@ -285,21 +294,22 @@ Hello World from CPU #0</code></pre>
 </li>
 </ol>
 <p>例如，<code>MODULE(os)</code> 和 <code>MODULE_DEF(os)</code> 的部分分别被宏展开成：</p>
-<pre class="codehilite"><code class="language-c">// MODULE(os) { ... };
-typedef struct mod_os_t mod_os_t;
-extern mod_os_t *os;
-struct mod_os_t {
-  void (*init)();
-  void (*run)();
-};
+<div class="codehilite"><pre><span></span><span class="c1">// MODULE(os) { ... };</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">mod_os_t</span> <span class="n">mod_os_t</span><span class="p">;</span>
+<span class="k">extern</span> <span class="n">mod_os_t</span> <span class="o">*</span><span class="n">os</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">mod_os_t</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">run</span><span class="p">)();</span>
+<span class="p">};</span>
 
-// MODULE_DEF(os) = { ... };
-extern mod_os_t __os_obj;
-mod_os_t *os = &__os_obj;
-mod_os_t __os_obj = {
-  .init = os_init,
-  .run = os_run,
-};</code></pre>
+<span class="c1">// MODULE_DEF(os) = { ... };</span>
+<span class="k">extern</span> <span class="n">mod_os_t</span> <span class="n">__os_obj</span><span class="p">;</span>
+<span class="n">mod_os_t</span> <span class="o">*</span><span class="n">os</span> <span class="o">=</span> <span class="o">&</span><span class="n">__os_obj</span><span class="p">;</span>
+<span class="n">mod_os_t</span> <span class="n">__os_obj</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="p">.</span><span class="n">init</span> <span class="o">=</span> <span class="n">os_init</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">run</span> <span class="o">=</span> <span class="n">os_run</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <ul>
@@ -319,11 +329,12 @@ mod_os_t __os_obj = {
 </ul>
 <h3 id="44-kallockfree">4.4 实现 kalloc/kfree</h3>
 <p>我们的实现主要在 pmm (physical memory management) 模块：</p>
-<pre class="codehilite"><code class="language-c">MODULE(pmm) {
-  void  (*init)();
-  void *(*alloc)(size_t size);
-  void  (*free)(void *ptr);
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">MODULE</span><span class="p">(</span><span class="n">pmm</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span>  <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">alloc</span><span class="p">)(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+  <span class="kt">void</span>  <span class="p">(</span><span class="o">*</span><span class="n">free</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>模块包含三个函数指针：</p>
@@ -333,14 +344,15 @@ mod_os_t __os_obj = {
 <li><code>pmm-&gt;free()</code> 对应实验要求中的 kfree。</li>
 </ul>
 <p>框架代码中包含了 “空的” pmm 实现，它对任何内存分配的请求都返回失败，因此它满足 safety，但完全没有 liveness，仿佛堆区的大小为零：</p>
-<pre class="codehilite"><code class="language-c">static void *kalloc(size_t size) { return NULL; }
-static void kfree(void *ptr) { } 
-static void pmm_init() { } 
-MODULE_DEF(pmm) = {
-  .init  = pmm_init,
-  .alloc = kalloc,
-  .free  = kfree,
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">kalloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span> <span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">kfree</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span> <span class="p">}</span> 
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">pmm_init</span><span class="p">()</span> <span class="p">{</span> <span class="p">}</span> 
+<span class="n">MODULE_DEF</span><span class="p">(</span><span class="n">pmm</span><span class="p">)</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="p">.</span><span class="n">init</span>  <span class="o">=</span> <span class="n">pmm_init</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">alloc</span> <span class="o">=</span> <span class="n">kalloc</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">free</span>  <span class="o">=</span> <span class="n">kfree</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-green"><div>
@@ -379,31 +391,32 @@ MODULE_DEF(pmm) = {
 </li>
 </ul>
 <p>把测试用例都混在一起执行固然可以，但我们也可以用 <code>main</code> 函数的参数，就像 amtest (<code>abstract-machine/tests/am-test.c</code>，我们希望你在测试 klib 的时候，已经运行过这个程序了) 中那样：</p>
-<pre class="codehilite"><code class="language-c">#define IOE ({ _ioe_init();  })
-#define CTE(h) ({ _Context *h(_Event, _Context *); _cte_init(h); })
-#define VME(f1, f2) ({ void *f1(size_t); void f2(void *); _vme_init(f1, f2); })
-#define MPE ({ _mpe_init(entry); })
+<div class="codehilite"><pre><span></span><span class="cp">#define IOE ({ _ioe_init();  })</span>
+<span class="cp">#define CTE(h) ({ _Context *h(_Event, _Context *); _cte_init(h); })</span>
+<span class="cp">#define VME(f1, f2) ({ void *f1(size_t); void f2(void *); _vme_init(f1, f2); })</span>
+<span class="cp">#define MPE ({ _mpe_init(entry); })</span>
 
-extern void (*entry)();
+<span class="k">extern</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)();</span>
 
-#define CASE(id, entry_, ...) \
-  case id: { \
-    void entry_(); \
-    entry = entry_; \
-    __VA_ARGS__; \
-    entry_(); \
-    break; \
-  }
+<span class="cp">#define CASE(id, entry_, ...) \</span>
+<span class="cp">  case id: { \</span>
+<span class="cp">    void entry_(); \</span>
+<span class="cp">    entry = entry_; \</span>
+<span class="cp">    __VA_ARGS__; \</span>
+<span class="cp">    entry_(); \</span>
+<span class="cp">    break; \</span>
+<span class="cp">  }</span>
 
-int main(const char *args) {
-  switch (args[0]) {
-    CASE('h', hello);
-    CASE('i', hello_intr, IOE, CTE(simple_trap));
-    CASE('d', devscan, IOE);
-    ...
-  }
-  return 0;
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">{</span>
+    <span class="n">CASE</span><span class="p">(</span><span class="sc">'h'</span><span class="p">,</span> <span class="n">hello</span><span class="p">);</span>
+    <span class="n">CASE</span><span class="p">(</span><span class="sc">'i'</span><span class="p">,</span> <span class="n">hello_intr</span><span class="p">,</span> <span class="n">IOE</span><span class="p">,</span> <span class="n">CTE</span><span class="p">(</span><span class="n">simple_trap</span><span class="p">));</span>
+    <span class="n">CASE</span><span class="p">(</span><span class="sc">'d'</span><span class="p">,</span> <span class="n">devscan</span><span class="p">,</span> <span class="n">IOE</span><span class="p">);</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-blue"><div>

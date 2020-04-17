@@ -57,22 +57,24 @@
 </ul>
 <p>信号量就是“合三为一”的线程同步手段。信号量也是一个结构体<code>sem_t</code>，内部包含一个计数器<code>count</code>，它的行为是：</p>
 <p>P(原子)操作时，<code>count</code>减1，如果计数器数值小于零则线程睡眠等待。</p>
-<pre class="codehilite"><code class="language-c">void P(sem_t &amp;sem) {
-  sem-&gt;count--;
-  if (sem-&gt;count &lt; 0) {
-    push(sem-&gt;queue, current);
-    suspend();
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">P</span><span class="p">(</span><span class="n">sem_t</span> <span class="o">&amp;</span><span class="n">sem</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">sem</span><span class="o">-&gt;</span><span class="n">count</span><span class="o">--</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">count</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">push</span><span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">queue</span><span class="p">,</span> <span class="n">current</span><span class="p">);</span>
+    <span class="n">suspend</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>V(原子)操作时，<code>count</code>加一，同时如果有正在睡眠的线程，则把睡眠的线程唤醒。</p>
-<pre class="codehilite"><code class="language-c">void V(sem_t &amp;sem) {
-  sem-&gt;count++;
-  if (!empty(sem-&gt;queue)) {
-    wakeup(pop(sem-&gt;queue));
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">V</span><span class="p">(</span><span class="n">sem_t</span> <span class="o">&amp;</span><span class="n">sem</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">sem</span><span class="o">-&gt;</span><span class="n">count</span><span class="o">++</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">empty</span><span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">queue</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">wakeup</span><span class="p">(</span><span class="n">pop</span><span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">queue</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div class="fenced fenced-green">
@@ -87,23 +89,24 @@
 <p><center><img alt="" src="../static/wiki/os/2018/img/sem.jpg" /></center></p>
 <p>池子里的“锁”就是用来同步的资源。如果<code>count</code>的初始值为1，我们可以直接把P/V当作互斥锁来使用——池子里只有一把锁，进入临界区必须取得锁，临界区结束后归还。</p>
 <p>信号量可以说是为生产者/消费者问题量身定制的同步原语：</p>
-<pre class="codehilite"><code class="language-c">sem_t empty = SEM_INIT(n);
-sem_t fill = SEM_INIT(0);
-void producer() {
-  while (1) {
-    P(&amp;empty);
-    printf(&quot;(&quot;);
-    V(&amp;fill);
-  }
-}
+<div class="codehilite"><pre><span></span><span class="n">sem_t</span> <span class="n">empty</span> <span class="o">=</span> <span class="n">SEM_INIT</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
+<span class="n">sem_t</span> <span class="n">fill</span> <span class="o">=</span> <span class="n">SEM_INIT</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">producer</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">P</span><span class="p">(</span><span class="o">&amp;</span><span class="n">empty</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;(&quot;</span><span class="p">);</span>
+    <span class="n">V</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fill</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void consumer() {
-  while (1) {
-    P(&amp;fill);
-    printf(&quot;)&quot;);
-    V(&amp;empty);
-  }
-}</code></pre>
+<span class="kt">void</span> <span class="nf">consumer</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">P</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fill</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;)&quot;</span><span class="p">);</span>
+    <span class="n">V</span><span class="p">(</span><span class="o">&amp;</span><span class="n">empty</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这就搞定了！如果我们用刚才锁的池子的方式来理解，就是生产者必须从<code>empty</code>里取得一把锁，即保证缓冲区中有空位，然后向<code>fill</code>归还一把锁；而消费者则执行完全对称的操作，实现<code>P(empty) -&gt; V(fill) -&gt; P(fill) -&gt; V(empty) -&gt; ...</code>的生产-消费循环。同时因为池子里的锁总共只有<math>n</math>把，因此缓冲区操作总是成功。</p>

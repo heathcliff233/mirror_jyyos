@@ -93,21 +93,24 @@
 <li>但类型不匹配是 undefined behavior (坑)</li>
 </ul>
 </blockquote>
-<pre class="codehilite"><code class="language-c">// a.c
-int foo(int a, int b) {
-  return a + b;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// a.c</span>
+<span class="kt">int</span> <span class="nf">foo</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
-<pre class="codehilite"><code class="language-c">// b.c
-int x = 100, y = 200;</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// b.c</span>
+<span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">200</span><span class="p">;</span>
+</pre></div>
 
 
-<pre class="codehilite"><code class="language-c">// main.c
-extern int x, y;
-int foo(int a, int b); // 可以试试 extern int foo;
-int main() {
-  printf("%d + %d = %d\n", x, y, foo(x, y));
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="c1">// main.c</span>
+<span class="k">extern</span> <span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">;</span>
+<span class="kt">int</span> <span class="nf">foo</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span> <span class="c1">// 可以试试 extern int foo;</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"%d + %d = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">程序的编译</h2>
@@ -115,7 +118,7 @@ int main() {
 <ul>
 <li>注意指令中的 <code>00 00 00 00</code> offset</li>
 </ul>
-<pre class="codehilite"><code class="language-text">0000000000000000 &lt;main&gt;:
+<div class="codehilite"><pre><span></span>0000000000000000 &lt;main&gt;:
    0:   48 83 ec 08             sub    $0x8,%rsp
    4:   8b 35 00 00 00 00       mov    0x0(%rip),%esi  # y
    a:   8b 3d 00 00 00 00       mov    0x0(%rip),%edi  # x
@@ -129,7 +132,8 @@ int main() {
   32:   e8 00 00 00 00          callq  37 &lt;main+0x37&gt;  # __printf_chk
   37:   31 c0                   xor    %eax,%eax
   39:   5a                      pop    %rdx
-  3a:   c3                      retq   </code></pre>
+  3a:   c3                      retq   
+</pre></div>
 
 
 <ul>
@@ -234,17 +238,19 @@ int main() {
 <hr></hr>
 <ul>
 <li><p>huge.S</p>
-<pre class="codehilite"><code class="language-assembly">.globl foo
-foo:
-  # 128 MiB of nop
-  .fill 1024 * 1024 * 128, 1, 0x90
-  ret</code></pre>
+<div class="codehilite"><pre><span></span><span class="na">.globl</span> <span class="no">foo</span>
+<span class="nl">foo:</span>
+  <span class="c1"># 128 MiB of nop</span>
+  <span class="na">.fill</span> <span class="mi">1024</span> <span class="p">*</span> <span class="mi">1024</span> <span class="p">*</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0x90</span>
+  <span class="nf">ret</span>
+</pre></div>
 
 </li>
 <li><p>huge.c</p>
-<pre class="codehilite"><code class="language-c">foo();
-printf("pid = %d\n", getpid());
-while (1) sleep(1);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">foo</span><span class="p">();</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">"pid = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">getpid</span><span class="p">());</span>
+<span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+</pre></div>
 
 
 </li>
@@ -270,10 +276,11 @@ while (1) sleep(1);</code></pre>
 </li>
 <li>直接把代码 mmap 进进程的地址空间就行了</li>
 </ul>
-<pre class="codehilite"><code class="language-text">.globl foo
+<div class="codehilite"><pre><span></span>.globl foo
 foo:
   movl $1, %eax
-  ret</code></pre>
+  ret
+</pre></div>
 
 <p>代码展示: <a href="">loader.c</a></p></div></div>
 </section>
@@ -295,14 +302,15 @@ foo:
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-text">x: # 数据不能共享 (MAP_PRIVATE 方式映射)
+<div class="codehilite"><pre><span></span>x: # 数据不能共享 (MAP_PRIVATE 方式映射)
   .int 0
 
 .globl bar
 bar:
   addl $1, x(%rip)
   movl x(%rip), %eax
-  ret</code></pre></div></div>
+  ret
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="3">实现动态加载 (3)</h2>
@@ -321,7 +329,7 @@ bar:
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-text">.globl ..bar
+<div class="codehilite"><pre><span></span>.globl ..bar
 ..bar: bar:
   .quad 0
 
@@ -329,7 +337,8 @@ bar:
 baz:
   movq bar(%rip), %rdi
   call *%rdi
-  ret</code></pre></div></div>
+  ret
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="pic">PIC + 查表实现动态链接</h2>
@@ -419,15 +428,17 @@ baz:
 <li>如果符号解析未完成，解析符号</li>
 <li>跳转到解析后的符号执行</li>
 </ul>
-<pre class="codehilite"><code class="language-c">int printf_internal(const char *fmt, ...) {
-  if (!GOT[PRINTF]) {
-    GOT[PRINTF] = call_dl_runtime_resolve("printf");
-  }
-  return GOT[PRINTF](...);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">printf_internal</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fmt</span><span class="p">,</span> <span class="p">...)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">GOT</span><span class="p">[</span><span class="n">PRINTF</span><span class="p">])</span> <span class="p">{</span>
+    <span class="n">GOT</span><span class="p">[</span><span class="n">PRINTF</span><span class="p">]</span> <span class="o">=</span> <span class="n">call_dl_runtime_resolve</span><span class="p">(</span><span class="s">"printf"</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">GOT</span><span class="p">[</span><span class="n">PRINTF</span><span class="p">](...);</span>
+<span class="p">}</span>
+</pre></div>
 
-<pre class="codehilite"><code class="language-text"># 编译器：把向 printf (动态链接库) 的调用翻译成
-call printf_internal</code></pre>
+<div class="codehilite"><pre><span></span># 编译器：把向 printf (动态链接库) 的调用翻译成
+call printf_internal
+</pre></div>
 
 
 <ul>
@@ -442,7 +453,7 @@ call printf_internal</code></pre>
 <blockquote>
 <p>黑科技：让初始的 <code>printf@GOT</code> 指向 trampoline 的下一条指令</p>
 </blockquote>
-<pre class="codehilite"><code class="language-text">0000000000000510 &lt;.plt&gt;:
+<div class="codehilite"><pre><span></span>0000000000000510 &lt;.plt&gt;:
  510:   ff 35 aa 0a 20 00    pushq  0x200aaa(%rip)  # 200fc0 &lt;GOT+0x8&gt;
  516:   ff 25 ac 0a 20 00    jmpq   *0x200aac(%rip) # 200fc8 &lt;GOT+0x10&gt;
                                                     # GOT[2], 还记得吗？
@@ -451,7 +462,8 @@ call printf_internal</code></pre>
 0000000000000520 &lt;printf@plt&gt;:
  520:   ff 25 aa 0a 20 00    jmpq   *0x200aaa(%rip) # printf@GOT
  526:   68 00 00 00 00       pushq  $0x0
- 52b:   e9 e0 ff ff ff       jmpq   510 &lt;.plt&gt;</code></pre>
+ 52b:   e9 e0 ff ff ff       jmpq   510 &lt;.plt&gt;
+</pre></div>
 
 
 <ul>

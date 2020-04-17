@@ -98,11 +98,12 @@
 <ul>
 <li>实现 <code>lock_t</code> 数据结构和 <code>lock/unlock</code> API:</li>
 </ul>
-<pre class="codehilite"><code class="language-c">typedef struct {
-  ...
-} spinlock_t;
-void lock(spinlock_t *lk);   // 试图获得锁的独占访问，成功获得后返回
-void unlock(spinlock_t *lk); // 释放锁的独占访问</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+  <span class="p">...</span>
+<span class="p">}</span> <span class="n">spinlock_t</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>   <span class="c1">// 试图获得锁的独占访问，成功获得后返回</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span> <span class="c1">// 释放锁的独占访问</span>
+</pre></div>
 
 <hr></hr>
 <p>一把 “排他性” 的锁——对于锁对象 <code>lk</code></p>
@@ -161,19 +162,20 @@ void unlock(spinlock_t *lk); // 释放锁的独占访问</code></pre>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="peterson">Peterson 算法的真正问题</h2>
-<pre class="codehilite"><code class="language-c">int x = 0, y = 0;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void thread_1() {
-  [1] store(x, 1); // 处理器允许 1-2 “交换”
-  [2] t = load(y);
-  [3] printf("y = %d\n", t);
-}
+<span class="kt">void</span> <span class="nf">thread_1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">store</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// 处理器允许 1-2 “交换”</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="n">t</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">y</span><span class="p">);</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="n">printf</span><span class="p">(</span><span class="s">"y = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">t</span><span class="p">);</span>
+<span class="p">}</span>
 
-void thread_2() {
-  [1] store(y, 1); // 处理器允许 1-2 “交换”
-  [2] t = load(x);
-  [3] printf("x = %d\n", t);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread_2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">store</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// 处理器允许 1-2 “交换”</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="n">t</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="n">printf</span><span class="p">(</span><span class="s">"x = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">t</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <hr></hr>
@@ -218,31 +220,32 @@ void thread_2() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="peterson-contd">Peterson 算法的真正问题 (cont'd)</h2>
-<pre class="codehilite"><code class="language-c">int turn = T1, x = 0, y = 0;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">turn</span> <span class="o">=</span> <span class="n">T1</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void thread1() {
-  [1] store(x,    1);  // 举起 T1 的旗子
-  [2] store(turn, T2); // 在牌子上礼貌地写上对方的名字 (T2)
-spin:
-  [3] t1 = load(y);    // !!! x, y, turn 是不同的变量 !!!
-  [4] if (!t1)      goto critical_section;  // 如果对方没有举起旗子
-  [5] t2 = load(turn);
-  [6] if (t2 != T2) goto critical_section;  // 或者牌子上写着自己 (T1)
-  [7] goto spin;
-critical_section:
-  ...
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">store</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>    <span class="mi">1</span><span class="p">);</span>  <span class="c1">// 举起 T1 的旗子</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="n">store</span><span class="p">(</span><span class="n">turn</span><span class="p">,</span> <span class="n">T2</span><span class="p">);</span> <span class="c1">// 在牌子上礼貌地写上对方的名字 (T2)</span>
+<span class="nl">spin</span><span class="p">:</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="n">t1</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">y</span><span class="p">);</span>    <span class="c1">// !!! x, y, turn 是不同的变量 !!!</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">t1</span><span class="p">)</span>      <span class="k">goto</span> <span class="n">critical_section</span><span class="p">;</span>  <span class="c1">// 如果对方没有举起旗子</span>
+  <span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="n">t2</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">turn</span><span class="p">);</span>
+  <span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="k">if</span> <span class="p">(</span><span class="n">t2</span> <span class="o">!=</span> <span class="n">T2</span><span class="p">)</span> <span class="k">goto</span> <span class="n">critical_section</span><span class="p">;</span>  <span class="c1">// 或者牌子上写着自己 (T1)</span>
+  <span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="k">goto</span> <span class="n">spin</span><span class="p">;</span>
+<span class="nl">critical_section</span><span class="p">:</span>
+  <span class="p">...</span>
 
-void thread2() {
-  [1] store(y,    1);  // 举起 T2 的旗子
-  [2] store(turn, T1); // 在牌子上写上 T1
-spin:
-  [3] t1 = load(x);
-  [4] if (!t1)      goto critical_section;  // 如果对方没有举起旗子
-  [5] t2 = load(turn);
-  [6] if (t2 != T1) goto critical_section;  // 或者牌子上写着自己 (T2)
-  [7] goto spin;
-critical_section:
-  ...</code></pre></div></div>
+<span class="kt">void</span> <span class="n">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">store</span><span class="p">(</span><span class="n">y</span><span class="p">,</span>    <span class="mi">1</span><span class="p">);</span>  <span class="c1">// 举起 T2 的旗子</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="n">store</span><span class="p">(</span><span class="n">turn</span><span class="p">,</span> <span class="n">T1</span><span class="p">);</span> <span class="c1">// 在牌子上写上 T1</span>
+<span class="nl">spin</span><span class="p">:</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="n">t1</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">t1</span><span class="p">)</span>      <span class="k">goto</span> <span class="n">critical_section</span><span class="p">;</span>  <span class="c1">// 如果对方没有举起旗子</span>
+  <span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="n">t2</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">turn</span><span class="p">);</span>
+  <span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="k">if</span> <span class="p">(</span><span class="n">t2</span> <span class="o">!=</span> <span class="n">T1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">critical_section</span><span class="p">;</span>  <span class="c1">// 或者牌子上写着自己 (T2)</span>
+  <span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="k">goto</span> <span class="n">spin</span><span class="p">;</span>
+<span class="nl">critical_section</span><span class="p">:</span>
+  <span class="p">...</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">共享内存带来的更多问题……</h2>
@@ -306,15 +309,16 @@ critical_section:
 <li>(现代多处理器) load/store 可能在执行时被乱序</li>
 </ol>
 <p>例子：用一个变量 <code>locked</code> 实现互斥</p>
-<pre class="codehilite"><code class="language-c">void critical_section() {
-     while (1)
-[1]    if (!locked) {
-[2]      locked = 1;
-[3]      break;
-       }
-     // 进入临界区
-[4]    locked = 0;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">critical_section</span><span class="p">()</span> <span class="p">{</span>
+     <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">[</span><span class="mi">1</span><span class="p">]</span>    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">locked</span><span class="p">)</span> <span class="p">{</span>
+<span class="p">[</span><span class="mi">2</span><span class="p">]</span>      <span class="n">locked</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">[</span><span class="mi">3</span><span class="p">]</span>      <span class="k">break</span><span class="p">;</span>
+       <span class="p">}</span>
+     <span class="c1">// 进入临界区</span>
+<span class="p">[</span><span class="mi">4</span><span class="p">]</span>    <span class="n">locked</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 <ul>
 <li>用状态机模型分析：<math class="inline-math">T_1 \to T_2</math> 或 <math class="inline-math">T_2 \to T_1</math> 会同时进入临界区</li>
@@ -365,15 +369,16 @@ critical_section:
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="x86-xchg">x86 原子操作：<code>xchg</code></h2>
-<pre class="codehilite"><code class="language-c">int xchg(volatile int *addr, int newval) {
-  int result;
-  asm volatile ("lock xchg %0, %1"
-  : "+m"(*addr), // [%0] addr (内存；读写)
-    "=a"(result) // [%1] result (%eax)
-  : "1"(newval)  // [%1]
-  : "cc");       // clobbers eflags
-  return result;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">xchg</span><span class="p">(</span><span class="k">volatile</span> <span class="kt">int</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">int</span> <span class="n">newval</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">result</span><span class="p">;</span>
+  <span class="k">asm</span> <span class="k">volatile</span> <span class="p">(</span><span class="s">"lock xchg %0, %1"</span>
+  <span class="o">:</span> <span class="s">"+m"</span><span class="p">(</span><span class="o">*</span><span class="n">addr</span><span class="p">),</span> <span class="c1">// [%0] addr (内存；读写)</span>
+    <span class="s">"=a"</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="c1">// [%1] result (%eax)</span>
+  <span class="o">:</span> <span class="s">"1"</span><span class="p">(</span><span class="n">newval</span><span class="p">)</span>  <span class="c1">// [%1]</span>
+  <span class="o">:</span> <span class="s">"cc"</span><span class="p">);</span>       <span class="c1">// clobbers eflags</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>思考题：如何用 <code>xchg</code> 实现 <code>lock</code>/<code>unlock</code>？</p>
@@ -416,25 +421,27 @@ critical_section:
 <section>
 <div class="slide-container"><div class=""><p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/spin.png" width="75px"></img></p>
 <h2 id="_1">实现互斥：自旋锁</h2>
-<pre class="codehilite"><code class="language-c">int table = KEY;
-void lock() {
-  while (1) {
-    int got = xchg(&table, NOTE);
-    if (got == KEY) break;
-  }
-}
-void unlock() {
-  xchg(&table, KEY)
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">table</span> <span class="o">=</span> <span class="n">KEY</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">lock</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">got</span> <span class="o">=</span> <span class="n">xchg</span><span class="p">(</span><span class="o">&</span><span class="n">table</span><span class="p">,</span> <span class="n">NOTE</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">got</span> <span class="o">==</span> <span class="n">KEY</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">xchg</span><span class="p">(</span><span class="o">&</span><span class="n">table</span><span class="p">,</span> <span class="n">KEY</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
 <div class="fragment">
-<pre class="codehilite"><code class="language-c">int locked = 0;
-void lock()   {
-  while (xchg(&locked, 1)) ;
-}
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">locked</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">lock</span><span class="p">()</span>   <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">xchg</span><span class="p">(</span><span class="o">&</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">;</span>
+<span class="p">}</span>
 
-void unlock() {
-  xchg(&locked, 0);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">xchg</span><span class="p">(</span><span class="o">&</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <ul>
@@ -499,15 +506,16 @@ void unlock() {
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">void do_lrsc(){
-     while (1) {
-[1]    t = lr(x);
-[2]    t = f1/f2(t); // 不同线程可以执行不同操作
-[3]    if (sc(x, t) == SUCC) {
-[4]      break;
-       }
-     }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">do_lrsc</span><span class="p">(){</span>
+     <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+<span class="p">[</span><span class="mi">1</span><span class="p">]</span>    <span class="n">t</span> <span class="o">=</span> <span class="n">lr</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="p">[</span><span class="mi">2</span><span class="p">]</span>    <span class="n">t</span> <span class="o">=</span> <span class="n">f1</span><span class="o">/</span><span class="n">f2</span><span class="p">(</span><span class="n">t</span><span class="p">);</span> <span class="c1">// 不同线程可以执行不同操作</span>
+<span class="p">[</span><span class="mi">3</span><span class="p">]</span>    <span class="k">if</span> <span class="p">(</span><span class="n">sc</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="o">==</span> <span class="n">SUCC</span><span class="p">)</span> <span class="p">{</span>
+<span class="p">[</span><span class="mi">4</span><span class="p">]</span>      <span class="k">break</span><span class="p">;</span>
+       <span class="p">}</span>
+     <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <ul>
@@ -516,18 +524,19 @@ void unlock() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="cas-lrsc">CAS 的 LR/SC 实现</h2>
-<pre class="codehilite"><code class="language-c">int cas(int *addr, int cmp_val, int new_val) {
-  int old_val = *addr;
-  if (old_val == cmp_val) {
-    *addr = new_val;
-    return 0;
-  } else {
-    return 1;
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">cas</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">int</span> <span class="n">cmp_val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">new_val</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">old_val</span> <span class="o">=</span> <span class="o">*</span><span class="n">addr</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">old_val</span> <span class="o">==</span> <span class="n">cmp_val</span><span class="p">)</span> <span class="p">{</span>
+    <span class="o">*</span><span class="n">addr</span> <span class="o">=</span> <span class="n">new_val</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
-<pre class="codehilite"><code class="language-text">cas:
+<div class="codehilite"><pre><span></span>cas:
   jlr.w t0, (a0)       # Load original value.
   bne   t0, a1, fail   # Doesn’t match, so fail.
   sc.w  t0, a2, (a0)   # Try to update.
@@ -536,7 +545,8 @@ void unlock() {
   jr ra                # Return.
 fail:
   li a0, 1             # Set return to failure.
-  jr ra                # Return</code></pre></div></div>
+  jr ra                # Return
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="lrsc">LR/SC 的硬件实现</h2>
@@ -565,26 +575,27 @@ fail:
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="lrsc-on-boom">LR/SC on BOOM</h2>
-<pre class="codehilite"><code class="language-scala">// s2 == pipeline stage #2
-val lrsc_count = RegInit(0.U(log2Ceil(lrscCycles).W))
-val lrsc_valid = lrsc_count &gt; lrscBackoff.U
-...
-val s2_lrsc_addr_match = widthMap(
-     w =&gt; lrsc_valid
-  && lrsc_addr === (s2_req(w).addr &gt;&gt; blockOffBits) ) // req 地址匹配
-...
+<div class="codehilite"><pre><span></span><span class="c1">// s2 == pipeline stage #2</span>
+<span class="k">val</span> <span class="n">lrsc_count</span> <span class="k">=</span> <span class="nc">RegInit</span><span class="o">(</span><span class="mf">0.</span><span class="n">U</span><span class="o">(</span><span class="n">log2Ceil</span><span class="o">(</span><span class="n">lrscCycles</span><span class="o">).</span><span class="n">W</span><span class="o">))</span>
+<span class="k">val</span> <span class="n">lrsc_valid</span> <span class="k">=</span> <span class="n">lrsc_count</span> <span class="o">&gt;</span> <span class="n">lrscBackoff</span><span class="o">.</span><span class="n">U</span>
+<span class="o">...</span>
+<span class="k">val</span> <span class="n">s2_lrsc_addr_match</span> <span class="k">=</span> <span class="n">widthMap</span><span class="o">(</span>
+     <span class="n">w</span> <span class="k">=&gt;</span> <span class="n">lrsc_valid</span>
+  <span class="o">&&</span> <span class="n">lrsc_addr</span> <span class="o">===</span> <span class="o">(</span><span class="n">s2_req</span><span class="o">(</span><span class="n">w</span><span class="o">).</span><span class="n">addr</span> <span class="o">&gt;&gt;</span> <span class="n">blockOffBits</span><span class="o">)</span> <span class="o">)</span> <span class="c1">// req 地址匹配</span>
+<span class="o">...</span>
 
-// val memWidth = memIssueParam.issueWidth (parameters.scala)
-for (w &lt;- 0 until memWidth) {
-  when (s2_valid(w)                            &&
-    s2_type === t_lsu                          &&
-    !s2_hit(w)                                 && // not hit
-    !(s2_has_permission(w) && s2_tag_match(w)) &&
-    s2_lrsc_addr_match(w)                      && // 地址匹配
-    !s2_nack(w)) {
-    lrsc_count := 0.U
-  }
-}</code></pre></div></div>
+<span class="c1">// val memWidth = memIssueParam.issueWidth (parameters.scala)</span>
+<span class="k">for</span> <span class="o">(</span><span class="n">w</span> <span class="k">&lt;-</span> <span class="mi">0</span> <span class="n">until</span> <span class="n">memWidth</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">when</span> <span class="o">(</span><span class="n">s2_valid</span><span class="o">(</span><span class="n">w</span><span class="o">)</span>                            <span class="o">&&</span>
+    <span class="n">s2_type</span> <span class="o">===</span> <span class="n">t_lsu</span>                          <span class="o">&&</span>
+    <span class="o">!</span><span class="n">s2_hit</span><span class="o">(</span><span class="n">w</span><span class="o">)</span>                                 <span class="o">&&</span> <span class="c1">// not hit</span>
+    <span class="o">!(</span><span class="n">s2_has_permission</span><span class="o">(</span><span class="n">w</span><span class="o">)</span> <span class="o">&&</span> <span class="n">s2_tag_match</span><span class="o">(</span><span class="n">w</span><span class="o">))</span> <span class="o">&&</span>
+    <span class="n">s2_lrsc_addr_match</span><span class="o">(</span><span class="n">w</span><span class="o">)</span>                      <span class="o">&&</span> <span class="c1">// 地址匹配</span>
+    <span class="o">!</span><span class="n">s2_nack</span><span class="o">(</span><span class="n">w</span><span class="o">))</span> <span class="o">{</span>
+    <span class="n">lrsc_count</span> <span class="o">:=</span> <span class="mf">0.</span><span class="n">U</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></div></div></div>
 </section>
 </section>
 
@@ -596,19 +607,20 @@ for (w &lt;- 0 until memWidth) {
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">阻止并发发生：失败的例子</h2>
 <p>并不是在 <code>sum++</code> 前后加上原子操作，就能实现互斥</p>
-<pre class="codehilite"><code class="language-c">spinlock_t lk1, lk2;
+<div class="codehilite"><pre><span></span><span class="n">spinlock_t</span> <span class="n">lk1</span><span class="p">,</span> <span class="n">lk2</span><span class="p">;</span>
 
-void thread1() {
-  spin_lock(&lk1);
-  sum++;
-  spin_unlock(&lk1);
-}
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk1</span><span class="p">);</span>
+  <span class="n">sum</span><span class="o">++</span><span class="p">;</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk1</span><span class="p">);</span>
+<span class="p">}</span>
 
-void thread2() {
-  spin_lock(&lk2);
-  sum++;
-  spin_unlock(&lk2);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk2</span><span class="p">);</span>
+  <span class="n">sum</span><span class="o">++</span><span class="p">;</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk2</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <hr></hr>

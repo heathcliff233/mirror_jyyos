@@ -161,8 +161,9 @@ but it has since moved to GitHub, where people more talented than the original a
 <p>Use <code>xargs</code> (or <code>parallel</code>). It's very powerful. Note you can control how many items execute per line (<code>-L</code>) as well as parallelism (<code>-P</code>). If you're not sure if it'll do the right thing, use <code>xargs echo</code> first. Also, <code>-I{}</code> is handy. Examples:</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-bash">      find . -name '*.py' | xargs grep some_function
-      cat hosts | xargs -I{} ssh root@{} hostname</code></pre>
+<div class="codehilite"><pre><span></span>      find . -name <span class="s1">&#39;*.py&#39;</span> <span class="p">|</span> xargs grep some_function
+      cat hosts <span class="p">|</span> xargs -I<span class="o">{}</span> ssh root@<span class="o">{}</span> hostname
+</pre></div>
 
 
 <ul>
@@ -206,16 +207,18 @@ but it has since moved to GitHub, where people more talented than the original a
 <p>In Bash scripts, use <code>set -x</code> (or the variant <code>set -v</code>, which logs raw input, including unexpanded variables and comments) for debugging output. Use strict modes unless you have a good reason not to: Use <code>set -e</code> to abort on errors (nonzero exit code). Use <code>set -u</code> to detect unset variable usages. Consider <code>set -o pipefail</code> too, to abort on errors within pipes (though read up on it more if you do, as this topic is a bit subtle). For more involved scripts, also use <code>trap</code> on EXIT or ERR. A useful habit is to start a script like this, which will make it detect and abort on common errors and print a message:</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-bash">      set -euo pipefail
-      trap &quot;echo 'error: Script failed: see failed command above'&quot; ERR</code></pre>
+<div class="codehilite"><pre><span></span>      <span class="nb">set</span> -euo pipefail
+      <span class="nb">trap</span> <span class="s2">&quot;echo &#39;error: Script failed: see failed command above&#39;&quot;</span> ERR
+</pre></div>
 
 
 <ul>
 <li>In Bash scripts, subshells (written with parentheses) are convenient ways to group commands. A common example is to temporarily move to a different working directory, e.g.</li>
 </ul>
-<pre class="codehilite"><code class="language-bash">      # do something in current dir
-      (cd /some/other/dir &amp;&amp; other-command)
-      # continue in original dir</code></pre>
+<div class="codehilite"><pre><span></span>      <span class="c1"># do something in current dir</span>
+      <span class="o">(</span><span class="nb">cd</span> /some/other/dir <span class="o">&amp;&amp;</span> other-command<span class="o">)</span>
+      <span class="c1"># continue in original dir</span>
+</pre></div>
 
 
 <ul>
@@ -232,24 +235,27 @@ but it has since moved to GitHub, where people more talented than the original a
 <p>The output of a command can be treated like a file via <code>&lt;(some command)</code> (known as process substitution). For example, compare local <code>/etc/hosts</code> with a remote one:</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      diff /etc/hosts &lt;(ssh somehost cat /etc/hosts)</code></pre>
+<div class="codehilite"><pre><span></span>      diff /etc/hosts &lt;<span class="o">(</span>ssh somehost cat /etc/hosts<span class="o">)</span>
+</pre></div>
 
 
 <ul>
 <li>When writing scripts you may want to put all of your code in curly braces. If the closing brace is missing, your script will be prevented from executing due to a syntax error. This makes sense when your script is going to be downloaded from the web, since it prevents partially downloaded scripts from executing:</li>
 </ul>
-<pre class="codehilite"><code class="language-bash">{
-      # Your code here
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">{</span>
+      <span class="c1"># Your code here</span>
+<span class="o">}</span>
+</pre></div>
 
 
 <ul>
 <li>A "here document" allows <a href="https://www.tldp.org/LDP/abs/html/here-docs.html">redirection of multiple lines of input</a> as if from a file:</li>
 </ul>
-<pre class="codehilite"><code>cat &lt;&lt;EOF
-input
-on multiple lines
-EOF</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">cat &lt;&lt;EOF</span>
+<span class="err">input</span>
+<span class="err">on multiple lines</span>
+<span class="err">EOF</span>
+</pre></div>
 
 
 <ul>
@@ -269,13 +275,14 @@ EOF</code></pre>
 <p>It can be useful to make a few optimizations to your ssh configuration; for example, this <code>~/.ssh/config</code> contains settings to avoid dropped connections in certain network environments, uses compression (which is helpful with scp over low-bandwidth connections), and multiplex channels to the same server with a local control file:</p>
 </li>
 </ul>
-<pre class="codehilite"><code>      TCPKeepAlive=yes
-      ServerAliveInterval=15
-      ServerAliveCountMax=6
-      Compression=yes
-      ControlMaster auto
-      ControlPath /tmp/%r@%h:%p
-      ControlPersist yes</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">      TCPKeepAlive=yes</span>
+<span class="err">      ServerAliveInterval=15</span>
+<span class="err">      ServerAliveCountMax=6</span>
+<span class="err">      Compression=yes</span>
+<span class="err">      ControlMaster auto</span>
+<span class="err">      ControlPath /tmp/%r@%h:%p</span>
+<span class="err">      ControlPersist yes</span>
+</pre></div>
 
 
 <ul>
@@ -289,7 +296,8 @@ EOF</code></pre>
 <p>To get the permissions on a file in octal form, which is useful for system configuration but not available in <code>ls</code> and easy to bungle, use something like</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      stat -c '%A %a %n' /etc/timezone</code></pre>
+<div class="codehilite"><pre><span></span>      stat -c <span class="s1">&#39;%A %a %n&#39;</span> /etc/timezone
+</pre></div>
 
 
 <ul>
@@ -316,8 +324,9 @@ EOF</code></pre>
 <p>For a basic calculator (and of course access to Python in general), use the <code>python</code> interpreter. For example,</p>
 </li>
 </ul>
-<pre class="codehilite"><code>&gt;&gt;&gt; 2+3
-5</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">&gt;&gt;&gt; 2+3</span>
+<span class="err">5</span>
+</pre></div>
 
 
 <h2 id="processing-files-and-data">Processing files and data</h2>
@@ -377,24 +386,27 @@ EOF</code></pre>
 <p>To replace all occurrences of a string in place, in one or more files:</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      perl -pi.bak -e 's/old-string/new-string/g' my-files-*.txt</code></pre>
+<div class="codehilite"><pre><span></span>      perl -pi.bak -e <span class="s1">&#39;s/old-string/new-string/g&#39;</span> my-files-*.txt
+</pre></div>
 
 
 <ul>
 <li>To rename multiple files and/or search and replace within files, try <a href="https://github.com/jlevy/repren"><code>repren</code></a>. (In some cases the <code>rename</code> command also allows multiple renames, but be careful as its functionality is not the same on all Linux distributions.)</li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      # Full rename of filenames, directories, and contents foo -&gt; bar:
+<div class="codehilite"><pre><span></span>      <span class="c1"># Full rename of filenames, directories, and contents foo -&gt; bar:</span>
       repren --full --preserve-case --from foo --to bar .
-      # Recover backup files whatever.bak -&gt; whatever:
-      repren --renames --from '(.*)\.bak' --to '\1' *.bak
-      # Same as above, using rename, if available:
-      rename 's/\.bak$//' *.bak</code></pre>
+      <span class="c1"># Recover backup files whatever.bak -&gt; whatever:</span>
+      repren --renames --from <span class="s1">&#39;(.*)\.bak&#39;</span> --to <span class="s1">&#39;\1&#39;</span> *.bak
+      <span class="c1"># Same as above, using rename, if available:</span>
+      rename <span class="s1">&#39;s/\.bak$//&#39;</span> *.bak
+</pre></div>
 
 
 <ul>
 <li>As the man page says, <code>rsync</code> really is a fast and extraordinarily versatile file copying tool. It's known for synchronizing between machines but is equally useful locally. When security restrictions allow, using <code>rsync</code> instead of <code>scp</code> allows recovery of a transfer without restarting from scratch. It also is among the <a href="https://web.archive.org/web/20130929001850/http://linuxnote.net/jianingy/en/linux/a-fast-way-to-remove-huge-number-of-files.html">fastest ways</a> to delete large numbers of files:</li>
 </ul>
-<pre class="codehilite"><code class="language-sh">mkdir empty &amp;&amp; rsync -r --delete empty/ some-dir &amp;&amp; rmdir some-dir</code></pre>
+<div class="codehilite"><pre><span></span>mkdir empty <span class="o">&amp;&amp;</span> rsync -r --delete empty/ some-dir <span class="o">&amp;&amp;</span> rmdir some-dir
+</pre></div>
 
 
 <ul>
@@ -426,11 +438,12 @@ EOF</code></pre>
 <p>To convert text encodings, try <code>iconv</code>. Or <code>uconv</code> for more advanced use; it supports some advanced Unicode things. For example:</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      # Displays hex codes or actual names of characters (useful for debugging):
-      uconv -f utf-8 -t utf-8 -x '::Any-Hex;' &lt; input.txt
-      uconv -f utf-8 -t utf-8 -x '::Any-Name;' &lt; input.txt
-      # Lowercase and removes all accents (by expanding and dropping them):
-      uconv -f utf-8 -t utf-8 -x '::Any-Lower; ::Any-NFD; [:Nonspacing Mark:] &gt;; ::Any-NFC;' &lt; input.txt &gt; output.txt</code></pre>
+<div class="codehilite"><pre><span></span>      <span class="c1"># Displays hex codes or actual names of characters (useful for debugging):</span>
+      uconv -f utf-8 -t utf-8 -x <span class="s1">&#39;::Any-Hex;&#39;</span> &lt; input.txt
+      uconv -f utf-8 -t utf-8 -x <span class="s1">&#39;::Any-Name;&#39;</span> &lt; input.txt
+      <span class="c1"># Lowercase and removes all accents (by expanding and dropping them):</span>
+      uconv -f utf-8 -t utf-8 -x <span class="s1">&#39;::Any-Lower; ::Any-NFD; [:Nonspacing Mark:] &gt;; ::Any-NFC;&#39;</span> &lt; input.txt &gt; output.txt
+</pre></div>
 
 
 <ul>
@@ -450,8 +463,9 @@ EOF</code></pre>
 <p>Use <code>getfacl</code> and <code>setfacl</code> to save and restore file permissions. For example:</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-sh">   getfacl -R /some/path &gt; permissions.txt
-   setfacl --restore=permissions.txt</code></pre>
+<div class="codehilite"><pre><span></span>   getfacl -R /some/path &gt; permissions.txt
+   setfacl --restore<span class="o">=</span>permissions.txt
+</pre></div>
 
 
 <ul>
@@ -526,15 +540,17 @@ EOF</code></pre>
 <ul>
 <li>It is remarkably helpful sometimes that you can do set intersection, union, and difference of text files via <code>sort</code>/<code>uniq</code>. Suppose <code>a</code> and <code>b</code> are text files that are already uniqued. This is fast, and works on files of arbitrary size, up to many gigabytes. (Sort is not limited by memory, though you may need to use the <code>-T</code> option if <code>/tmp</code> is on a small root partition.) See also the note about <code>LC_ALL</code> above and <code>sort</code>'s <code>-u</code> option (left out for clarity below).</li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      sort a b | uniq &gt; c   # c is a union b
-      sort a b | uniq -d &gt; c   # c is a intersect b
-      sort a b b | uniq -u &gt; c   # c is set difference a - b</code></pre>
+<div class="codehilite"><pre><span></span>      sort a b <span class="p">|</span> uniq &gt; c   <span class="c1"># c is a union b</span>
+      sort a b <span class="p">|</span> uniq -d &gt; c   <span class="c1"># c is a intersect b</span>
+      sort a b b <span class="p">|</span> uniq -u &gt; c   <span class="c1"># c is set difference a - b</span>
+</pre></div>
 
 
 <ul>
 <li>Pretty-print two JSON files, normalizing their syntax, then coloring and paginating the result:</li>
 </ul>
-<pre class="codehilite"><code>      diff &lt;(jq --sort-keys . &lt; file1.json) &lt;(jq --sort-keys . &lt; file2.json) | colordiff | less -R</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">      diff &lt;(jq --sort-keys . &lt; file1.json) &lt;(jq --sort-keys . &lt; file2.json) | colordiff | less -R</span>
+</pre></div>
 
 
 <ul>
@@ -545,19 +561,22 @@ EOF</code></pre>
 <p>Summing all numbers in the third column of a text file (this is probably 3X faster and 3X less code than equivalent Python):</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      awk '{ x += $3 } END { print x }' myfile</code></pre>
+<div class="codehilite"><pre><span></span>      awk <span class="s1">&#39;{ x += $3 } END { print x }&#39;</span> myfile
+</pre></div>
 
 
 <ul>
 <li>To see sizes/dates on a tree of files, this is like a recursive <code>ls -l</code> but is easier to read than <code>ls -lR</code>:</li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      find . -type f -ls</code></pre>
+<div class="codehilite"><pre><span></span>      find . -type f -ls
+</pre></div>
 
 
 <ul>
 <li>Say you have a text file, like a web server log, and a certain value that appears on some lines, such as an <code>acct_id</code> parameter that is present in the URL. If you want a tally of how many requests for each <code>acct_id</code>:</li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      egrep -o 'acct_id=[0-9]+' access.log | cut -d= -f2 | sort | uniq -c | sort -rn</code></pre>
+<div class="codehilite"><pre><span></span>      egrep -o <span class="s1">&#39;acct_id=[0-9]+&#39;</span> access.log <span class="p">|</span> cut -d<span class="o">=</span> -f2 <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn
+</pre></div>
 
 
 <ul>
@@ -568,14 +587,15 @@ EOF</code></pre>
 <p>Run this function to get a random tip from this document (parses Markdown and extracts an item):</p>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-sh">      function taocl() {
-        curl -s https://raw.githubusercontent.com/jlevy/the-art-of-command-line/master/README.md |
-          sed '/cowsay[.]png/d' |
-          pandoc -f markdown -t html |
-          xmlstarlet fo --html --dropdtd |
-          xmlstarlet sel -t -v &quot;(html/body/ul/li[count(p)&gt;0])[$RANDOM mod last()+1]&quot; |
-          xmlstarlet unesc | fmt -80 | iconv -t US
-      }</code></pre>
+<div class="codehilite"><pre><span></span>      <span class="k">function</span> taocl<span class="o">()</span> <span class="o">{</span>
+        curl -s https://raw.githubusercontent.com/jlevy/the-art-of-command-line/master/README.md <span class="p">|</span>
+          sed <span class="s1">&#39;/cowsay[.]png/d&#39;</span> <span class="p">|</span>
+          pandoc -f markdown -t html <span class="p">|</span>
+          xmlstarlet fo --html --dropdtd <span class="p">|</span>
+          xmlstarlet sel -t -v <span class="s2">&quot;(html/body/ul/li[count(p)&gt;0])[</span><span class="nv">$RANDOM</span><span class="s2"> mod last()+1]&quot;</span> <span class="p">|</span>
+          xmlstarlet unesc <span class="p">|</span> fmt -80 <span class="p">|</span> iconv -t US
+      <span class="o">}</span>
+</pre></div>
 
 
 <h2 id="obscure-but-useful">Obscure but useful</h2>

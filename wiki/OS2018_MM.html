@@ -75,8 +75,9 @@
 </div>
 <h2 id="_4">库函数眼中的内存</h2>
 <p>虽然库函数可以看成是程序的一部分，但它们还肩负了特别的使命：它们需要管理进程地址空间中可用的内存，为程序使用提供便利。其中最重要的两个函数就是</p>
-<pre class="codehilite"><code class="language-c">void *malloc(size_t size);
-void free(void *ptr);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">malloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">free</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
+</pre></div>
 
 
 <p>实现这两个函数可不是个简单的问题。虽然现在大家普遍都接受了libc里的内存分配器，但Managed Runtime里的垃圾回收至今还是open problem——支付宝有那么一拨人，整天对着几十GB的堆区调节各种内存管理的参数。</p>

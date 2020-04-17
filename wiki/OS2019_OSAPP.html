@@ -116,14 +116,16 @@
 </div>
 <h3 id="_6">简单的应用程序</h3>
 <p>最简单的应用程序是<code>true</code>和<code>false</code>，它们只有一行代码：</p>
-<pre class="codehilite"><code class="language-c">int true_main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM)
-{
-    return EXIT_SUCCESS;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">true_main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span> <span class="n">UNUSED_PARAM</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span> <span class="n">UNUSED_PARAM</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">EXIT_SUCCESS</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>真的只有一行，<code>true</code>返回<code>EXIT_SUCCESS</code>，<code>false</code>返回<code>EXIT_FAILURE</code>。此外，<code>main</code>函数有两个参数：<code>argc</code>和<code>argv</code>。这就是操作系统在程序之间传递信息之间的一种约定：<strong>程序启动时能从外界传入参数，并且能用返回值表示自己执行的情况</strong>。整数<code>argc</code>表示参数的个数，<code>argv</code>是指向<code>char *</code>的指针，用<code>argv[i]</code>可以取得程序的参数。在Shell中，命令的参数就是这样传递的，比如</p>
-<pre class="codehilite"><code class="language-bash">find . -name &quot;*.c&quot; -o -name &quot;*.h&quot;</code></pre>
+<div class="codehilite"><pre><span></span>find . -name <span class="s2">&quot;*.c&quot;</span> -o -name <span class="s2">&quot;*.h&quot;</span>
+</pre></div>
 
 
 <p>能列出当前目录和子目录下的<code>.c</code>和<code>.h</code>文件。<code>find</code>程序就是从<code>argv</code>中读取这些参数的。你既可以手工解析这些参数，也能用<code>getopt</code>之类的库函数。使用<code>man 3 getopt</code>查看它的用法。搜索互联网能得到更多的信息。</p>
@@ -133,7 +135,8 @@
 </div>
 <h3 id="coreutils">Coreutils</h3>
 <p><a href="https://en.wikipedia.org/wiki/GNU_Core_Utilities">Coreutils</a>是一组支持系统管理的基本命令行工具，你可以直接在命令行里运行它们(系统里已经安装了GNU Coreutils，busybox对它们做了简化的实现)。<code>true</code>, <code>false</code>都是其中的工具。有些大家已经知道如何实现了，比如<code>expr</code>：</p>
-<pre class="codehilite"><code class="language-bash">expr \( 1 + 2 \) \* \( 3 + 4 \)</code></pre>
+<div class="codehilite"><pre><span></span>expr <span class="se">\(</span> <span class="m">1</span> + <span class="m">2</span> <span class="se">\)</span> <span class="se">\*</span> <span class="se">\(</span> <span class="m">3</span> + <span class="m">4</span> <span class="se">\)</span>
+</pre></div>
 
 
 <p>其中用到一些库函数，它们都在<code>libbb</code>目录。比如<code>expr_main</code>里会看到<code>bb_error_msg_and_die</code>，它的定义在<code>libbb/verror_msg.c</code>。然后它用了一个相当直接的算法去求解表达式的值。</p>

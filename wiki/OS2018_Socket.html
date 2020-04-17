@@ -68,33 +68,35 @@
 <h4 id="vs">套接字 vs 文件描述符</h4>
 <p>套接字看起来和文件描述符很像——进程间通信的一端，我们对它最主要的操作就是读和写。没错，套接字也是用文件描述符表示的！</p>
 <p>看看Linux Kernel里的代码：</p>
-<pre class="codehilite"><code class="language-c">struct socket *sock_from_file(struct file *file, int *err)
-{
-  if (file-&gt;f_op == &amp;socket_file_ops)
-    return file-&gt;private_data;  /* set in sock_map_fd */
-  *err = -ENOTSOCK;
-  return NULL;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="nf">sock_from_file</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">err</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">file</span><span class="o">-&gt;</span><span class="n">f_op</span> <span class="o">==</span> <span class="o">&amp;</span><span class="n">socket_file_ops</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">file</span><span class="o">-&gt;</span><span class="n">private_data</span><span class="p">;</span>  <span class="cm">/* set in sock_map_fd */</span>
+  <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="o">-</span><span class="n">ENOTSOCK</span><span class="p">;</span>
+  <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p><code>socket_file_ops</code>和OSLab2中的虚拟文件系统实现非常像：</p>
-<pre class="codehilite"><code class="language-c">static const struct file_operations socket_file_ops = {
-        .owner =        THIS_MODULE,
-        .llseek =       no_llseek,
-        .read_iter =    sock_read_iter,
-        .write_iter =   sock_write_iter,
-        .poll =         sock_poll,
-        .unlocked_ioctl = sock_ioctl,
-#ifdef CONFIG_COMPAT
-        .compat_ioctl = compat_sock_ioctl,
-#endif
-        .mmap =         sock_mmap,
-        .release =      sock_close,
-        .fasync =       sock_fasync,
-        .sendpage =     sock_sendpage,
-        .splice_write = generic_splice_sendpage,
-        .splice_read =  sock_splice_read,
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">file_operations</span> <span class="n">socket_file_ops</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">owner</span> <span class="o">=</span>        <span class="n">THIS_MODULE</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">llseek</span> <span class="o">=</span>       <span class="n">no_llseek</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">read_iter</span> <span class="o">=</span>    <span class="n">sock_read_iter</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">write_iter</span> <span class="o">=</span>   <span class="n">sock_write_iter</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">poll</span> <span class="o">=</span>         <span class="n">sock_poll</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">unlocked_ioctl</span> <span class="o">=</span> <span class="n">sock_ioctl</span><span class="p">,</span>
+<span class="cp">#ifdef CONFIG_COMPAT</span>
+        <span class="p">.</span><span class="n">compat_ioctl</span> <span class="o">=</span> <span class="n">compat_sock_ioctl</span><span class="p">,</span>
+<span class="cp">#endif</span>
+        <span class="p">.</span><span class="n">mmap</span> <span class="o">=</span>         <span class="n">sock_mmap</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">release</span> <span class="o">=</span>      <span class="n">sock_close</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">fasync</span> <span class="o">=</span>       <span class="n">sock_fasync</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">sendpage</span> <span class="o">=</span>     <span class="n">sock_sendpage</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">splice_write</span> <span class="o">=</span> <span class="n">generic_splice_sendpage</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">splice_read</span> <span class="o">=</span>  <span class="n">sock_splice_read</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>所以当一个文件描述符支持的操作恰好是<code>socket_file_ops</code>，它就表示了一个套接字，其中的<code>private_data</code>域保存了<code>struct socket</code>的指针。</p>
@@ -102,7 +104,8 @@
 <p>当然，把套接字连接起来也不算是太简单，需要几个步骤：</p>
 <h3 id="_5">创建</h3>
 <p>我们已经知道套接字代表了连接的“一端”，创建它是相当容易的：</p>
-<pre class="codehilite"><code class="language-c">int socket(int domain, int type, int protocol);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">socket</span><span class="p">(</span><span class="kt">int</span> <span class="n">domain</span><span class="p">,</span> <span class="kt">int</span> <span class="n">type</span><span class="p">,</span> <span class="kt">int</span> <span class="n">protocol</span><span class="p">);</span>
+</pre></div>
 
 
 <p>在创建时要描述套接字接口的类型(就像插座的类型一样)。常用的类型(domain)有：</p>
@@ -121,23 +124,25 @@
 <p>protocol为0表示使用默认的协议，例如<code>AF_INET</code>, <code>SOCK_STREAM</code>默认使用TCP传输。创建成功后，会返回套接字的文件描述符——正如之前所说的那样，套接字通过文件描述符访问。</p>
 <h3 id="_6">连接管理</h3>
 <p>创建好套接字以后，用这些函数实现套接字的连接：</p>
-<pre class="codehilite"><code class="language-c">int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-int listen(int sockfd, int backlog);
-int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">bind</span><span class="p">(</span><span class="kt">int</span> <span class="n">sockfd</span><span class="p">,</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">sockaddr</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">socklen_t</span> <span class="n">addrlen</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">listen</span><span class="p">(</span><span class="kt">int</span> <span class="n">sockfd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">backlog</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">accept</span><span class="p">(</span><span class="kt">int</span> <span class="n">sockfd</span><span class="p">,</span> <span class="k">struct</span> <span class="n">sockaddr</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">socklen_t</span> <span class="o">*</span><span class="n">addrlen</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">connect</span><span class="p">(</span><span class="kt">int</span> <span class="n">sockfd</span><span class="p">,</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">sockaddr</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">socklen_t</span> <span class="n">addrlen</span><span class="p">);</span>
+</pre></div>
 
 
 <p>其中bind, listen, accept是服务端使用的，connect则是客户端使用的。因为计算机之间可能的连接多种多样(IP地址/端口只是其中的一种，所以套接字的API就使用了传入一个结构体的方式)，这也是引起新手困惑的地方——地址的描述也需要两个结构体，哦有点复杂，你需要一点时间RTFM弄清楚其中的概念。</p>
-<pre class="codehilite"><code class="language-c">struct sockaddr_in {
-    sa_family_t    sin_family; /* address family: AF_INET */
-    in_port_t      sin_port;   /* port in network byte order */
-    struct in_addr sin_addr;   /* internet address */
-};
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="p">{</span>
+    <span class="n">sa_family_t</span>    <span class="n">sin_family</span><span class="p">;</span> <span class="cm">/* address family: AF_INET */</span>
+    <span class="n">in_port_t</span>      <span class="n">sin_port</span><span class="p">;</span>   <span class="cm">/* port in network byte order */</span>
+    <span class="k">struct</span> <span class="n">in_addr</span> <span class="n">sin_addr</span><span class="p">;</span>   <span class="cm">/* internet address */</span>
+<span class="p">};</span>
 
-/* Internet address. */
-struct in_addr {
-    uint32_t       s_addr;     /* address in network byte order */
-};</code></pre>
+<span class="cm">/* Internet address. */</span>
+<span class="k">struct</span> <span class="n">in_addr</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span>       <span class="n">s_addr</span><span class="p">;</span>     <span class="cm">/* address in network byte order */</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>在连接建立以后，剩下的事情就和访问文件(管道)差不多了。除了read/write，套接字还支持send/recv; readv/writev; sendmsg/recvmsg，也推荐使用<code>select</code>系统调用管理多个文件描述符。事情开始变糟了——原本UNIX世界的API是非常干净简洁的，但为了支持越来越多的系统功能，不得不加入大量的结构体、大量的API。</p>

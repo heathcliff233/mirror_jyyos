@@ -56,7 +56,8 @@
 <h4 id="_2">实验说明</h4>
 <p>请先阅读<a href="ICS2019_Code.html">《计算机系统基础》Labs 须知</a>。</p>
 <p>获取代码：在 <code>ics-workbench</code> 中执行</p>
-<pre class="codehilite"><code class="language-bash">git pull origin lab3</code></pre>
+<div class="codehilite"><pre><span></span>git pull origin lab3
+</pre></div>
 
 
 <p>提交方法：在 <code>perf</code> 目录下设置好 <code>STUID</code>, <code>STUNAME</code> 环境变量后，执行 <code>make submit</code> 提交。</p>
@@ -70,21 +71,22 @@
 <p>在上一个实验中，我们使用内嵌汇编实现了 <code>memcpy</code>。实际中的 <code>memcpy</code> 到底应该怎么实现才能最大程度地发挥现代处理器的性能呢？在这个实验中，你需要实现性能的监控程序。</p>
 </div>
 <p>你需要实现命令行工具 perf，它能够反复运行<strong>一小段代码</strong>，并且度量它的精确运行时间。在框架代码中，已经有一些函数的实现：</p>
-<pre class="codehilite"><code class="language-c">void dummy() {
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">dummy</span><span class="p">()</span> <span class="p">{</span>
+<span class="p">}</span>
 
-void print_hello() {
-  printf(&quot;hello\n&quot;);
-}
+<span class="kt">void</span> <span class="nf">print_hello</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;hello</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
 
-void print_error() {
-  printf(&quot;invalid subject!\n&quot;);
-  exit(1);
-}
+<span class="kt">void</span> <span class="nf">print_error</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;invalid subject!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
 
-void simple_loop() {
-  for (volatile int i = 0; i &lt; 1000000; i++) ;
-}</code></pre>
+<span class="kt">void</span> <span class="nf">simple_loop</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="k">volatile</span> <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>你可以添加自己需要度量运行时间的函数实现，并且把函数名称添加到 <code>perf.h</code> 中。</p>
@@ -97,30 +99,32 @@ void simple_loop() {
 </ol>
 </div>
 <p>我们已经提供了框架代码，主要由三个函数组成：</p>
-<pre class="codehilite"><code class="language-c">static void run(void (*func)(), int rounds); // 运行 @func 函数 rounds 次
-static uint64_t gettime(); // 获取程序运行的时间戳
-static void (*lookup(const char *fn))(); // 根据函数名查找对应的入口地址</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">run</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)(),</span> <span class="kt">int</span> <span class="n">rounds</span><span class="p">);</span> <span class="c1">// 运行 @func 函数 rounds 次</span>
+<span class="k">static</span> <span class="kt">uint64_t</span> <span class="nf">gettime</span><span class="p">();</span> <span class="c1">// 获取程序运行的时间戳</span>
+<span class="k">static</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">lookup</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fn</span><span class="p">))();</span> <span class="c1">// 根据函数名查找对应的入口地址</span>
+</pre></div>
 
 
 <p><code>run</code> 函数相对容易理解，它把 <code>rounds</code> 次运行 <code>func</code> 的运行时间存储到 <code>elapsed</code> 数组中。你需要填入 TODO 的部分生成统计数据，例如数据的分布情况、是否近似为正态分布等。</p>
-<pre class="codehilite"><code class="language-c">static void run(void (*func)(), int rounds) {
-  uint64_t *elapsed = malloc(sizeof(uint64_t) * rounds);
-  if (!elapsed) { // 注意错误处理
-    perror(&quot;elapsed&quot;);
-    return;
-  }
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">run</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)(),</span> <span class="kt">int</span> <span class="n">rounds</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">uint64_t</span> <span class="o">*</span><span class="n">elapsed</span> <span class="o">=</span> <span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">uint64_t</span><span class="p">)</span> <span class="o">*</span> <span class="n">rounds</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">elapsed</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 注意错误处理</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">&quot;elapsed&quot;</span><span class="p">);</span>
+    <span class="k">return</span><span class="p">;</span>
+  <span class="p">}</span>
 
-  for (int round = 0; round &lt; rounds; round++) {
-    uint64_t st = gettime();
-    func();
-    uint64_t ed = gettime();
-    elapsed[round] = ed - st;
-  }
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">round</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">round</span> <span class="o">&lt;</span> <span class="n">rounds</span><span class="p">;</span> <span class="n">round</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint64_t</span> <span class="n">st</span> <span class="o">=</span> <span class="n">gettime</span><span class="p">();</span>
+    <span class="n">func</span><span class="p">();</span>
+    <span class="kt">uint64_t</span> <span class="n">ed</span> <span class="o">=</span> <span class="n">gettime</span><span class="p">();</span>
+    <span class="n">elapsed</span><span class="p">[</span><span class="n">round</span><span class="p">]</span> <span class="o">=</span> <span class="n">ed</span> <span class="o">-</span> <span class="n">st</span><span class="p">;</span>
+  <span class="p">}</span>
 
-  // TODO: display runtime statistics
+  <span class="c1">// TODO: display runtime statistics</span>
 
-  free(elapsed); // OJ 做多了的坏习惯：申请的内存从不释放
-}</code></pre>
+  <span class="n">free</span><span class="p">(</span><span class="n">elapsed</span><span class="p">);</span> <span class="c1">// OJ 做多了的坏习惯：申请的内存从不释放</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div class="fenced fenced-blue">
@@ -133,22 +137,23 @@ static void (*lookup(const char *fn))(); // 根据函数名查找对应的入口
 <li>查阅互联网上的资料，理解 C 语言的类型系统。这可以帮助你理解 <code>lookup</code> 函数到底接受什么参数、返回什么；</li>
 <li>使用 <code>gcc -E</code> 查看预处理后的文件。</li>
 </ol>
-<pre class="codehilite"><code class="language-c">static void (*lookup(const char *fn))() {
-  #define PAIR(fn) { #fn, fn },
-  struct pair {
-    const char *name;
-    void *ptr; // bad practice! 思考题：为什么？
-  };
-  struct pair lut[] = {
-    PROGRAMS(PAIR)
-  };
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">lookup</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fn</span><span class="p">))()</span> <span class="p">{</span>
+  <span class="cp">#define PAIR(fn) { #fn, fn },</span>
+  <span class="k">struct</span> <span class="n">pair</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">;</span> <span class="c1">// bad practice! 思考题：为什么？</span>
+  <span class="p">};</span>
+  <span class="k">struct</span> <span class="n">pair</span> <span class="n">lut</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">PROGRAMS</span><span class="p">(</span><span class="n">PAIR</span><span class="p">)</span>
+  <span class="p">};</span>
 
-  for (int i = 0; i &lt; LENGTH(lut); i++) {
-    struct pair *p = &amp;lut[i];
-    if (strcmp(fn, p-&gt;name) == 0) return p-&gt;ptr;
-  }
-  return print_error;
-}</code></pre>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">LENGTH</span><span class="p">(</span><span class="n">lut</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">pair</span> <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">lut</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">print_error</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在此基础上，我们希望你评估你 Lab1 中三个 multimod 实现的性能差异。</p>
@@ -172,37 +177,38 @@ static void (*lookup(const char *fn))(); // 根据函数名查找对应的入口
 <li>实验运行至少 100 次取观测到的最小值。</li>
 </ol>
 <p>参考实现的代码如下：</p>
-<pre class="codehilite"><code class="language-c">// 教科书上的实现
-void *memcpy_simple(void *dst, const void *src, size_t size) {
-  void *ret = dst;
-  while (size--) {
-    (*(char *)dst++) = (*(char *)src++);
-  }
-  return ret;
-}
+<div class="codehilite"><pre><span></span><span class="c1">// 教科书上的实现</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">memcpy_simple</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="n">dst</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">size</span><span class="o">--</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">dst</span><span class="o">++</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">src</span><span class="o">++</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
+<span class="p">}</span>
 
 
-// Lab2内容，使用movs指令实现
-void *memcpy_asm(void *dst, const void *src, size_t size) {
-  // hidden
-}
+<span class="c1">// Lab2内容，使用movs指令实现</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">memcpy_asm</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// hidden</span>
+<span class="p">}</span>
 
-// 奇怪的循环展开，会编译出非常长的指令序列
-void *memcpy_unroll(void *dst, const void *src, size_t size) {
-  void *ret = dst;
-  assert(size % 64 == 0); // 假设已对齐到 64 bytes，简化代码
+<span class="c1">// 奇怪的循环展开，会编译出非常长的指令序列</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">memcpy_unroll</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="n">dst</span><span class="p">;</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">size</span> <span class="o">%</span> <span class="mi">64</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 假设已对齐到 64 bytes，简化代码</span>
 
-  for (; size; size -= 64) {
-    const uint64_t *s = src;
-    uint64_t *d = dst;
-    d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3];
-    d[4] = s[4]; d[5] = s[5]; d[6] = s[6]; d[7] = s[7];
-    dst = (char *)dst + 64;
-    src = (char *)src + 64;
-  }
+  <span class="k">for</span> <span class="p">(;</span> <span class="n">size</span><span class="p">;</span> <span class="n">size</span> <span class="o">-=</span> <span class="mi">64</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">uint64_t</span> <span class="o">*</span><span class="n">s</span> <span class="o">=</span> <span class="n">src</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="o">*</span><span class="n">d</span> <span class="o">=</span> <span class="n">dst</span><span class="p">;</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span> <span class="n">d</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span> <span class="n">d</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span> <span class="n">d</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">6</span><span class="p">];</span> <span class="n">d</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">7</span><span class="p">];</span>
+    <span class="n">dst</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">dst</span> <span class="o">+</span> <span class="mi">64</span><span class="p">;</span>
+    <span class="n">src</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">src</span> <span class="o">+</span> <span class="mi">64</span><span class="p">;</span>
+  <span class="p">}</span>
 
-  return ret;
-}</code></pre>
+  <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>下图展示了各个 <code>memcpy</code> 实现的复制吞吐量 (纵轴，单位 GiB/s)；横轴是复制的字节数 (单位 MiB)：</p>

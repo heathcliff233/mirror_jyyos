@@ -75,27 +75,29 @@
 <p><span class="center">(Red Alert 95, 运行在320 x 200 x 256的彩色模式)</span></p>
 <h2 id="_3">更快的处理器、更大的存储</h2>
 <p>当我们的内存多到可以同时容纳多个程序的时候，让多个程序同时驻留内存共享处理器就成为很自然的需求，例如有两个程序：</p>
-<pre class="codehilite"><code class="language-c">void program_A() {
-  while (1) {
-    compute_A();   // 100ms
-    wait_disk();   // 100ms
-  }
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">program_A</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">compute_A</span><span class="p">();</span>   <span class="c1">// 100ms</span>
+    <span class="n">wait_disk</span><span class="p">();</span>   <span class="c1">// 100ms</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void program_B() {
-  while (1) {
-    compute_B();    // 100ms
-    wait_printer(); // 100ms
-  }
-}</code></pre>
+<span class="kt">void</span> <span class="nf">program_B</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">compute_B</span><span class="p">();</span>    <span class="c1">// 100ms</span>
+    <span class="n">wait_printer</span><span class="p">();</span> <span class="c1">// 100ms</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在内存不足的时代，我们只能按照 A → B 或者 B → A 的顺序执行，因为把程序从磁盘载入内存非常费时。如果在处理器上切换程序执行的代价变小，我们就可以按照以下流程执行程序：</p>
-<pre class="codehilite"><code>A: compute_A()
-// 在磁盘I/O指令发出后，不再忙等待，而是切换到B执行
-B: compute_B()
-A: wait_disk();    // 磁盘已经就绪，立即完成
-B: wait_printer(); // 立即完成</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">A</span><span class="o">:</span> <span class="n">compute_A</span><span class="o">()</span>
+<span class="c1">// 在磁盘I/O指令发出后，不再忙等待，而是切换到B执行</span>
+<span class="n">B</span><span class="o">:</span> <span class="n">compute_B</span><span class="o">()</span>
+<span class="n">A</span><span class="o">:</span> <span class="n">wait_disk</span><span class="o">();</span>    <span class="c1">// 磁盘已经就绪，立即完成</span>
+<span class="n">B</span><span class="o">:</span> <span class="n">wait_printer</span><span class="o">();</span> <span class="c1">// 立即完成</span>
+</pre></div>
 
 
 <p>如果我们把所有运行的程序都加载到内存，并且定时在运行的时间切换，就是今天的分时操作系统。为了更好地管理进程，操作系统借助了众多处理器提供的机制：</p>

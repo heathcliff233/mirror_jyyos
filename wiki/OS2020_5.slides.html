@@ -85,12 +85,13 @@
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">while (1) {
-  lock(&biglock);
-  printf("Thread-%s on CPU #%d acquired the lock\n", arg, _cpu());
-  unlock(&biglock);
-  for (int volatile i = 0; i &lt; 100000; i++) ;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">biglock</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"Thread-%s on CPU #%d acquired the lock</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">arg</span><span class="p">,</span> <span class="n">_cpu</span><span class="p">());</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">biglock</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="k">volatile</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">100000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 <ul>
 <li>程序运行时<ul>
@@ -131,17 +132,18 @@
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="v1">自旋锁 v1: 上课讲过的版本</h2>
-<pre class="codehilite"><code class="language-c">typedef struct {
-  intptr_t locked;
-} spinlock_t;
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+  <span class="kt">intptr_t</span> <span class="n">locked</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">spinlock_t</span><span class="p">;</span>
 
-void lock(spinlock_t *lk) {
-  while (_atomic_xchg(&lk-&gt;locked, 1));
-}
+<span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">_atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+<span class="p">}</span>
 
-void unlock(spinlock_t *lk) {
-  _atomic_xchg(&lk-&gt;locked, 0);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">_atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>似乎挺不错的……</p>
@@ -160,14 +162,16 @@ void unlock(spinlock_t *lk) {
 <section>
 <div class="slide-container"><div class=""><h2 id="bug-1">Bug #1: ？？？</h2>
 <p>如果我们注释掉</p>
-<pre class="codehilite"><code class="language-c">for (int volatile i = 0; i &lt; 100000; i++) ;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="k">volatile</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">100000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">;</span>
+</pre></div>
 
 
 <p>应该不会有什么麻烦吧？</p>
-<pre class="codehilite"><code class="language-text">Thread-B on CPU #1 acquired the lock
+<div class="codehilite"><pre><span></span>Thread-B on CPU #1 acquired the lock
 Thread-B on CPU #1 acquired the lock
 Thread-B on CPU #1 acquired the lock
-...</code></pre>
+...
+</pre></div>
 
 
 <ul>
@@ -231,15 +235,16 @@ Thread-B on CPU #1 acquired the lock
 <li>在单处理器上，<code>spin_lock</code> 中的 <code>atomic_xchg</code> 永远成功 (假设 lock/unlock 配对)</li>
 </ul>
 </blockquote>
-<pre class="codehilite"><code class="language-c">void spin_lock(spinlock_t &lk) {
-  cli();
-  while (atomic_xchg(&lk-&gt;locked, 1)) ;
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">spin_lock</span><span class="p">(</span><span class="n">spinlock_t</span> <span class="o">&</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">cli</span><span class="p">();</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">;</span>
+<span class="p">}</span>
 
-void spin_unlock(spinlock_t &lk) {
-  atomic_xchg(&lk-&gt;locked, 0);
-  sti();
-}</code></pre>
+<span class="kt">void</span> <span class="nf">spin_unlock</span><span class="p">(</span><span class="n">spinlock_t</span> <span class="o">&</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">sti</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>细节 (为什么？)</p>
@@ -251,28 +256,30 @@ void spin_unlock(spinlock_t &lk) {
 <section>
 <div class="slide-container"><div class=""><h2 id="bug-2">Bug #2: 中断标志位</h2>
 <p>关中断也许比大家想象得要难一些……</p>
-<pre class="codehilite"><code class="language-c">void foo() {
-  spin_lock(&lock_a);
-  spin_lock(&lock_b);
-  spin_unlock(&lock_b);
-  assert(_intr_read() == 0); // 此时中断应当关闭
-  spin_unlock(&lock_a);
-  assert(_intr_read() == 1); // 此时中断应当打开
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_a</span><span class="p">);</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_b</span><span class="p">);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_b</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">_intr_read</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 此时中断应当关闭</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_a</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">_intr_read</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// 此时中断应当打开</span>
+<span class="p">}</span>
+</pre></div>
 
 
-<pre class="codehilite"><code class="language-c">void foo() {
-  spin_lock(&lock_a);
-  spin_lock(&lock_b);
-  spin_unlock(&lock_b);
-  spin_unlock(&lock_a);
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_a</span><span class="p">);</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_b</span><span class="p">);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_b</span><span class="p">);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lock_a</span><span class="p">);</span>
+<span class="p">}</span>
 
-void on_interrupt(_Event *ev, _Context *ctx) {
-  assert(_intr_read() == 0);
-  foo();
-  assert(_intr_read() == 0); // 此时中断应该关闭
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">on_interrupt</span><span class="p">(</span><span class="n">_Event</span> <span class="o">*</span><span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">_intr_read</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">foo</span><span class="p">();</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">_intr_read</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 此时中断应该关闭</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="bug-2">Bug #2: 修复</h2>
@@ -301,12 +308,13 @@ void on_interrupt(_Event *ev, _Context *ctx) {
 <blockquote>
 <p>A standard joke is that a bug can be turned into a feature simply by documenting it (then theoretically no one can complain about it because it’s in the manual), or even by simply declaring it to be good. “That’s not a bug, that’s a feature!” is a common catchphrase.</p>
 </blockquote>
-<pre class="codehilite"><code class="language-c">// It's not a bug, it's a feature!
-lock(&lk);
-lock(&lk);
-printf(...);
-unlock(&lk);
-unlock(&lk);</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// It's not a bug, it's a feature!</span>
+<span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+<span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+<span class="n">printf</span><span class="p">(...);</span>
+<span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+<span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+</pre></div>
 
 
 <p><span class="center">(Leave it as a feature!)</span></p></div></div>
@@ -373,15 +381,16 @@ unlock(&lk);</code></pre>
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">struct spinlock {
-  uint locked;       // Is the lock held?
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">spinlock</span> <span class="p">{</span>
+  <span class="n">uint</span> <span class="n">locked</span><span class="p">;</span>       <span class="c1">// Is the lock held?</span>
 
-  // For debugging:
-  char *name;        // Name of lock.
-  struct cpu *cpu;   // The cpu holding the lock.
-  uint pcs[10];      // The call stack (an array of program counters)
-                     // that locked the lock.
-};</code></pre></div></div>
+  <span class="c1">// For debugging:</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>        <span class="c1">// Name of lock.</span>
+  <span class="k">struct</span> <span class="n">cpu</span> <span class="o">*</span><span class="n">cpu</span><span class="p">;</span>   <span class="c1">// The cpu holding the lock.</span>
+  <span class="n">uint</span> <span class="n">pcs</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>      <span class="c1">// The call stack (an array of program counters)</span>
+                     <span class="c1">// that locked the lock.</span>
+<span class="p">};</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="xv6-spinlock">xv6 spinlock: 调试功能</h2>
@@ -450,15 +459,16 @@ unlock(&lk);</code></pre>
 </li>
 </ul>
 </blockquote>
-<pre class="codehilite"><code class="language-c">void disk_read(int fd, char *buf, size_t size) {
-  // 系统中只有一个磁盘，因此需要互斥
-  spin_lock(&disk_lock);
-  // 问题 1: 临界区执行时间可能很长
-  send_disk_request();
-  wait_for_interrupt(); // 问题 2: 中断根本无法到达处理器
-  copy_data();
-  spin_unlock(&disk_lock);
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">disk_read</span><span class="p">(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 系统中只有一个磁盘，因此需要互斥</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">disk_lock</span><span class="p">);</span>
+  <span class="c1">// 问题 1: 临界区执行时间可能很长</span>
+  <span class="n">send_disk_request</span><span class="p">();</span>
+  <span class="n">wait_for_interrupt</span><span class="p">();</span> <span class="c1">// 问题 2: 中断根本无法到达处理器</span>
+  <span class="n">copy_data</span><span class="p">();</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">disk_lock</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="contd">操作系统中的长临界区 (cont'd)</h2>
@@ -483,14 +493,15 @@ unlock(&lk);</code></pre>
 <blockquote>
 <p>Simply yield!</p>
 </blockquote>
-<pre class="codehilite"><code class="language-c">void mutex_lock(spinlock_t *lk) {
-  while (atomic_xchg(&lk-&gt;locked, 1)) {
-    // 在 atomic_xchg 执行的时候，已经有人得到了锁
-    // 因为是长临界区，所以预期要等很久
-    let_another_thread_to_execute(); // 不如让其他线程执行
-    // _yield() on AbstractMachine;
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">mutex_lock</span><span class="p">(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">{</span>
+    <span class="c1">// 在 atomic_xchg 执行的时候，已经有人得到了锁</span>
+    <span class="c1">// 因为是长临界区，所以预期要等很久</span>
+    <span class="n">let_another_thread_to_execute</span><span class="p">();</span> <span class="c1">// 不如让其他线程执行</span>
+    <span class="c1">// _yield() on AbstractMachine;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 <ul>
 <li>思考题：此时不关中断是否有问题？</li>
@@ -516,30 +527,31 @@ unlock(&lk);</code></pre>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">不止是小优化！</h2>
 <p>给线程设置状态：<code>BLOCKED</code>: 在等待某个锁；<code>RUNNABLE</code>: 可被调度运行</p>
-<pre class="codehilite"><code class="language-c">void mutex_lock(mutexlock_t *lk) {
-  int acquired = 0;
-  spin_lock(&lk-&gt;spinlock);
-  if (lk-&gt;locked != 0) {
-    enqueue(lk-&gt;wait_list, current);
-    current-&gt;status = BLOCKED;
-  } else {
-    lk-&gt;locked = 1;
-    acquired = 1;
-  }
-  spin_unlock(&lk-&gt;spinlock);
-  if (!acquired) yield(); // 主动切换到其他线程执行
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">mutex_lock</span><span class="p">(</span><span class="n">mutexlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">acquired</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">enqueue</span><span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">wait_list</span><span class="p">,</span> <span class="n">current</span><span class="p">);</span>
+    <span class="n">current</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">=</span> <span class="n">BLOCKED</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">acquired</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">acquired</span><span class="p">)</span> <span class="n">yield</span><span class="p">();</span> <span class="c1">// 主动切换到其他线程执行</span>
+<span class="p">}</span>
 
-void mutex_unlock(mutexlock_t *lk) {
-  spin_lock(&lk-&gt;spinlock);
-  if (!empty(lk-&gt;wait_list)) {
-    struct task_t *task = dequeue(lk-&gt;wait_list);
-    task-&gt;status = RUNNABLE; // 唤醒之前睡眠的线程
-  } else {
-    lk-&gt;locked = 0;
-  }
-  spin_unlock(&lk-&gt;spinlock);
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">mutex_unlock</span><span class="p">(</span><span class="n">mutexlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">empty</span><span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">wait_list</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">task_t</span> <span class="o">*</span><span class="n">task</span> <span class="o">=</span> <span class="n">dequeue</span><span class="p">(</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">wait_list</span><span class="p">);</span>
+    <span class="n">task</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">=</span> <span class="n">RUNNABLE</span><span class="p">;</span> <span class="c1">// 唤醒之前睡眠的线程</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">spinlock</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="l2">直观解释 (在 L2 中实现)</h2>

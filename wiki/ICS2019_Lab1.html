@@ -56,7 +56,8 @@
 <h4 id="_2">实验说明</h4>
 <p>请先阅读<a href="ICS2019_Code.html">《计算机系统基础》Labs 须知</a>。</p>
 <p>获取代码：在 <code>ics-workbench</code> 中执行</p>
-<pre class="codehilite"><code class="language-bash">git pull origin lab1</code></pre>
+<div class="codehilite"><pre><span></span>git pull origin lab1
+</pre></div>
 
 
 <p>提交方法：在 <code>multimod</code> 目录下设置好 <code>STUID</code>, <code>STUNAME</code> 环境变量后，执行 <code>make submit</code> 提交。</p>
@@ -71,9 +72,10 @@
 </div>
 <p>给定 64 位有符号整数 <math>a</math>, <math>b</math>, <math>m</math> (类型为 <code>int64_t</code>)，你希望求出 <math>a\times b\mod m</math> 的数值，即最小的非负整数 <math>t</math>，满足 <math>a\times b\equiv t\mod m</math>。</p>
 <p>你很容易写出如下实现：</p>
-<pre class="codehilite"><code class="language-c">int64_t multimod(int64_t a, int64_t b, int64_t m) {
-  return (a * b) % m;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int64_t</span> <span class="nf">multimod</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">b</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">m</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">)</span> <span class="o">%</span> <span class="n">m</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但这段看起来正常的代码其实是错误的：<code>a * b</code> 计算两个 64 位整数的乘积，只能保留乘积的低 64 位。有符号整数溢出导致<a href="https://en.wikipedia.org/wiki/Undefined_behavior">undefined behavior (UB)</a>，即便不是UB而是得到 mod <math>2^{64}</math> 的结果，计算出的数值也是错误的 (为什么？)。</p>
@@ -87,9 +89,10 @@
 <div class="fenced fenced-red">
 <h4 id="_6">危险的编译优化</h4>
 <p>编译优化有时可能会非预期地改变程序的行为，例如</p>
-<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; 1000000000; i++) {
-  multimod(a, b, m);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000000000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">multimod</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">m</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在编译优化的情况下可能会被完全“删除”——它们没有对程序的全局状态产生任何效果，从而删掉之后的程序语义和原程序等价。因此你在度量运行时间时应当格外小心，建议使用 <code>objdump</code> 阅读生成的汇编代码。</p>
@@ -99,14 +102,16 @@
 <p>做一些合适的公式变形，你会体会到 “代数” 在解决计算机科学问题中的威力。</p>
 <h2 id="3">任务3：解析神秘代码</h2>
 <p>任务 3 中，你获得了一份 ACM-ICPC 圈子中广为流传的一段神奇代码，出处和年代太久远已经很难考证了：</p>
-<pre class="codehilite"><code class="language-c">int64_t multimod_fast(int64_t a, int64_t b, int64_t m) {
-  int64_t t = (a * b - (int64_t)((double)a * b / m) * m) % m;
-  return t &lt; 0 ? t + m : t;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int64_t</span> <span class="nf">multimod_fast</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">b</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">m</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int64_t</span> <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="o">-</span> <span class="p">(</span><span class="kt">int64_t</span><span class="p">)((</span><span class="kt">double</span><span class="p">)</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="o">/</span> <span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">m</span><span class="p">)</span> <span class="o">%</span> <span class="n">m</span><span class="p">;</span>
+  <span class="k">return</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="n">t</span> <span class="o">+</span> <span class="nl">m</span> <span class="p">:</span> <span class="n">t</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这段代码神奇地……竟然可以在 <math>O(1)</math> 时间就搞定溢出的问题？其中最精髓的一段在于</p>
-<pre class="codehilite"><code class="language-c">(int64_t)((double)a * b / m)</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">(</span><span class="kt">int64_t</span><span class="p">)((</span><span class="kt">double</span><span class="p">)</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="o">/</span> <span class="n">m</span><span class="p">)</span>
+</pre></div>
 
 
 <p>把整数 <code>a</code> 强行转换成了浮点数 (假设使用IEEE754 64位双精度类型)。我们知道浮点数的精度也不是无限的，仅仅类型转换就已经损失精度了，<code>double</code> 更不可能准确保存 <code>a * b</code> 的结果。请你利用学习过的数据的机器表示知识，理解 <code>multimod_fast</code> 中每一个子表达式的含义，并且分析其正确性。</p>
@@ -115,13 +120,14 @@
 <p>这都可以？如果你第一次见到这个代码，你一定很好奇它为什么对/不对。</p>
 <p>首先，这段代码会触发 Undefined Behavior，因此它首先对 <code>int64_t</code> 的乘法做了wraparound的假设 (好像是两个 64 位整数相乘得到 128 位整数，取低 64 位)。幸运的是，x86 的确是这样的，gcc 一般也不会对这个 UB 做过激的处理。于是这个严格意义上不正确的代码，竟然可以正常工作？</p>
 <p>然后，你会希望写一个测试程序，看看到底对什么样的输入 (<code>a</code>, <code>b</code>, <code>m</code>)，这个程序的结果能对；什么样的输入不对。显然，如果 <code>a * b</code> 没有导致溢出，这个结果将总是正确的。我们建议你使用 Python：</p>
-<pre class="codehilite"><code class="language-python">(x, y, m) = random_xym()
-ret = subprocess.check_output(
-    [&quot;multimod_fast&quot;, str(x), str(y), str(m)])
-if ret.decode() == x * y % m:
-    # 正确
-else:
-    # 错误</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="o">=</span> <span class="n">random_xym</span><span class="p">()</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;multimod_fast&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">m</span><span class="p">)])</span>
+<span class="k">if</span> <span class="n">ret</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span> <span class="o">==</span> <span class="n">x</span> <span class="o">*</span> <span class="n">y</span> <span class="o">%</span> <span class="n">m</span><span class="p">:</span>
+    <span class="c1"># 正确</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># 错误</span>
+</pre></div>
 
 
 <p>然后，你可以 (用人脑) 训练一个分类器，分类出什么样的输入正确、什么样的输入不正确，并用具体数字的计算过程帮助你理解为什么计算正确/错误。</p>

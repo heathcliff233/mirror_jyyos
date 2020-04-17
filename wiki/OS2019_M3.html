@@ -69,7 +69,8 @@
 <h4 id="_6">获取实验代码与提交</h4>
 <p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
 <p>在你原先的os-workbench基础上，执行</p>
-<pre class="codehilite"><code class="language-bash">git pull origin M3</code></pre>
+<div class="codehilite"><pre><span></span>git pull origin M3
+</pre></div>
 
 
 <p>将本实验的框架代码下载到本地。在<code>sperf/</code>下编译能得到二进制文件<code>sperf-32</code>和<code>sperf-64</code>。</p>
@@ -81,9 +82,10 @@
 <p>在运行时，还可以实时显示一段时间内的系统调用时间统计：</p>
 <p><center><img alt="" src="../static/wiki/os/2019/img/sperf-demo.gif" width="640px" /></center></p>
 <p>RTFM (<code>man 2 brk</code>)之后，你立即知道这段Python程序运行，在操作系统中最耗时的部分是内存管理。你的程序不必严格与参考程序一致，它甚至可以只是最简单地打印每个系统调用的时间，甚至不需要任何好看的“界面”，例如：</p>
-<pre class="codehilite"><code class="language-text">open: 36%
+<div class="codehilite"><pre><span></span>open: 36%
 read: 14%
-...</code></pre>
+...
+</pre></div>
 
 
 <h2 id="_7">实验指南</h2>
@@ -94,13 +96,14 @@ read: 14%
 </div>
 <h3 id="_9">获得各个系统调用的时间</h3>
 <p>这是整个实验里最困难的部分——作为操作系统新手，我们连系统调用是什么都还不太明白，却立即让我们得到所有系统调用的序列？这时候不妨求助一些外部工具吧。<code>strace</code>命令能够帮助我们统计进程的系统调用。执行<code>strace cmd arg1 arg2 ...</code>能统计执行<code>cmd arg1 arg2 ...</code>的系统调用。例如以下是<code>strace ls</code>的输出(截取了部分)：</p>
-<pre class="codehilite"><code class="language-c">execve(&quot;/bin/ls&quot;, [&quot;ls&quot;], [/* 46 vars */]) = 0
-brk(NULL)                               = 0x8f21000
-access(&quot;/etc/ld.so.nohwcap&quot;, F_OK)      = -1 ENOENT
-mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb76f7000
-access(&quot;/etc/ld.so.preload&quot;, R_OK)      = -1 ENOENT
-open(&quot;/etc/ld.so.cache&quot;, O_RDONLY|O_CLOEXEC) = 3
-...</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">execve</span><span class="p">(</span><span class="s">&quot;/bin/ls&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s">&quot;ls&quot;</span><span class="p">],</span> <span class="p">[</span><span class="cm">/* 46 vars */</span><span class="p">])</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">brk</span><span class="p">(</span><span class="nb">NULL</span><span class="p">)</span>                               <span class="o">=</span> <span class="mh">0x8f21000</span>
+<span class="n">access</span><span class="p">(</span><span class="s">&quot;/etc/ld.so.nohwcap&quot;</span><span class="p">,</span> <span class="n">F_OK</span><span class="p">)</span>      <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="n">ENOENT</span>
+<span class="n">mmap2</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">8192</span><span class="p">,</span> <span class="n">PROT_READ</span><span class="o">|</span><span class="n">PROT_WRITE</span><span class="p">,</span> <span class="n">MAP_PRIVATE</span><span class="o">|</span><span class="n">MAP_ANONYMOUS</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="mh">0xb76f7000</span>
+<span class="n">access</span><span class="p">(</span><span class="s">&quot;/etc/ld.so.preload&quot;</span><span class="p">,</span> <span class="n">R_OK</span><span class="p">)</span>      <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="n">ENOENT</span>
+<span class="n">open</span><span class="p">(</span><span class="s">&quot;/etc/ld.so.cache&quot;</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="o">|</span><span class="n">O_CLOEXEC</span><span class="p">)</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="p">...</span>
+</pre></div>
 
 
 <p>可以看到，<code>ls</code>从<code>execve</code>系统调用开始执行。<code>strace</code>命令中有一个选项能打印出系统调用所花的时间。所以从本质上讲，我们只需要<strong>解析strace的输出</strong>就行。</p>
@@ -126,27 +129,30 @@ open(&quot;/etc/ld.so.cache&quot;, O_RDONLY|O_CLOEXEC) = 3
 </div>
 <h3 id="strace_1">解析<code>strace</code>的输出</h3>
 <p><code>strace</code>的输出大致就和一个C函数调用类似，从一行字符串里提取出我们想要的信息，不过是个简单的OJ题，就是从下面这个字符串里提取出0.000011。</p>
-<pre class="codehilite"><code class="language-c">mmap2(0xb76d1000, 10780, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xb76d1000 &lt;0.000011&gt;</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">mmap2</span><span class="p">(</span><span class="mh">0xb76d1000</span><span class="p">,</span> <span class="mi">10780</span><span class="p">,</span> <span class="n">PROT_READ</span><span class="o">|</span><span class="n">PROT_WRITE</span><span class="p">,</span> <span class="n">MAP_PRIVATE</span><span class="o">|</span><span class="n">MAP_FIXED</span><span class="o">|</span><span class="n">MAP_ANONYMOUS</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="mh">0xb76d1000</span> <span class="o">&lt;</span><span class="mf">0.000011</span><span class="o">&gt;</span>
+</pre></div>
 
 
 <p>解析有很多种办法，最方便的当然是用正则表达式啦！有兴趣的同学可以试试<code>regex.h</code>。</p>
 <h3 id="_12">创建进程和管道</h3>
 <p>使用<code>pipe</code>系统调用可以创建管道。<code>pipe</code>系统调用：</p>
-<pre class="codehilite"><code class="language-c">int pipe(int fildes[2]);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">pipe</span><span class="p">(</span><span class="kt">int</span> <span class="n">fildes</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+</pre></div>
 
 
 <p>它会返回两个<strong>文件描述符</strong>，一个只能读出，另一个只能写入，分别对应了读端和写端——顾名思义，向写端写入数据，读入端就能读到了。所有的文件描述符都会在<code>fork</code>的时候被继承，所以父进程创建一个管道，子进程也得到了这两个文件描述符：</p>
-<pre class="codehilite"><code class="language-c">if (pipe(fildes) != 0) {
-  // 出错处理
-}
-pid = fork();
-if (pid == 0) {
-  // 子进程，执行strace命令
-  execve(...);
-  // 不应该执行此处代码，否则execve失败，出错处理
-} else {
-  // 父进程，读取strace输出并统计
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">if</span> <span class="p">(</span><span class="n">pipe</span><span class="p">(</span><span class="n">fildes</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 出错处理</span>
+<span class="p">}</span>
+<span class="n">pid</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">pid</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 子进程，执行strace命令</span>
+  <span class="n">execve</span><span class="p">(...);</span>
+  <span class="c1">// 不应该执行此处代码，否则execve失败，出错处理</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="c1">// 父进程，读取strace输出并统计</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这部分是比较难理解的代码，因为在<code>fork</code>以后，同时有两个“一模一样”的程序在执行了。花一点时间阅读参考书和网上的资料，慢慢就会习惯的。</p>
@@ -162,8 +168,9 @@ if (pid == 0) {
 <p>那示例的图片是根据什么画出来的呢？我们尽可能让每个系统调用的面积正比于它用时的百分比，就是这个效果了。也许你已经猜到是怎么绘制出来的了。搞不定也没关系，只要打印出比例就好啦——然后隔一段时间用ANSI Escape Code清一下屏幕，就能动态查看程序执行时的系统调用时间占比了。</p>
 <h3 id="_14">提示</h3>
 <p>你会发现一些比较难受的情况，例如<code>strace</code>的输出可能和程序的输出混在一起：</p>
-<pre class="codehilite"><code class="language-c">write(2, &quot;Hello World\n&quot;, 12Hello World
-)           = 12 &lt;0.000046&gt;</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">write</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s">&quot;Hello World</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="mi">12</span><span class="n">Hello</span> <span class="n">World</span>
+<span class="p">)</span>           <span class="o">=</span> <span class="mi">12</span> <span class="o">&lt;</span><span class="mf">0.000046</span><span class="o">&gt;</span>
+</pre></div>
 
 
 <p>可能会对你解析<code>strace</code>的输出产生影响。这时候<code>fork</code>-<code>execve</code>组合的力量就显示出来的：在执行<code>execve(STRACE_BIN, ...)</code>之前，我们可以把程序的输出重定向到<code>/dev/null</code>。还记得这个文件吗？</p>

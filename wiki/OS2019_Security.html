@@ -64,25 +64,27 @@
 <p>在实际的系统中，这几乎是个永远无法达成的目标——在之前的课程中我们已经知道，现代软件系统和操作系统的行为非常复杂，已经远远超过一个普通人能够管理的复杂性，因此软件(甚至硬件)中经常存在大家没有注意的角落，要么导致设置了错误的访问控制策略；要么导致了访问控制机制不能正确工作。</p>
 <h2 id="_3">错误设置访问控制策略</h2>
 <p>如果把家门打开，小偷是不是就更容易光顾了？听起来不可思议，但忘记关宿舍门这种事，大家想必没有少干过。错误设置的访问控制策略未必是错误设置了rwx的权限：</p>
-<pre class="codehilite"><code class="language-text">$ ./httpd –p 8000 /var/www
+<div class="codehilite"><pre><span></span>$ ./httpd –p 8000 /var/www
 &gt; Listening 0.0.0.0:8000
 &gt; GET /
 &gt; 200 OK -&gt; /var/www/index.html
 &gt; GET ../../etc/passwd
-&gt; 200 OK -&gt; /etc/passwd  # 泄露</code></pre>
+&gt; 200 OK -&gt; /etc/passwd  # 泄露
+</pre></div>
 
 
 <p>操作系统提供的访问控制机制没法保证你设置错误的访问控制策略——如果没有小心地处理用户输入(并做访问控制检查)，系统(尤其是服务器)就可能出现各种各样的安全漏洞。另一种常见的bug是注入攻击：</p>
 <p><center><img alt="" src="../static/wiki/os/2019/img/sql-injection-car.jpg" width="400px" /></center></p>
 <p>如果可怜的程序员不小心写到</p>
-<pre class="codehilite"><code class="language-c">...
-char *query = asprintf(
-  &quot;UPDATE car_record (id, station, time) VALUES ('%s', %d, %d)&quot;,
-  ocr_result,
-  station_id,
-  timestamp);
-if (query) SQL_execute(query);
-...</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">...</span>
+<span class="kt">char</span> <span class="o">*</span><span class="n">query</span> <span class="o">=</span> <span class="n">asprintf</span><span class="p">(</span>
+  <span class="s">&quot;UPDATE car_record (id, station, time) VALUES (&#39;%s&#39;, %d, %d)&quot;</span><span class="p">,</span>
+  <span class="n">ocr_result</span><span class="p">,</span>
+  <span class="n">station_id</span><span class="p">,</span>
+  <span class="n">timestamp</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="n">SQL_execute</span><span class="p">(</span><span class="n">query</span><span class="p">);</span>
+<span class="p">...</span>
+</pre></div>
 
 
 <p>OCR又恰好没有做数据清理，嘿嘿……这些漏洞即便在操作系统安全机制正确工作的前提下，依然会导致严重的后果。</p>
@@ -94,12 +96,13 @@ if (query) SQL_execute(query);
 <li>invalid pointer dereference，一个常见的情况是use after free</li>
 </ul>
 <p>回顾计算机硬件执行函数调用的过程，<code>call</code>指令会把函数返回的地址保存在堆栈上(<code>rsp</code>寄存器所指位置)，而<code>ret</code>指令的行为就是从<code>rsp</code>处取出下一条PC的地址。因此，缓冲区溢出，例如</p>
-<pre class="codehilite"><code class="language-c">void f(const char *ptr) {
-  char buf[64];
-  ...
-  strcpy(buf, ptr);
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">f</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+  <span class="p">...</span>
+  <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">ptr</span><span class="p">);</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>如果<code>ptr</code>所指的区域长度超过<code>buf</code>能容纳的空间，就会从低地址向高地址开始覆盖其他变量。如果把精心构造的数据写入堆栈(例如<a href="https://en.wikipedia.org/wiki/Return-oriented_programming">return-oriented-programming, ROP</a>)，通过向软件(操作系统)发送一个字符串，就能取得软件(操作系统)的控制权！难怪这要在标准里定义成UB：</p>

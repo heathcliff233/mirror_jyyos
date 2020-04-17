@@ -55,9 +55,10 @@
 <div class="fenced fenced-blue">
 <h4 id="meet-in-the-middle">Meet in the Middle</h4>
 <p>在本学期的MiniLabs里，我们编写的都是形如</p>
-<pre class="codehilite"><code class="language-c">int main(int argc, char *argv[]) {
- ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+ <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这样的程序，这些程序调用libc或者使用系统调用API (C语言封装)，来实现各式各样的应用需求。在这个实验里，我们的操作系统终于可以加载这样的程序了——终于MiniLabs和OSLabs在这里</p>
@@ -66,13 +67,14 @@
 <p><table class="submissions"><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></p>
 <h2 id="_3">实验描述</h2>
 <p>实现uproc模块中的以下API，并且能在系统启动后加载文件系统里的一个程序(路径固定，例如<code>/bin/init</code>)作为用户进程执行，用户进程运行在Ring 3，通过<code>int $0x80</code>执行系统调用。</p>
-<pre class="codehilite"><code class="language-c">MODULE {
-  void (*init)();
-  int (*mmap)(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
-  int (*fork)();
-  int (*execve)(const char *path, char *argv[], char *envp[]);
-  int (*exit)();
-} MOD_NAME(uproc);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">MODULE</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">mmap</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">int</span> <span class="n">prot</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">fork</span><span class="p">)();</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">execve</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[],</span> <span class="kt">char</span> <span class="o">*</span><span class="n">envp</span><span class="p">[]);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">exit</span><span class="p">)();</span>
+<span class="p">}</span> <span class="n">MOD_NAME</span><span class="p">(</span><span class="n">uproc</span><span class="p">);</span>
+</pre></div>
 
 
 <div class="fenced fenced-blue">
@@ -82,16 +84,18 @@
 </div>
 <h3 id="_5">创建进程上下文</h3>
 <p>进程有自己独立的地址空间。为了使用硬件管理虚拟存储的机制，我们需要启动AbstractMachine的VME：</p>
-<pre class="codehilite"><code class="language-c">int _vme_init(void *(*pgalloc)(size_t size), void (*pgfree)(void *));</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">_vme_init</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">pgalloc</span><span class="p">)(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">),</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">pgfree</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="p">));</span>
+</pre></div>
 
 
 <p>你需要给<code>_vme_init</code>传递两个函数指针类型的参数：</p>
-<pre class="codehilite"><code class="language-c">void *paglloc(size_t size) {
-  // your implementation
-}
-void pgfree(void *ptr) {
-  // your implementation
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">paglloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// your implementation</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">pgfree</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// your implementation</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>由于创建地址空间需要额外的内存，在需要分配物理页面时，VME会调用你传入的pgalloc/pgfree函数，其中pgalloc参数为页面的大小(例如4KB或1MB)，pgfree会传入你需要释放的物理页地址。要求：</p>
@@ -100,12 +104,13 @@ void pgfree(void *ptr) {
 <li>线程安全。<code>_vme_init</code>, <code>_map</code>, <code>_protect</code>, <code>_unprotect</code>可能调用pgalloc/pgree (不持有任何锁)。因此你需要格外注意你实现的正确性。</li>
 </ul>
 <p>之后，可以使用<code>_ucontext()</code>创建一个用户空间进程的上下文，它与<code>_kcontext</code>非常类似：</p>
-<pre class="codehilite"><code class="language-c">_Context *_ucontext(_AddressSpace *as,
-                    _Area ustack, // 用户栈，虚拟地址空间中的地址
-                    _Area kstack, // 内核栈，内核空间、物理地址
-                    void *entry,  // 用户态的第一条指令，通常是ELF的入口
-                                  // 执行必要的初始化，就像AM一样
-                    void *args);  // 一个参数指针</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">_Context</span> <span class="o">*</span><span class="nf">_ucontext</span><span class="p">(</span><span class="n">_AddressSpace</span> <span class="o">*</span><span class="n">as</span><span class="p">,</span>
+                    <span class="n">_Area</span> <span class="n">ustack</span><span class="p">,</span> <span class="c1">// 用户栈，虚拟地址空间中的地址</span>
+                    <span class="n">_Area</span> <span class="n">kstack</span><span class="p">,</span> <span class="c1">// 内核栈，内核空间、物理地址</span>
+                    <span class="kt">void</span> <span class="o">*</span><span class="n">entry</span><span class="p">,</span>  <span class="c1">// 用户态的第一条指令，通常是ELF的入口</span>
+                                  <span class="c1">// 执行必要的初始化，就像AM一样</span>
+                    <span class="kt">void</span> <span class="o">*</span><span class="n">args</span><span class="p">);</span>  <span class="c1">// 一个参数指针</span>
+</pre></div>
 
 
 <p><code>ucontext()</code>返回的<code>_Context</code>可以直接调度到处理器上执行，默认运行在低权限下，不能访问内核空间，也不能执行如I/O、关中断等系统指令。执行非法指令将会引起异常(会被<code>os-&gt;trap()</code>捕获)。</p>
@@ -115,26 +120,29 @@ void pgfree(void *ptr) {
 <div class="fenced fenced-green">
 <h4 id="_7">循序渐进编写代码</h4>
 <p>如果你想一口气把所有内容都写完再去测试，那定位bug的难度就大了。因此你不妨先实现一个最简单的用户程序，它不断地执行系统调用，例如：</p>
-<pre class="codehilite"><code class="language-c">int syscalls() {
-  int x = 0;
-  while (1) {
-    asm volatile(&quot;int $0x80&quot; : : &quot;a&quot;(++x));
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">syscalls</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">&quot;int $0x80&quot;</span> <span class="o">:</span> <span class="o">:</span> <span class="s">&quot;a&quot;</span><span class="p">(</span><span class="o">++</span><span class="n">x</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>然后得到它的汇编指令：</p>
-<pre class="codehilite"><code class="language-text">00000000 &lt;f&gt;:
+<div class="codehilite"><pre><span></span>00000000 &lt;f&gt;:
    0:   b8 00 00 00 00          mov    $0x0,%eax
    5:   83 c0 01                add    $0x1,%eax
    8:   cd 80                   int    $0x80
-   a:   eb f9                   jmp    5 &lt;f+0x5&gt;</code></pre>
+   a:   eb f9                   jmp    5 &lt;f+0x5&gt;
+</pre></div>
 
 
 <p>然后分配一页：</p>
-<pre class="codehilite"><code class="language-c">static uint8_t code[] = { 0xb8, 0x00, ..., 0xeb, 0xf9, };
-void *ptr = pgalloc(as-&gt;pgsize);
-memcpy(ptr, code, sizeof(code));</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">uint8_t</span> <span class="n">code</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span> <span class="mh">0xb8</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="p">...,</span> <span class="mh">0xeb</span><span class="p">,</span> <span class="mh">0xf9</span><span class="p">,</span> <span class="p">};</span>
+<span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">pgalloc</span><span class="p">(</span><span class="n">as</span><span class="o">-&gt;</span><span class="n">pgsize</span><span class="p">);</span>
+<span class="n">memcpy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">code</span><span class="p">));</span>
+</pre></div>
 
 
 <p>并且把<code>ptr</code>映射到地址空间中的某个位置，然后就可以测试你的系统调用实现了！在这个例子里，你先实现了一个最小的“用户进程”，调对并熟悉了VME API之后，就可以进入后续的实验了。</p>
@@ -143,45 +151,48 @@ memcpy(ptr, code, sizeof(code));</code></pre>
 <p>在完成了一些小的测试之后，我们就可以进入正题了：实现下来实现虚拟存储管理的核心系统调用mmap。</p>
 <h3 id="mmap">实现mmap</h3>
 <p>从道理上，mmap就是进程维护它关于内存映射的一个“视图”，就像我们在pmap命令中看到的那样：</p>
-<pre class="codehilite"><code>000055eda272d000    780K r-x-- zsh          # 代码
-000055eda29f0000      8K r---- zsh          # rodata
-000055eda29f2000     24K rw--- zsh          # 数据
-000055eda29f8000     80K rw---   [ anon ]   # bss
-000055eda4801000   1272K rw---   [ anon ]   # 堆区
-...
-00007f85c30de000   1948K r-x-- libc-2.27.so # 动态链接库
-00007f85c32c5000   2048K ----- libc-2.27.so
-00007f85c34c5000     16K r---- libc-2.27.so
-00007f85c34c9000      8K rw--- libc-2.27.so
-00007f85c34cb000     16K rw---   [ anon ]
-...</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">000055eda272d000    780K r-x-- zsh          # 代码</span>
+<span class="err">000055eda29f0000      8K r---- zsh          # rodata</span>
+<span class="err">000055eda29f2000     24K rw--- zsh          # 数据</span>
+<span class="err">000055eda29f8000     80K rw---   [ anon ]   # bss</span>
+<span class="err">000055eda4801000   1272K rw---   [ anon ]   # 堆区</span>
+<span class="err">...</span>
+<span class="err">00007f85c30de000   1948K r-x-- libc-2.27.so # 动态链接库</span>
+<span class="err">00007f85c32c5000   2048K ----- libc-2.27.so</span>
+<span class="err">00007f85c34c5000     16K r---- libc-2.27.so</span>
+<span class="err">00007f85c34c9000      8K rw--- libc-2.27.so</span>
+<span class="err">00007f85c34cb000     16K rw---   [ anon ]</span>
+<span class="err">...</span>
+</pre></div>
 
 
 <p>我们只需在进程中维护这个数据即可，例如我们不妨假设进程不能拥有超过16个内存映射区域(虽然这对于Linux来说是不可接受的，但对我们的小操作系统来说，这也没啥问题)：</p>
-<pre class="codehilite"><code class="language-c">struct mm_area {
-  uintptr_t start, end;
-  int fd, prot, flags;
-  off_t offset;
-};
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">mm_area</span> <span class="p">{</span>
+  <span class="kt">uintptr_t</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="n">prot</span><span class="p">,</span> <span class="n">flags</span><span class="p">;</span>
+  <span class="kt">off_t</span> <span class="n">offset</span><span class="p">;</span>
+<span class="p">};</span>
 
-struct task {
-  ...
-  struct mm_area mmaps[16];
-  ...
-}</code></pre>
+<span class="k">struct</span> <span class="n">task</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="k">struct</span> <span class="n">mm_area</span> <span class="n">mmaps</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>所谓mmap，就是在<code>maps[]</code>中找到一个空闲的slot，然后标记好映射到哪个文件的哪个位置。此外，我们支持匿名映射(<code>MAP_ANONYMOUS</code>)，它不涉及文件描述符，可以用于分配内存空间。bss和堆栈都可以直接使用匿名映射分配。</p>
 <p>有了mmap，ELF的加载就变得非常容易了，甚至比之前《计算机系统基础》课程中的还要容易——如果你使用readelf查看编译后的文件 (litenes)：</p>
-<pre class="codehilite"><code class="language-c">Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz   Flg Align
-LOAD           0x001000 0x00100000 0x00100000 0x0cfe8 0x0cfe8  R E 0x1000
-LOAD           0x00e000 0x0010d000 0x0010d000 0x74484 0x171e60 RW  0x1000
-GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000  RWE 0x10</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">Type</span>           <span class="n">Offset</span>   <span class="n">VirtAddr</span>   <span class="n">PhysAddr</span>   <span class="n">FileSiz</span> <span class="n">MemSiz</span>   <span class="n">Flg</span> <span class="n">Align</span>
+<span class="n">LOAD</span>           <span class="mh">0x001000</span> <span class="mh">0x00100000</span> <span class="mh">0x00100000</span> <span class="mh">0x0cfe8</span> <span class="mh">0x0cfe8</span>  <span class="n">R</span> <span class="n">E</span> <span class="mh">0x1000</span>
+<span class="n">LOAD</span>           <span class="mh">0x00e000</span> <span class="mh">0x0010d000</span> <span class="mh">0x0010d000</span> <span class="mh">0x74484</span> <span class="mh">0x171e60</span> <span class="n">RW</span>  <span class="mh">0x1000</span>
+<span class="n">GNU_STACK</span>      <span class="mh">0x000000</span> <span class="mh">0x00000000</span> <span class="mh">0x00000000</span> <span class="mh">0x00000</span> <span class="mh">0x00000</span>  <span class="n">RWE</span> <span class="mh">0x10</span>
+</pre></div>
 
 
 <p>看到了最后的Align选项(也可以在ld-script里指定align的字节数)，这就是为了方便对齐到页边界，直接进行内存映射。我们只需要用mmap系统调用把文件描述符对应文件的一部分映射到进程地址空间中即可。</p>
 <p>如果我们查看程序运行的strace，也有相当一部分是在进行动态链接库的内存映射：</p>
-<pre class="codehilite"><code class="language-text">openat(AT_FDCWD, &quot;/lib/x86_64-linux-gnu/libc.so.6&quot;, O_RDONLY|O_CLOEXEC) = 3
+<div class="codehilite"><pre><span></span>openat(AT_FDCWD, &quot;/lib/x86_64-linux-gnu/libc.so.6&quot;, O_RDONLY|O_CLOEXEC) = 3
 read(3, &quot;\177ELF&quot;..., 832)              = 832
 fstat(3, {st_mode=S_IFREG|0755, st_size=2030544, ...}) = 0
 mmap(NULL, 8192, READ|WRITE, PRIVATE|ANONYMOUS, -1, 0) = 0x7f8dcf1bd000
@@ -189,26 +200,29 @@ mmap(NULL, 4131552, READ|EXEC, PRIVATE|DENYWRITE, 3, 0) = 0x7f8dcebbb000
 mprotect(0x7f8dceda2000, 2097152, NONE) = 0
 mmap(0x7f8dcefa2000, 24576, READ|WRITE, PRIVATE|FIXED|DENYWRITE, 3, 0x1e7000) = 0x7f8dcefa2000
 mmap(0x7f8dcefa8000, 15072, READ|WRITE, PRIVATE|FIXED|ANONYMOUS, -1, 0) = 0x7f8dcefa8000
-close(3)                                = 0</code></pre>
+close(3)                                = 0
+</pre></div>
 
 
 <p>在<code>struct task</code>中完成映射后，就可以启动程序并运行了。用户进程执行的第一条指令是ELF文件指定的entry，这将会得到一个page fault，会由<code>os-&gt;trap()</code>捕获：</p>
-<pre class="codehilite"><code class="language-c">typedef struct _Event {
-  int event;
-  uintptr_t cause, ref;
-  const char *msg;
-} _Event;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">_Event</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">event</span><span class="p">;</span>
+  <span class="kt">uintptr_t</span> <span class="n">cause</span><span class="p">,</span> <span class="n">ref</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">_Event</span><span class="p">;</span>
+</pre></div>
 
 
 <p>其中的cause记录了page fault的原因；ref记录了page fault的地址。注意到这个page fault是在进程上下文上运行的，你做的事情大约是：</p>
-<pre class="codehilite"><code class="language-c">void *pg_addr = ROUND_DOWN(ev.ref, as-&gt;pagesz); // 获得缺页的地址
-for (int i = 0; i &lt; 16; i++) {
-  struct mm_area *mma = &amp;current-&gt;mmaps[i];
-  if (contains(mma, pg_addr)) {
-    void *pa = pgalloc(); // 分配一个新页
-    // 从mma-&gt;fd中读取数据到pa
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="n">pg_addr</span> <span class="o">=</span> <span class="n">ROUND_DOWN</span><span class="p">(</span><span class="n">ev</span><span class="p">.</span><span class="n">ref</span><span class="p">,</span> <span class="n">as</span><span class="o">-&gt;</span><span class="n">pagesz</span><span class="p">);</span> <span class="c1">// 获得缺页的地址</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">mm_area</span> <span class="o">*</span><span class="n">mma</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">current</span><span class="o">-&gt;</span><span class="n">mmaps</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">contains</span><span class="p">(</span><span class="n">mma</span><span class="p">,</span> <span class="n">pg_addr</span><span class="p">))</span> <span class="p">{</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">pa</span> <span class="o">=</span> <span class="n">pgalloc</span><span class="p">();</span> <span class="c1">// 分配一个新页</span>
+    <span class="c1">// 从mma-&gt;fd中读取数据到pa</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>也就是调用read系统调用的实现，从VFS中把这一页对应的数据载入到内存即可。</p>
@@ -219,43 +233,46 @@ for (int i = 0; i &lt; 16; i++) {
 <p>听起来很简单吧——mmap就是这么简单，这么好用。</p>
 <h3 id="_9">管理物理页</h3>
 <p>你需要管理一个进程所有的页面，例如用以下结构体表示一个进程映射的物理页。</p>
-<pre class="codehilite"><code class="language-c">struct page {
-  int flags;   // 页的状态，如copy-on-write标记
-  int refcnt;  // 引用计数
-  void *paddr; // 物理地址
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">page</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">flags</span><span class="p">;</span>   <span class="c1">// 页的状态，如copy-on-write标记</span>
+  <span class="kt">int</span> <span class="n">refcnt</span><span class="p">;</span>  <span class="c1">// 引用计数</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">paddr</span><span class="p">;</span> <span class="c1">// 物理地址</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>你还需要为每个进程维护它所有的页面，这样就能很容易地实现fork了。如果你希望实现copy-on-write的fork，就遍历。进程所有的pages，把它们设置成只读，并且让父子进程共享同一个<code>struct page</code>。当page fault发生在copy-on-write的页面时，将这个页面的引用计数减一并分配新页面(如果引用计数回到1，则可以标记为可写)。</p>
 <h3 id="_10">系统调用</h3>
 <p>在调度user-space context到处理器上后，处理器将在Ring 3 (低权限的保护模式)上运行，执行任何非法的指令将会导致#13 GP异常；访问页表中没有权限的页面将会导致#14 PF异常；或者，如果希望进行系统调用，使用<code>int $0x80</code>陷入内核执行：</p>
 <p>类似的，我们可以在Linux系统上做类似的事情(不过不支持<code>int $0x80</code>)，请求系统调用：</p>
-<pre class="codehilite"><code class="language-c">#include &lt;stdio.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
 
-int main() {
-  int ret;
-  asm volatile(&quot;syscall&quot; // x86-64, 不是int $0x80
-    : &quot;=a&quot;(ret) // 执行后%rax: 系统调用返回值
-    : &quot;a&quot;(57)); // 执行前%rax: 系统调用编号
-  printf(&quot;ret = %d\n&quot;, ret);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
+  <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">&quot;syscall&quot;</span> <span class="c1">// x86-64, 不是int $0x80</span>
+    <span class="o">:</span> <span class="s">&quot;=a&quot;</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span> <span class="c1">// 执行后%rax: 系统调用返回值</span>
+    <span class="o">:</span> <span class="s">&quot;a&quot;</span><span class="p">(</span><span class="mi">57</span><span class="p">));</span> <span class="c1">// 执行前%rax: 系统调用编号</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ret = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">ret</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>(可以使用<code>man 2 syscall</code>查看Linux在不同系统上的系统调用ABI，例如RDI寄存器用来存放系统调用的第一个参数……)</p>
 <p>系统调用也会被<code>os-&gt;trap()</code>捕获，对应的事件是<code>_EVENT_SYSCALL</code>。中断处理程序可以通过<code>ctx-&gt;GPR1</code>, …<code>ctx-&gt;GPR4</code>访问系统调用的参数；<code>GRPx</code>用于系统调用返回值(参见<code>am/include/arch/x86-qemu.h</code>)。(这实际上是AbstractMachine和用户程序之间的ABI。)</p>
 <h3 id="_11">实现系统调用</h3>
 <p>你可以直接在<code>os-&gt;trap()</code>里根据系统调用的编号，进行系统调用处理，就像这样：</p>
-<pre class="codehilite"><code class="language-c">int syscall_id = saved_ctx-&gt;GPR1;
-int ret = -EINVAL;
-switch (syscall_id) {
-  case SYS_READ:
-    ret = vfs-&gt;read(...);
-    break;
-  case SYS_WRITE:
-    ret = vfs-&gt;write(...);
-    break;
-}
-saved_ctx-&gt;GRPx = ret;</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">syscall_id</span> <span class="o">=</span> <span class="n">saved_ctx</span><span class="o">-&gt;</span><span class="n">GPR1</span><span class="p">;</span>
+<span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="o">-</span><span class="n">EINVAL</span><span class="p">;</span>
+<span class="k">switch</span> <span class="p">(</span><span class="n">syscall_id</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">case</span> <span class="nl">SYS_READ</span><span class="p">:</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">vfs</span><span class="o">-&gt;</span><span class="n">read</span><span class="p">(...);</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="k">case</span> <span class="nl">SYS_WRITE</span><span class="p">:</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">vfs</span><span class="o">-&gt;</span><span class="n">write</span><span class="p">(...);</span>
+    <span class="k">break</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">saved_ctx</span><span class="o">-&gt;</span><span class="n">GRPx</span> <span class="o">=</span> <span class="n">ret</span><span class="p">;</span>
+</pre></div>
 
 
 <p>你没有看错——操作系统就是这么简单！Linux就是直接在系统调用的异常处理函数里执行系统调用的。当然，你写代码的时候可能会稍稍遇到一些小麻烦：</p>
@@ -263,8 +280,9 @@ saved_ctx-&gt;GRPx = ret;</code></pre>
 <p>系统调用时，有些参数是来自用户进程地址空间的指针(例如<code>write()</code>系统调用的<code>buf</code>参数)，但这个指针仅在用户进程运行时才有效，内核并不能直接访问。</p>
 </blockquote>
 <p>所以你需要实现</p>
-<pre class="codehilite"><code class="language-c">void *copy_from_user(void *dst, void __user *src, size_t nbytes);
-void *copy_to_user(void __user *dst, void *src, size_t nbytes);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">copy_from_user</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="kt">void</span> <span class="n">__user</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbytes</span><span class="p">);</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">copy_to_user</span><span class="p">(</span><span class="kt">void</span> <span class="n">__user</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbytes</span><span class="p">);</span>
+</pre></div>
 
 
 <p>由于所有的用户空间的页面都是操作系统代码通过<code>_map()</code>映射的，因此操作系统原则上有足够多的信息把进程虚拟地址空间里的一个地址转换成<code>_heap</code>中的物理地址。</p>
@@ -278,19 +296,21 @@ void *copy_to_user(void __user *dst, void *src, size_t nbytes);</code></pre>
 <div class="fenced fenced-green">
 <h4 id="_13">是否应该在系统调用执行时打开中断？</h4>
 <p>答案是Yes——系统调用和缺页都是耗时很长的操作，如果关闭中断会导致中断丢失。打开中断容易，但请你仔细看一看你的代码：</p>
-<pre class="codehilite"><code class="language-c">void os_trap(_Event ev, _Context *ctx) {
-  ...
-  current-&gt;saved_ctx = *context;
-  ...</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">os_trap</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">current</span><span class="o">-&gt;</span><span class="n">saved_ctx</span> <span class="o">=</span> <span class="o">*</span><span class="n">context</span><span class="p">;</span>
+  <span class="p">...</span>
+</pre></div>
 
 
 <p>只要在系统调用/缺页(缺页可以看成是一种系统调用)时打开中断，这段代码就会造成麻烦：缺页或系统调用是由<code>int $0x80</code>指令或异常引起的，所以我们的代码相当于反复调用<code>os_trap</code>。甚至即便你不打开中断，在<code>os-&gt;trap</code>时睡眠也会引发一个额外的<code>int $0x80</code>：</p>
-<pre class="codehilite"><code class="language-c">// 中断/异常发生
-[1] void os_trap(_Event ev, _Context *ctx) {
-[2] current-&gt;saved_ctx = *context;
-[3] asm volatile(&quot;int $0x80&quot;);
-[4] void os_trap(_Event ev, _Context *ctx) { // 再次异常
-[5] current-&gt;saved_ctx = *context;</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// 中断/异常发生</span>
+<span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="kt">void</span> <span class="n">os_trap</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+<span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">saved_ctx</span> <span class="o">=</span> <span class="o">*</span><span class="n">context</span><span class="p">;</span>
+<span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">&quot;int $0x80&quot;</span><span class="p">);</span>
+<span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="kt">void</span> <span class="n">os_trap</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 再次异常</span>
+<span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">saved_ctx</span> <span class="o">=</span> <span class="o">*</span><span class="n">context</span><span class="p">;</span>
+</pre></div>
 
 
 <p>在[5]发生时，之前保存的寄存器现场已经<strong>不见</strong>了。也就是说，返回到用户空间的context已经找不回来了。你需要谨慎处理这个问题。(这是一个非常有用的剧透，否则全班同学又会debug致死了。)</p>
@@ -300,20 +320,22 @@ void *copy_to_user(void __user *dst, void *src, size_t nbytes);</code></pre>
 <div class="fenced fenced-green">
 <h4 id="_15">代码、数据、堆栈的位置</h4>
 <p>静态编译的ELF文件中需要指定代码和数据的地址。但这个地址到底应该是多少呢？如果查看VME的实现，你会发现：</p>
-<pre class="codehilite"><code class="language-c">static const struct vm_area areas[] = {
-  { RANGE(0x00000000, 0x20000000), 1 }, // kernel code/data
-  { RANGE(0x40000000, 0x80000000), 0 }, // protected address space range
-  { RANGE(0xf0000000, 0x00000000), 1 }, // system mmap area
-};
-#define uvm_area (areas[1].area)</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">vm_area</span> <span class="n">areas</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="p">{</span> <span class="n">RANGE</span><span class="p">(</span><span class="mh">0x00000000</span><span class="p">,</span> <span class="mh">0x20000000</span><span class="p">),</span> <span class="mi">1</span> <span class="p">},</span> <span class="c1">// kernel code/data</span>
+  <span class="p">{</span> <span class="n">RANGE</span><span class="p">(</span><span class="mh">0x40000000</span><span class="p">,</span> <span class="mh">0x80000000</span><span class="p">),</span> <span class="mi">0</span> <span class="p">},</span> <span class="c1">// protected address space range</span>
+  <span class="p">{</span> <span class="n">RANGE</span><span class="p">(</span><span class="mh">0xf0000000</span><span class="p">,</span> <span class="mh">0x00000000</span><span class="p">),</span> <span class="mi">1</span> <span class="p">},</span> <span class="c1">// system mmap area</span>
+<span class="p">};</span>
+<span class="cp">#define uvm_area (areas[1].area)</span>
+</pre></div>
 
 
 <p><code>_protect()</code>执行的是：</p>
-<pre class="codehilite"><code class="language-c">*p = (_AddressSpace) {
-  .pgsize = PGSIZE,
-  .area = uvm_area,
-  .ptr = upt,
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="p">(</span><span class="n">_AddressSpace</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">.</span><span class="n">pgsize</span> <span class="o">=</span> <span class="n">PGSIZE</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">uvm_area</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">upt</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>这也是AbstractMachine应用程序ABI的一部分。</p>

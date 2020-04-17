@@ -55,7 +55,8 @@
 <div class="fenced fenced-red">
 <h4 id="_2">提交方法</h4>
 <p>将所有待提交的文件保存到同一目录中(包括以学号命名的pdf实验报告)，设置好<code>STUID</code>和<code>STUNAME</code>环境变量后，在命令行中(当前工作目录为提交文件所在目录)，执行</p>
-<pre class="codehilite"><code>bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</span>
+</pre></div>
 
 
 <p>(复制上述命令，没有连字符)，输入<code>Lab3</code>提交(注意大小写)。</p>
@@ -72,11 +73,13 @@
 <p>这个编程实验需要实现一个用来加载静态链接ELF可执行程序的loader,
 并对程序运行的情况做一些简单的监控, 来巩固ELF格式的相关知识. 我们已经准备好了一些<a href="../static/wiki/ics/ics2018-lab3.zip">框架代码</a>.</p>
 <p>在代码目录下执行</p>
-<pre class="codehilite"><code>make</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">make</span>
+</pre></div>
 
 
 <p>来编译<code>main.c</code>, 生成loader的可执行文件<code>a.out</code>. 其运行方式如下</p>
-<pre class="codehilite"><code>./a.out prog</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">./a.out prog</span>
+</pre></div>
 
 
 <p>其中<code>prog</code>是一个静态链接的, <code>main</code>函数不带参数的ELF可执行文件.</p>
@@ -130,24 +133,26 @@ ELF是GNU/Linux可执行文件的标准格式, 这是因为GNU/Linux遵循System
 <p>符号表是可执行文件的一个section, 它记录了程序编译时刻的一些信息, 其中就包括变量和函数的信息.
 我们首先需要了解符号表中都记录了哪些信息.</p>
 <p>我们以一个很简单的用户程序add为例, 使用<code>readelf</code>命令查看ELF可执行文件的信息:</p>
-<pre class="codehilite"><code>readelf -a add</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">readelf -a add</span>
+</pre></div>
 
 
 <p>你会看到<code>readelf</code>命令输出了很多信息, 这些信息对了解ELF的结构有很好的帮助,
 我们建议你在课后仔细琢磨.
 目前我们只需要关心符号表的信息就可以了, 在输出中找到符号表的信息:</p>
-<pre class="codehilite"><code>Symbol table '.symtab' contains 10 entries:
-   Num:    Value  Size Type    Bind   Vis      Ndx Name
-     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
-     1: 00100000     0 SECTION LOCAL  DEFAULT    1 
-     2: 0010009c     0 SECTION LOCAL  DEFAULT    2 
-     3: 00100100     0 SECTION LOCAL  DEFAULT    3 
-     4: 00000000     0 SECTION LOCAL  DEFAULT    4 
-     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS add.c
-     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 add
-     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 main
-     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 ans
-     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 test_data</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">Symbol table &#39;.symtab&#39; contains 10 entries:</span>
+<span class="err">   Num:    Value  Size Type    Bind   Vis      Ndx Name</span>
+<span class="err">     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND </span>
+<span class="err">     1: 00100000     0 SECTION LOCAL  DEFAULT    1 </span>
+<span class="err">     2: 0010009c     0 SECTION LOCAL  DEFAULT    2 </span>
+<span class="err">     3: 00100100     0 SECTION LOCAL  DEFAULT    3 </span>
+<span class="err">     4: 00000000     0 SECTION LOCAL  DEFAULT    4 </span>
+<span class="err">     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS add.c</span>
+<span class="err">     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 add</span>
+<span class="err">     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 main</span>
+<span class="err">     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 ans</span>
+<span class="err">     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 test_data</span>
+</pre></div>
 
 
 <p>其中每一行代表一个表项, 每一列列出了表项的一些属性, 现在我们只需要关心<code>Type</code>属性为<code>FUNC</code>的表项就可以了.
@@ -157,45 +162,48 @@ ELF是GNU/Linux可执行文件的标准格式, 这是因为GNU/Linux遵循System
 别着急, <code>readelf</code>输出的信息是已经经过解析的,
 实际上符号表中<code>Name</code>属性存放的是字符串在字符串表(string table)中的偏移量.
 为了查看字符串表, 我们先查看<code>readelf</code>输出中Section Headers的信息:</p>
-<pre class="codehilite"><code>Section Headers:
-  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
-  [ 1] .text             PROGBITS        00100000 001000 00009a 00  AX  0   0  4
-  [ 2] .eh_frame         PROGBITS        0010009c 00109c 000058 00   A  0   0  4
-  [ 3] .data             PROGBITS        00100100 001100 000120 00  WA  0   0 32
-  [ 4] .comment          PROGBITS        00000000 001220 00001c 01  MS  0   0  1
-  [ 5] .shstrtab         STRTAB          00000000 00123c 00003a 00      0   0  1
-  [ 6] .symtab           SYMTAB          00000000 0013b8 0000a0 10      7   6  4
-  [ 7] .strtab           STRTAB          00000000 001458 00001e 00      0   0  1</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">Section</span><span class="w"> </span><span class="nl">Headers</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n">Nr</span><span class="o">]</span><span class="w"> </span><span class="n">Name</span><span class="w">              </span><span class="n">Type</span><span class="w">            </span><span class="n">Addr</span><span class="w">     </span><span class="k">Off</span><span class="w">    </span><span class="k">Size</span><span class="w">   </span><span class="n">ES</span><span class="w"> </span><span class="n">Flg</span><span class="w"> </span><span class="n">Lk</span><span class="w"> </span><span class="n">Inf</span><span class="w"> </span><span class="n">Al</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 0</span><span class="o">]</span><span class="w">                   </span><span class="k">NULL</span><span class="w">            </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">000000</span><span class="w"> </span><span class="mi">000000</span><span class="w"> </span><span class="mi">00</span><span class="w">      </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w">  </span><span class="mi">0</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 1</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="nc">text</span><span class="w">             </span><span class="n">PROGBITS</span><span class="w">        </span><span class="mi">00100000</span><span class="w"> </span><span class="mi">001000</span><span class="w"> </span><span class="mi">00009</span><span class="n">a</span><span class="w"> </span><span class="mi">00</span><span class="w">  </span><span class="n">AX</span><span class="w">  </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w">  </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 2</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="n">eh_frame</span><span class="w">         </span><span class="n">PROGBITS</span><span class="w">        </span><span class="mi">0010009</span><span class="n">c</span><span class="w"> </span><span class="mi">00109</span><span class="n">c</span><span class="w"> </span><span class="mi">000058</span><span class="w"> </span><span class="mi">00</span><span class="w">   </span><span class="n">A</span><span class="w">  </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w">  </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 3</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="k">data</span><span class="w">             </span><span class="n">PROGBITS</span><span class="w">        </span><span class="mi">00100100</span><span class="w"> </span><span class="mi">001100</span><span class="w"> </span><span class="mi">000120</span><span class="w"> </span><span class="mi">00</span><span class="w">  </span><span class="n">WA</span><span class="w">  </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w"> </span><span class="mi">32</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 4</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="n">comment</span><span class="w">          </span><span class="n">PROGBITS</span><span class="w">        </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">001220</span><span class="w"> </span><span class="mi">00001</span><span class="n">c</span><span class="w"> </span><span class="mi">01</span><span class="w">  </span><span class="n">MS</span><span class="w">  </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w">  </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 5</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="n">shstrtab</span><span class="w">         </span><span class="n">STRTAB</span><span class="w">          </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">00123</span><span class="n">c</span><span class="w"> </span><span class="mi">00003</span><span class="n">a</span><span class="w"> </span><span class="mi">00</span><span class="w">      </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w">  </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 6</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="n">symtab</span><span class="w">           </span><span class="n">SYMTAB</span><span class="w">          </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">0013</span><span class="n">b8</span><span class="w"> </span><span class="mi">0000</span><span class="n">a0</span><span class="w"> </span><span class="mi">10</span><span class="w">      </span><span class="mi">7</span><span class="w">   </span><span class="mi">6</span><span class="w">  </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 7</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="n">strtab</span><span class="w">           </span><span class="n">STRTAB</span><span class="w">          </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">001458</span><span class="w"> </span><span class="mi">00001</span><span class="n">e</span><span class="w"> </span><span class="mi">00</span><span class="w">      </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w">  </span><span class="mi">1</span><span class="w"></span>
+</pre></div>
 
 
 <p>从Section Headers的信息可以看到, 字符串表在ELF文件偏移为<code>0x1458</code>的位置开始存放.
 在shell中可以通过以下命令直接输出ELF文件的十六进制形式:</p>
-<pre class="codehilite"><code>hd add</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">hd add</span>
+</pre></div>
 
 
 <p>在输出结果中找到上述偏移量, 我们可以看到, 字符串表只不过是把标识符的字符串拼接起来而已.
 现在我们就可以厘清符号表和字符串表之间的关系了:</p>
-<pre class="codehilite"><code>Section Headers:
-  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-  [ 7] .strtab           STRTAB          00000000 001458 00001e 00      0   0  1
-                                                  |                                 
-                                   +--------------+     +-----------------------+   
-                                   V                    V                       |   
-00001450  20 00 00 00 11 00 03 00  00 61 64 64 2e 63 00 61  | ........add.c.a|  |
-00001460  64 64 00 6d 61 69 6e 00  61 6e 73 00 74 65 73 74  |dd.main.ans.test|  |
-00001470  5f 64 61 74 61 00        ^           ^            |_data.|            |
-                                   |           |                                |   
-                                   |           +-------------+                  |   
-                                   |                         |                  |   
-                                   +---------------------+   |                  |   
-Symbol table '.symtab' contains 10 entries:              |   |                  |
-   Num:    Value  Size Type    Bind   Vis      Ndx Name  |   |                  |
-     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS 1     |   |                  |
-     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 7  ---+---+------------------+
-     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 11    |   |
-     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 16 ---+   |
-     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 20 -------+</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">Section</span><span class="w"> </span><span class="nl">Headers</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n">Nr</span><span class="o">]</span><span class="w"> </span><span class="n">Name</span><span class="w">              </span><span class="n">Type</span><span class="w">            </span><span class="n">Addr</span><span class="w">     </span><span class="k">Off</span><span class="w">    </span><span class="k">Size</span><span class="w">   </span><span class="n">ES</span><span class="w"> </span><span class="n">Flg</span><span class="w"> </span><span class="n">Lk</span><span class="w"> </span><span class="n">Inf</span><span class="w"> </span><span class="n">Al</span><span class="w"></span>
+<span class="w">  </span><span class="o">[</span><span class="n"> 7</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="n">strtab</span><span class="w">           </span><span class="n">STRTAB</span><span class="w">          </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">001458</span><span class="w"> </span><span class="mi">00001</span><span class="n">e</span><span class="w"> </span><span class="mi">00</span><span class="w">      </span><span class="mi">0</span><span class="w">   </span><span class="mi">0</span><span class="w">  </span><span class="mi">1</span><span class="w"></span>
+<span class="w">                                                  </span><span class="o">|</span><span class="w">                                 </span>
+<span class="w">                                   </span><span class="o">+</span><span class="c1">--------------+     +-----------------------+   </span>
+<span class="w">                                   </span><span class="n">V</span><span class="w">                    </span><span class="n">V</span><span class="w">                       </span><span class="o">|</span><span class="w">   </span>
+<span class="mi">00001450</span><span class="w">  </span><span class="mi">20</span><span class="w"> </span><span class="mi">00</span><span class="w"> </span><span class="mi">00</span><span class="w"> </span><span class="mi">00</span><span class="w"> </span><span class="mi">11</span><span class="w"> </span><span class="mi">00</span><span class="w"> </span><span class="mi">03</span><span class="w"> </span><span class="mi">00</span><span class="w">  </span><span class="mi">00</span><span class="w"> </span><span class="mi">61</span><span class="w"> </span><span class="mi">64</span><span class="w"> </span><span class="mi">64</span><span class="w"> </span><span class="mi">2</span><span class="n">e</span><span class="w"> </span><span class="mi">63</span><span class="w"> </span><span class="mi">00</span><span class="w"> </span><span class="mi">61</span><span class="w">  </span><span class="o">|</span><span class="w"> </span><span class="p">........</span><span class="k">add</span><span class="p">.</span><span class="n">c</span><span class="p">.</span><span class="n">a</span><span class="o">|</span><span class="w">  </span><span class="o">|</span><span class="w"></span>
+<span class="mi">00001460</span><span class="w">  </span><span class="mi">64</span><span class="w"> </span><span class="mi">64</span><span class="w"> </span><span class="mi">00</span><span class="w"> </span><span class="mi">6</span><span class="n">d</span><span class="w"> </span><span class="mi">61</span><span class="w"> </span><span class="mi">69</span><span class="w"> </span><span class="mi">6</span><span class="n">e</span><span class="w"> </span><span class="mi">00</span><span class="w">  </span><span class="mi">61</span><span class="w"> </span><span class="mi">6</span><span class="n">e</span><span class="w"> </span><span class="mi">73</span><span class="w"> </span><span class="mi">00</span><span class="w"> </span><span class="mi">74</span><span class="w"> </span><span class="mi">65</span><span class="w"> </span><span class="mi">73</span><span class="w"> </span><span class="mi">74</span><span class="w">  </span><span class="o">|</span><span class="n">dd</span><span class="p">.</span><span class="n">main</span><span class="p">.</span><span class="n">ans</span><span class="p">.</span><span class="n">test</span><span class="o">|</span><span class="w">  </span><span class="o">|</span><span class="w"></span>
+<span class="mi">00001470</span><span class="w">  </span><span class="mi">5</span><span class="n">f</span><span class="w"> </span><span class="mi">64</span><span class="w"> </span><span class="mi">61</span><span class="w"> </span><span class="mi">74</span><span class="w"> </span><span class="mi">61</span><span class="w"> </span><span class="mi">00</span><span class="w">        </span><span class="o">^</span><span class="w">           </span><span class="o">^</span><span class="w">            </span><span class="o">|</span><span class="n">_data</span><span class="p">.</span><span class="o">|</span><span class="w">            </span><span class="o">|</span><span class="w"></span>
+<span class="w">                                   </span><span class="o">|</span><span class="w">           </span><span class="o">|</span><span class="w">                                </span><span class="o">|</span><span class="w">   </span>
+<span class="w">                                   </span><span class="o">|</span><span class="w">           </span><span class="o">+</span><span class="c1">-------------+                  |   </span>
+<span class="w">                                   </span><span class="o">|</span><span class="w">                         </span><span class="o">|</span><span class="w">                  </span><span class="o">|</span><span class="w">   </span>
+<span class="w">                                   </span><span class="o">+</span><span class="c1">---------------------+   |                  |   </span>
+<span class="n">Symbol</span><span class="w"> </span><span class="nc">table</span><span class="w"> </span><span class="s1">&#39;.symtab&#39;</span><span class="w"> </span><span class="k">contains</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="nl">entries</span><span class="p">:</span><span class="w">              </span><span class="o">|</span><span class="w">   </span><span class="o">|</span><span class="w">                  </span><span class="o">|</span><span class="w"></span>
+<span class="w">   </span><span class="nl">Num</span><span class="p">:</span><span class="w">    </span><span class="k">Value</span><span class="w">  </span><span class="k">Size</span><span class="w"> </span><span class="n">Type</span><span class="w">    </span><span class="n">Bind</span><span class="w">   </span><span class="n">Vis</span><span class="w">      </span><span class="n">Ndx</span><span class="w"> </span><span class="n">Name</span><span class="w">  </span><span class="o">|</span><span class="w">   </span><span class="o">|</span><span class="w">                  </span><span class="o">|</span><span class="w"></span>
+<span class="w">     </span><span class="mi">5</span><span class="err">:</span><span class="w"> </span><span class="mi">00000000</span><span class="w">     </span><span class="mi">0</span><span class="w"> </span><span class="k">FILE</span><span class="w">    </span><span class="k">LOCAL</span><span class="w">  </span><span class="k">DEFAULT</span><span class="w">  </span><span class="nf">ABS</span><span class="w"> </span><span class="mi">1</span><span class="w">     </span><span class="o">|</span><span class="w">   </span><span class="o">|</span><span class="w">                  </span><span class="o">|</span><span class="w"></span>
+<span class="w">     </span><span class="mi">6</span><span class="err">:</span><span class="w"> </span><span class="mi">00100084</span><span class="w">    </span><span class="mi">22</span><span class="w"> </span><span class="n">FUNC</span><span class="w">    </span><span class="k">GLOBAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w">    </span><span class="mi">1</span><span class="w"> </span><span class="mi">7</span><span class="w">  </span><span class="c1">---+---+------------------+</span>
+<span class="w">     </span><span class="mi">7</span><span class="err">:</span><span class="w"> </span><span class="mi">00100000</span><span class="w">   </span><span class="mi">129</span><span class="w"> </span><span class="n">FUNC</span><span class="w">    </span><span class="k">GLOBAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w">    </span><span class="mi">1</span><span class="w"> </span><span class="mi">11</span><span class="w">    </span><span class="o">|</span><span class="w">   </span><span class="o">|</span><span class="w"></span>
+<span class="w">     </span><span class="mi">8</span><span class="err">:</span><span class="w"> </span><span class="mi">00100120</span><span class="w">   </span><span class="mi">256</span><span class="w"> </span><span class="k">OBJECT</span><span class="w">  </span><span class="k">GLOBAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w">    </span><span class="mi">3</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="c1">---+   |</span>
+<span class="w">     </span><span class="mi">9</span><span class="err">:</span><span class="w"> </span><span class="mi">00100100</span><span class="w">    </span><span class="mi">32</span><span class="w"> </span><span class="k">OBJECT</span><span class="w">  </span><span class="k">GLOBAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w">    </span><span class="mi">3</span><span class="w"> </span><span class="mi">20</span><span class="w"> </span><span class="c1">-------+</span>
+</pre></div>
 
 
 <p>一种解决方法已经呼之欲出了: 要查找一个函数的地址,
@@ -206,7 +214,8 @@ Symbol table '.symtab' contains 10 entries:              |   |                  
 由于库函数的原因, 如果我们去查看一个在GNU Linux上运行的,
 哪怕很小的程序, 都会包含大量的库函数的信息.
 在代码目录下执行</p>
-<pre class="codehilite"><code>make prog/hello</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">make prog/hello</span>
+</pre></div>
 
 
 <p>就会在<code>prog</code>目录下生成<code>hello</code>可执行文件, 你可以通过上述方法查看其ELF信息.</p>
@@ -226,7 +235,8 @@ Symbol table '.symtab' contains 10 entries:              |   |                  
 <p>根据上文提到的方法, 实现<code>get_entry()</code>函数,
 在输入的ELF文件中找到<code>main</code>函数的地址.
 可以通过运行</p>
-<pre class="codehilite"><code>./a.out prog/hello</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">./a.out prog/hello</span>
+</pre></div>
 
 
 <p>来人工检查找到的地址是否与<code>readelf</code>中的结果一致.</p>
@@ -234,25 +244,29 @@ Symbol table '.symtab' contains 10 entries:              |   |                  
 其中<code>strtab</code>是字符串表, <code>symtab</code>是符号表, <code>nr_symtab_entry</code>是符号表的表项数目,
 更多的信息请阅读代码.</p>
 <p>头文件<code>&lt;elf.h&gt;</code>已经为我们定义了与ELF可执行文件相关的数据结构, 为了使用符号表, 请查阅</p>
-<pre class="codehilite"><code>man 5 elf</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">man 5 elf</span>
+</pre></div>
 
 
 </div>
 <div class="fenced fenced-green">
 <h4 id="_12">思考题: 冗余的符号表</h4>
 <p>在GNU/Linux下编写一个Hello World程序, 然后使用<code>strip</code>命令丢弃可执行文件中的符号表:</p>
-<pre class="codehilite"><code>gcc -o hello hello.c
-strip -s hello</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">gcc -o hello hello.c</span>
+<span class="err">strip -s hello</span>
+</pre></div>
 
 
 <p>用<code>readelf</code>查看hello的信息, 你会发现符号表被丢弃了, 此时的hello程序能成功运行吗?</p>
 <p>目标文件中也有符号表, 我们同样可以丢弃它:</p>
-<pre class="codehilite"><code>gcc -c hello.c
-strip -s hello.o</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">gcc -c hello.c</span>
+<span class="err">strip -s hello.o</span>
+</pre></div>
 
 
 <p>用<code>readelf</code>查看hello.o的信息, 你会发现符号表被丢弃了. 尝试对hello.o进行链接:</p>
-<pre class="codehilite"><code>gcc -o hello hello.o</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">gcc -o hello hello.o</span>
+</pre></div>
 
 
 <p>你发现了什么问题? 尝试对比上述两种情况, 并分析其中的原因.</p>
@@ -281,36 +295,37 @@ ELF中采用program header table来管理segment, program header table的一个�
 再仔细观察一下, 你会发现<code>FileSiz</code>通常不会大于相应的<code>MemSiz</code>, 这又是为什么?</p>
 </div>
 <p>我们通过下面的图来说明如何根据segment的属性来加载它:</p>
-<pre class="codehilite"><code>      +-------+---------------+-----------------------+
-      |       |...............|                       |
-      |       |...............|                       |  ELF file
-      |       |...............|                       |
-      +-------+---------------+-----------------------+
-      0       ^               |              
-              |&lt;------+------&gt;|       
-              |       |       |             
-              |       |                            
-              |       +----------------------------+       
-              |                                    |       
-   Type       |   Offset    VirtAddr    PhysAddr   |FileSiz  MemSiz   Flg  Align
-   LOAD       +-- 0x001000  0x00100000  0x00100000 +0x1d600  0x27240  RWE  0x1000
-                               |                       |       |     
-                               |   +-------------------+       |     
-                               |   |                           |     
-                               |   |     |           |         |       
-                               |   |     |           |         |      
-                               |   |     +-----------+ ---     |     
-                               |   |     |00000000000|  ^      |   
-                               |   | --- |00000000000|  |      |    
-                               |   |  ^  |...........|  |      |  
-                               |   |  |  |...........|  +------+
-                               |   +--+  |...........|  |      
-                               |      |  |...........|  |     
-                               |      v  |...........|  v    
-                               +-------&gt; +-----------+ ---  
-                                         |           |     
-                                         |           |    
-                                            Memory  </code></pre>
+<div class="codehilite"><pre><span></span><span class="err">      +-------+---------------+-----------------------+</span>
+<span class="err">      |       |...............|                       |</span>
+<span class="err">      |       |...............|                       |  ELF file</span>
+<span class="err">      |       |...............|                       |</span>
+<span class="err">      +-------+---------------+-----------------------+</span>
+<span class="err">      0       ^               |              </span>
+<span class="err">              |&lt;------+------&gt;|       </span>
+<span class="err">              |       |       |             </span>
+<span class="err">              |       |                            </span>
+<span class="err">              |       +----------------------------+       </span>
+<span class="err">              |                                    |       </span>
+<span class="err">   Type       |   Offset    VirtAddr    PhysAddr   |FileSiz  MemSiz   Flg  Align</span>
+<span class="err">   LOAD       +-- 0x001000  0x00100000  0x00100000 +0x1d600  0x27240  RWE  0x1000</span>
+<span class="err">                               |                       |       |     </span>
+<span class="err">                               |   +-------------------+       |     </span>
+<span class="err">                               |   |                           |     </span>
+<span class="err">                               |   |     |           |         |       </span>
+<span class="err">                               |   |     |           |         |      </span>
+<span class="err">                               |   |     +-----------+ ---     |     </span>
+<span class="err">                               |   |     |00000000000|  ^      |   </span>
+<span class="err">                               |   | --- |00000000000|  |      |    </span>
+<span class="err">                               |   |  ^  |...........|  |      |  </span>
+<span class="err">                               |   |  |  |...........|  +------+</span>
+<span class="err">                               |   +--+  |...........|  |      </span>
+<span class="err">                               |      |  |...........|  |     </span>
+<span class="err">                               |      v  |...........|  v    </span>
+<span class="err">                               +-------&gt; +-----------+ ---  </span>
+<span class="err">                                         |           |     </span>
+<span class="err">                                         |           |    </span>
+<span class="err">                                            Memory  </span>
+</pre></div>
 
 
 <p>你需要找出每一个需要加载的segment的<code>Offset</code>, <code>VirtAddr</code>, <code>FileSiz</code>和<code>MemSiz</code>这些参数.
@@ -325,7 +340,8 @@ ELF中采用program header table来管理segment, program header table的一个�
 </div>
 <p>关于程序从何而来, 可以参考一篇文章: <a href="http://www.tenouk.com/ModuleW.html">COMPILER, ASSEMBLER, LINKER AND LOADER: A BRIEF STORY</a>.
 如果你希望查阅更多与ELF文件相关的信息, 请参考</p>
-<pre class="codehilite"><code>man 5 elf</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">man 5 elf</span>
+</pre></div>
 
 
 <div class="fenced fenced-red">
@@ -349,48 +365,50 @@ ELF中采用program header table来管理segment, program header table的一个�
 <code>EIP</code>可以让你知道程序现在的位置, 栈帧链则可以告诉你, 程序是怎么运行到现在的位置的.
 GDB中的<code>bt</code>命令可以打印出栈帧链的信息, 如果你从来没有使用过<code>bt</code>命令, 请先在GDB中尝试.</p>
 <p>在堆栈中形成的栈帧链结构如下:</p>
-<pre class="codehilite"><code>      |   |   ......   | 4G
-    stack +------------+ 
-    frame |  prev_ebp  |
-      |   +------------+ &lt;--+
-      |   | local_var  |    |
-      v   |  temp_var  |    |
-    ----- +------------+    |
-      ^   | arguments  |    |
-      |   +------------+    |
-      |   |  ret_addr  |    |
-    stack +------------+    |
-    frame |  prev_ebp  | ---+
-      |   +------------+ &lt;--+
-      |   | local_var  |    |
-      v   |  temp_var  |    |
-    ----- +------------+    |
-      ^   | arguments  |    |
-      |   +------------+    |
-      |   |  ret_addr  |    |
-    stack +------------+    |
-    frame |  prev_ebp  | ---+
-      |   +------------+ &lt;--+
-      |   | local_var  |    |
-      v   |  temp_var  |    |
-    ----- +------------+    |
-      ^   | arguments  |    |
-      |   +------------+    |
-      |   |  ret_addr  |    |
-    stack +------------+    |
-    frame |  prev_ebp  | ---+
-      |   +------------+ &lt;-- EBP
-      |   |   ......   | 0</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">      |   |   ......   | 4G</span>
+<span class="err">    stack +------------+ </span>
+<span class="err">    frame |  prev_ebp  |</span>
+<span class="err">      |   +------------+ &lt;--+</span>
+<span class="err">      |   | local_var  |    |</span>
+<span class="err">      v   |  temp_var  |    |</span>
+<span class="err">    ----- +------------+    |</span>
+<span class="err">      ^   | arguments  |    |</span>
+<span class="err">      |   +------------+    |</span>
+<span class="err">      |   |  ret_addr  |    |</span>
+<span class="err">    stack +------------+    |</span>
+<span class="err">    frame |  prev_ebp  | ---+</span>
+<span class="err">      |   +------------+ &lt;--+</span>
+<span class="err">      |   | local_var  |    |</span>
+<span class="err">      v   |  temp_var  |    |</span>
+<span class="err">    ----- +------------+    |</span>
+<span class="err">      ^   | arguments  |    |</span>
+<span class="err">      |   +------------+    |</span>
+<span class="err">      |   |  ret_addr  |    |</span>
+<span class="err">    stack +------------+    |</span>
+<span class="err">    frame |  prev_ebp  | ---+</span>
+<span class="err">      |   +------------+ &lt;--+</span>
+<span class="err">      |   | local_var  |    |</span>
+<span class="err">      v   |  temp_var  |    |</span>
+<span class="err">    ----- +------------+    |</span>
+<span class="err">      ^   | arguments  |    |</span>
+<span class="err">      |   +------------+    |</span>
+<span class="err">      |   |  ret_addr  |    |</span>
+<span class="err">    stack +------------+    |</span>
+<span class="err">    frame |  prev_ebp  | ---+</span>
+<span class="err">      |   +------------+ &lt;-- EBP</span>
+<span class="err">      |   |   ......   | 0</span>
+</pre></div>
 
 
 <p>可以看到, <code>EBP</code>在栈帧链的组织中起到了非常重要的作用, 通过<code>EBP</code>, 我们就可以找到每一个栈帧的信息了.
 聪明的你也许一眼就看出来, 这不就是程序设计课中学过的链表吗?
 我们可以定义一个结构体来进一步厘清其中的奥妙:</p>
-<pre class="codehilite"><code class="language-c">typedef struct _PartOfStackFrame {
-  struct _PartOfStackFrame *prev_ebp;
-  uint32_t ret_addr;
-  uint32_t args[4];
-} PartOfStackFrame;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">_PartOfStackFrame</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">_PartOfStackFrame</span> <span class="o">*</span><span class="n">prev_ebp</span><span class="p">;</span>
+  <span class="kt">uint32_t</span> <span class="n">ret_addr</span><span class="p">;</span>
+  <span class="kt">uint32_t</span> <span class="n">args</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span>
+<span class="p">}</span> <span class="n">PartOfStackFrame</span><span class="p">;</span>
+</pre></div>
 
 
 <p>其中<code>prev_ebp</code>就类似于<code>next</code>指针, <code>args</code>成员数组表示函数的实参,
@@ -402,18 +420,19 @@ GDB中的<code>bt</code>命令可以打印出栈帧链的信息, 如果你从来
 <p>由于缺乏形参和局部变量的具体信息, 我们只需要打印地址, 函数名, 以及前4个参数就可以了.
 打印格式可以参考GDB中<code>bt</code>命令的输出.
 如何确定某个地址落在哪一个函数中呢? 这就需要符号表的帮助了:</p>
-<pre class="codehilite"><code>Symbol table '.symtab' contains 10 entries:
-   Num:    Value  Size Type    Bind   Vis      Ndx Name
-     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
-     1: 00100000     0 SECTION LOCAL  DEFAULT    1 
-     2: 0010009c     0 SECTION LOCAL  DEFAULT    2 
-     3: 00100100     0 SECTION LOCAL  DEFAULT    3 
-     4: 00000000     0 SECTION LOCAL  DEFAULT    4 
-     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS add.c
-     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 add
-     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 main
-     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 ans
-     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 test_data</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">Symbol table &#39;.symtab&#39; contains 10 entries:</span>
+<span class="err">   Num:    Value  Size Type    Bind   Vis      Ndx Name</span>
+<span class="err">     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND </span>
+<span class="err">     1: 00100000     0 SECTION LOCAL  DEFAULT    1 </span>
+<span class="err">     2: 0010009c     0 SECTION LOCAL  DEFAULT    2 </span>
+<span class="err">     3: 00100100     0 SECTION LOCAL  DEFAULT    3 </span>
+<span class="err">     4: 00000000     0 SECTION LOCAL  DEFAULT    4 </span>
+<span class="err">     5: 00000000     0 FILE    LOCAL  DEFAULT  ABS add.c</span>
+<span class="err">     6: 00100084    22 FUNC    GLOBAL DEFAULT    1 add</span>
+<span class="err">     7: 00100000   129 FUNC    GLOBAL DEFAULT    1 main</span>
+<span class="err">     8: 00100120   256 OBJECT  GLOBAL DEFAULT    3 ans</span>
+<span class="err">     9: 00100100    32 OBJECT  GLOBAL DEFAULT    3 test_data</span>
+</pre></div>
 
 
 <p>对于<code>Type</code>属性为<code>FUNC</code>的表项, <code>Value</code>属性指示了函数的起始地址,
@@ -429,7 +448,8 @@ GDB中的<code>bt</code>命令可以打印出栈帧链的信息, 如果你从来
 <p>根据上文的内容, 实现框架代码中的<code>bt()</code>函数, 通过参数<code>ebp</code>和<code>eip</code>来打印程序当前的栈帧链.
 <code>bt()</code>函数会在<code>segv_handler()</code>中被调用, 来打印段错误时的栈帧链.
 实现正确后, 先通过</p>
-<pre class="codehilite"><code>make prog/segmentfault</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">make prog/segmentfault</span>
+</pre></div>
 
 
 <p>来编译<code>segmentfault</code>程序.

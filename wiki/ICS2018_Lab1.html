@@ -61,7 +61,8 @@
 <div class="fenced fenced-red">
 <h4 id="_3">提交方法</h4>
 <p>将所有待提交的文件保存到同一目录中，设置好<code>STUID</code>和<code>STUNAME</code>环境变量后，在命令行中(当前工作目录为提交文件所在目录)，执行</p>
-<pre class="codehilite"><code>bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</span>
+</pre></div>
 
 
 <p>(复制上述命令，没有连字符)，输入<code>Lab1</code>提交(注意大小写)。</p>
@@ -73,9 +74,10 @@
 <h2 id="_5">实验描述</h2>
 <p>给定64位有符号整数<math>a</math>, <math>b</math>, <math>m</math>  (类型为<code>int64_t</code>)，你希望求出<math>a\times b\mod m</math>的数值，即最小的非负整数<math>t</math>，满足<math>a\times b\equiv t\mod m</math>。</p>
 <p>你很容易写出如下实现：</p>
-<pre class="codehilite"><code class="language-c">int64_t multimod(int64_t a, int64_t b, int64_t m) {
-  return (a * b) % m;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int64_t</span> <span class="nf">multimod</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">b</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">m</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">)</span> <span class="o">%</span> <span class="n">m</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但这段看起来正常的代码其实是错的：<code>a * b</code>存在溢出的行为。有符号整数溢出导致<a href="https://en.wikipedia.org/wiki/Undefined_behavior">undefined behavior (UB)</a>，即便不是UB而是得到mod <math>2^{64}</math>的结果，计算出的数值也是错误的 (为什么？)。</p>
@@ -89,9 +91,10 @@
 <div class="fenced fenced-red">
 <h4 id="_6">危险的编译优化</h4>
 <p>编译优化有时可能会非预期地改变程序的行为，例如</p>
-<pre class="codehilite"><code class="language-c">for (int i = 0; i &lt; 1000000000; i++) {
-  multimod(a, b, m);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000000000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">multimod</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">m</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在编译优化的情况下可能会被完全“删除”——它们没有对程序的全局状态产生任何效果，从而删掉之后的程序语义和原程序等价。因此你在度量运行时间时应当格外小心，建议使用<code>objdump</code>阅读生成的汇编代码。</p>
@@ -99,14 +102,16 @@
 <p>将你优化过的程序保存成<code>p2.c</code>, <code>p3.c</code>, ... 以此类推。我们将根据正确性、性能和你实验报告中结果的可靠性评分。</p>
 <h2 id="3">任务3：解析神秘代码</h2>
 <p>任务3中，你获得了一份ACM-ICPC圈子中广为流传的一段神奇代码，出处和年代太久远已经很难考证了：</p>
-<pre class="codehilite"><code class="language-c">int64_t multimod_fast(int64_t a, int64_t b, int64_t m) {
-  int64_t t = a * b - (int64_t)((double)a * b / m + 1e-8) * m;
-  return t &lt; 0 ? t + m : t;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int64_t</span> <span class="nf">multimod_fast</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">b</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">m</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int64_t</span> <span class="n">t</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="o">-</span> <span class="p">(</span><span class="kt">int64_t</span><span class="p">)((</span><span class="kt">double</span><span class="p">)</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="o">/</span> <span class="n">m</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span> <span class="o">*</span> <span class="n">m</span><span class="p">;</span>
+  <span class="k">return</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="n">t</span> <span class="o">+</span> <span class="nl">m</span> <span class="p">:</span> <span class="n">t</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这段代码神奇地……竟然可以在<math>O(1)</math>时间就搞定溢出的问题？其中最精髓的一段在于</p>
-<pre class="codehilite"><code class="language-c">(int64_t)((double)a * b / m + 1e-8)</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">(</span><span class="kt">int64_t</span><span class="p">)((</span><span class="kt">double</span><span class="p">)</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="o">/</span> <span class="n">m</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
+</pre></div>
 
 
 <p>把整数<code>a</code>强行转换成了浮点数(假设使用IEEE754 64位双精度类型)。我们知道浮点数的精度也不是无限的，仅仅类型转换就已经损失精度了，<code>double</code>更不可能准确保存<code>a * b</code>的结果了啊？</p>

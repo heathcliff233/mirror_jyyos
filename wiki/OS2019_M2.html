@@ -61,19 +61,21 @@
 </div>
 <h2 id="_4">背景</h2>
 <p>如果大家用过Python/Javascript，一定多多少少了解过生成器(generator)和yield，例如，我们可以定义以下“死循环”的函数：</p>
-<pre class="codehilite"><code class="language-python">def integers():
-  i = 0
-  while True:
-    yield i # &quot;output&quot; i
-    i += 1</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">integers</span><span class="p">():</span>
+  <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="k">yield</span> <span class="n">i</span> <span class="c1"># &quot;output&quot; i</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+</pre></div>
 
 
 <p>这个函数可以生成所有的整数，从而用于其他类型的数据生成：</p>
-<pre class="codehilite"><code class="language-python">def is_prime(i):
-  return i &gt;= 2 and True not in (i % j == 0 for j in range(2, i))
+<div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">is_prime</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="kc">True</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
 
-primes = (i for i in integers() if is_prime(i)) # 所有的素数
-# 类型：&lt;generator object &lt;genexpr&gt; at 0x7f142c14c9e8&gt;</code></pre>
+<span class="n">primes</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">integers</span><span class="p">()</span> <span class="k">if</span> <span class="n">is_prime</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="c1"># 所有的素数</span>
+<span class="c1"># 类型：&lt;generator object &lt;genexpr&gt; at 0x7f142c14c9e8&gt;</span>
+</pre></div>
 
 
 <p>虽然<code>integers()</code>是个死循环，但<code>primes</code>却不会无限地执行下去。我们始终可以用<code>next(primes)</code>得到下一个素数，而<code>primes</code>内部的状态<code>i</code>又被神奇的保存了下来。</p>
@@ -90,20 +92,22 @@ primes = (i for i in integers() if is_prime(i)) # 所有的素数
 <h4 id="_6">获取实验代码与提交</h4>
 <p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
 <p>在你原先的os-workbench基础上，执行</p>
-<pre class="codehilite"><code class="language-bash">git pull origin M2</code></pre>
+<div class="codehilite"><pre><span></span>git pull origin M2
+</pre></div>
 
 
 <p>将本实验的框架代码下载到本地。在<code>libco/</code>下编译能得到动态链接库<code>libco-32.so</code>和<code>libco-64.so</code>。测试代码在<code>libco/tests</code>。</p>
 </div>
 <p>在这个实验中，我们实现轻量级的用户态<del>携谐</del>协程 (coroutine)，也称为green threads、user-level threads，可以在一个不支持线程的操作系统上实现多线程的能力。</p>
 <p>实验要求实现四个函数，分别是：</p>
-<pre class="codehilite"><code class="language-C">typedef void (*func_t)(void *arg);
-struct co;
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">func_t</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+<span class="k">struct</span> <span class="n">co</span><span class="p">;</span>
 
-void co_init();
-struct co *co_start(const char *name, func_t func, void *arg);
-void co_yield();
-void co_wait(struct co *thd);</code></pre>
+<span class="kt">void</span> <span class="nf">co_init</span><span class="p">();</span>
+<span class="k">struct</span> <span class="n">co</span> <span class="o">*</span><span class="nf">co_start</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="n">func_t</span> <span class="n">func</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">co_yield</span><span class="p">();</span>
+<span class="kt">void</span> <span class="nf">co_wait</span><span class="p">(</span><span class="k">struct</span> <span class="n">co</span> <span class="o">*</span><span class="n">thd</span><span class="p">);</span>
+</pre></div>
 
 
 <p>这些函数的实现会被封装成一个动态链接库(就像我们调用<code>printf</code>，其实是调用了glibc动态链接库中的函数)，这样就能被其他程序调用了。函数的具体功能如下：</p>
@@ -134,37 +138,40 @@ threads (or processes).</p>
 <p>资源管理一直是计算机系统世界的难题，至今很多系统还受到资源泄漏、use-after-free的困扰。</p>
 </div>
 <p>让我们回到协程API。协程运行的函数就是普通的C函数，只不过其中可以调用<code>co_yield()</code>：</p>
-<pre class="codehilite"><code class="language-C">void foo() {
-  while (1) {
-    printf(&quot;x&quot;);
-    co_yield();
-  }
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;x&quot;</span><span class="p">);</span>
+    <span class="n">co_yield</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void bar() {
-  while (1) {
-    printf(&quot;y&quot;);
-    co_yield();
-  }
-}</code></pre>
+<span class="kt">void</span> <span class="nf">bar</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;y&quot;</span><span class="p">);</span>
+    <span class="n">co_yield</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>例如这样两个函数被两个协程执行的话，将会打印出由x和y组成的字符串，例如 <code>xxyxyyxy...</code></p>
-<pre class="codehilite"><code class="language-C">int main() {
-  co_init();
-  co1 = co_start(&quot;t1&quot;, work1, arg1);
-  co2 = co_start(&quot;t2&quot;, work2, arg2);
-  co_wait(co1);
-  co_wait(co2);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">co_init</span><span class="p">();</span>
+  <span class="n">co1</span> <span class="o">=</span> <span class="n">co_start</span><span class="p">(</span><span class="s">&quot;t1&quot;</span><span class="p">,</span> <span class="n">work1</span><span class="p">,</span> <span class="n">arg1</span><span class="p">);</span>
+  <span class="n">co2</span> <span class="o">=</span> <span class="n">co_start</span><span class="p">(</span><span class="s">&quot;t2&quot;</span><span class="p">,</span> <span class="n">work2</span><span class="p">,</span> <span class="n">arg2</span><span class="p">);</span>
+  <span class="n">co_wait</span><span class="p">(</span><span class="n">co1</span><span class="p">);</span>
+  <span class="n">co_wait</span><span class="p">(</span><span class="n">co2</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>例如上面的代码创建了两个新的协程，并且等待这两个协程都执行结束。如果要实现generator，可以让<code>yield()</code>能返回一个指向协程堆栈上的指针，这个数据在协程结束前都会保证可用。</p>
 <div class="fenced fenced-green">
 <h4 id="vs">协程 vs. 线程</h4>
 <p>细心的你也许已经发现了，协程和课堂上讲解过的线程并没有很大的区别，回顾我们课堂上使用的线程库(<code>threads.h</code>)：</p>
-<pre class="codehilite"><code class="language-c">void create(void (*func)());
-void join(void (*func)());</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">create</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)());</span>
+<span class="kt">void</span> <span class="nf">join</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)());</span>
+</pre></div>
 
 
 <p>刚好对应了<code>co_start</code>和<code>co_wait</code> (<code>join</code>多次调用<code>pthread_join</code>等待所有线程结束)。唯一不同的是，线程是完全并发执行的，但协程会一直运行，直到执行<code>co_yield()</code>为止，才会切换到另一个协程运行。</p>
@@ -182,25 +189,29 @@ void join(void (*func)());</code></pre>
 </div>
 <h3 id="_11">运行库</h3>
 <p>和之前的实验(把源文件编译成一个二进制文件)不同，本实验把源文件编译成后缀名为<code>.so</code>的共享库(shared object)：</p>
-<pre class="codehilite"><code class="language-text">$ file libco-64.so 
-libco-64.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), ...</code></pre>
+<div class="codehilite"><pre><span></span>$ file libco-64.so 
+libco-64.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), ...
+</pre></div>
 
 
 <p>注意到我们实现的是一组库函数(没有main函数)，库函数是被其他程序调用的——这个<code>.so</code>共享库将会和其他程序动态链接，从而使另一个程序能调用我们的协程库函数。</p>
 <p>我们的Makefile里已经写明了如何编译共享库：</p>
-<pre class="codehilite"><code class="language-makefile">$(NAME)-64.so: $(DEPS) # 64bit shared library
-    gcc -fPIC -shared -m64 $(CFLAGS) $(SRCS) -o $@ $(LDFLAGS)</code></pre>
+<div class="codehilite"><pre><span></span><span class="nf">$(NAME)-64.so</span><span class="o">:</span> <span class="k">$(</span><span class="nv">DEPS</span><span class="k">)</span> <span class="c"># 64bit shared library</span>
+    gcc -fPIC -shared -m64 <span class="k">$(</span>CFLAGS<span class="k">)</span> <span class="k">$(</span>SRCS<span class="k">)</span> -o <span class="nv">$@</span> <span class="k">$(</span>LDFLAGS<span class="k">)</span>
+</pre></div>
 
 
 <p>其中<code>-fPIC -fshared</code>就代表编译成位置无关代码的共享库。虽然这个文件有+x属性并且可以执行，但会立即得到Segmentation Fault。当然，你的确可以让你的共享库真正可以执行(并得到有意义的结果)，同时作为命令行工具和动态链接库，有兴趣的同学请STFW。</p>
 <div class="fenced fenced-red">
 <h4 id="_12">测试你的代码</h4>
 <p>我们已经提供了一组测试用例，测试你的线程库(64bit)。</p>
-<pre class="codehilite"><code class="language-bash">gcc -I.. -L.. -m64 main.c -o libco-test-64 -lco-64</code></pre>
+<div class="codehilite"><pre><span></span>gcc -I.. -L.. -m64 main.c -o libco-test-64 -lco-64
+</pre></div>
 
 
 <p>请大家RTFM以下编译选项的含义：<code>-I</code>, <code>-L</code>, <code>-l</code>。然后使用</p>
-<pre class="codehilite"><code class="language-bash">LD_LIBRARY_PATH=.. ./libco-test-64</code></pre>
+<div class="codehilite"><pre><span></span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>.. ./libco-test-64
+</pre></div>
 
 
 <p>运行。这里我们配置了<code>LD_LIBRARY_PATH</code>环境变量，至于为什么，也请STFW。弄清楚这些以后，你就不难搞定32位版本的测试。</p>
@@ -212,34 +223,36 @@ libco-64.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), ...</code><
 </div>
 <h3 id="_13">问题分析</h3>
 <p>实现协程最关键的地方在于理解函数调用。例如我们写一个函数：</p>
-<pre class="codehilite"><code class="language-c">void foo() {
-  int i;
-  for (int i = 0; i &lt; 1000; i++) {
-    printf(&quot;%d\n&quot;, i);
-    co_yield();
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">co_yield</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>它会编译成以下汇编代码：</p>
-<pre class="codehilite"><code class="language-assembly">push   %rbp
-push   %rbx
-lea    &lt;stdout&gt;, %rbp       
-xor    %ebx, %ebx
-sub    $0x8, %rsp
-mov    %ebx, %esi
-mov    %rbp, %rdi
-xor    %eax, %eax
-callq  &lt;printf@plt&gt;
-inc    %ebx
-xor    %eax, %eax
-callq  &lt;co_yield&gt;
-cmp    $0x3e8, %ebx
-jne    669 &lt;foo+0xf&gt;
-pop    %rax
-pop    %rbx
-pop    %rbp
-retq    </code></pre>
+<div class="codehilite"><pre><span></span><span class="err">push   %rbp</span>
+<span class="err">push   %rbx</span>
+<span class="err">lea    &lt;stdout&gt;, %rbp       </span>
+<span class="err">xor    %ebx, %ebx</span>
+<span class="err">sub    $0x8, %rsp</span>
+<span class="err">mov    %ebx, %esi</span>
+<span class="err">mov    %rbp, %rdi</span>
+<span class="err">xor    %eax, %eax</span>
+<span class="err">callq  &lt;printf@plt&gt;</span>
+<span class="err">inc    %ebx</span>
+<span class="err">xor    %eax, %eax</span>
+<span class="err">callq  &lt;co_yield&gt;</span>
+<span class="err">cmp    $0x3e8, %ebx</span>
+<span class="err">jne    669 &lt;foo+0xf&gt;</span>
+<span class="err">pop    %rax</span>
+<span class="err">pop    %rbx</span>
+<span class="err">pop    %rbp</span>
+<span class="err">retq    </span>
+</pre></div>
 
 
 <p>因此，如果在<code>co_yield()</code>时切换到另一个函数执行，我们至少需要保存：</p>
@@ -258,46 +271,48 @@ retq    </code></pre>
 </div>
 <h3 id="_15">为每个协程分配堆栈</h3>
 <p>分配堆栈是非常容易的——用<code>malloc</code>分配一段内存即可，甚至我们可以直接把协程的堆栈定义在数据区：</p>
-<pre class="codehilite"><code class="language-c">struct co {
-  ...
-  uint8_t stack[4096];
-};
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">co</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="kt">uint8_t</span> <span class="n">stack</span><span class="p">[</span><span class="mi">4096</span><span class="p">];</span>
+<span class="p">};</span>
 
-struct co coroutines[MAX_CO]; // 静态分配</code></pre>
+<span class="k">struct</span> <span class="n">co</span> <span class="n">coroutines</span><span class="p">[</span><span class="n">MAX_CO</span><span class="p">];</span> <span class="c1">// 静态分配</span>
+</pre></div>
 
 
 <p>那么怎么为协程切换堆栈呢？我们来看一段ACM-ICPC界广为流传的外挂代码。在蛮荒时代，很多赛区使用默认的Linux堆栈，这会导致在有<math>10^6</math>级数据时递归堆栈溢出，因此有了如下代码，可以把一段数据区的内存作为堆栈：</p>
-<pre class="codehilite"><code class="language-c">#define KB * 1024LL
-#define MB KB * 1024LL
-#define GB MB * 1024LL
-char __stack[4 GB];
-void *__stack_backup;
+<div class="codehilite"><pre><span></span><span class="cp">#define KB * 1024LL</span>
+<span class="cp">#define MB KB * 1024LL</span>
+<span class="cp">#define GB MB * 1024LL</span>
+<span class="kt">char</span> <span class="n">__stack</span><span class="p">[</span><span class="mi">4</span> <span class="n">GB</span><span class="p">];</span>
+<span class="kt">void</span> <span class="o">*</span><span class="n">__stack_backup</span><span class="p">;</span>
 
-#if defined(__i386__)
-  define SP &quot;%%esp&quot;
-#elif defined(__x86_64__)
-  #define SP &quot;%%rsp&quot;
-#endif
+<span class="cp">#if defined(__i386__)</span>
+  <span class="n">define</span> <span class="n">SP</span> <span class="s">&quot;%%esp&quot;</span>
+<span class="cp">#elif defined(__x86_64__)</span>
+  <span class="cp">#define SP &quot;%%rsp&quot;</span>
+<span class="cp">#endif</span>
 
-void stackoverflow(long long level) {
-  if (level % (1 MB) == 0) {
-    printf(&quot;level = %d\n&quot;, level);
-  }
-  stackoverflow(level + 1);
-}
+<span class="kt">void</span> <span class="n">stackoverflow</span><span class="p">(</span><span class="kt">long</span> <span class="kt">long</span> <span class="n">level</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">level</span> <span class="o">%</span> <span class="p">(</span><span class="mi">1</span> <span class="n">MB</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;level = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">level</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">stackoverflow</span><span class="p">(</span><span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
 
-int main() {
-  // 堆栈外挂——启动
-  asm volatile(&quot;mov &quot; SP &quot;, %0; mov %1, &quot; SP :
-                 &quot;=g&quot;(__stack_backup) :
-                 &quot;g&quot;(__stack + sizeof(__stack)));
+<span class="kt">int</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// 堆栈外挂——启动</span>
+  <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov &quot;</span> <span class="n">SP</span> <span class="s">&quot;, %0; mov %1, &quot;</span> <span class="nl">SP</span> <span class="p">:</span>
+                 <span class="s">&quot;=g&quot;</span><span class="p">(</span><span class="n">__stack_backup</span><span class="p">)</span> <span class="o">:</span>
+                 <span class="s">&quot;g&quot;</span><span class="p">(</span><span class="n">__stack</span> <span class="o">+</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">__stack</span><span class="p">)));</span>
 
-  stackoverflow(0);
+  <span class="n">stackoverflow</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
 
-  // 堆栈外挂——关闭
-  asm volatile(&quot;mov %0,&quot; SP : : &quot;g&quot;(__stack_backup));
-  // 如果不切换回堆栈，ret指令将会返回到不合法的地址(Segmentation Fault)
-}</code></pre>
+  <span class="c1">// 堆栈外挂——关闭</span>
+  <span class="k">asm</span> <span class="nf">volatile</span><span class="p">(</span><span class="s">&quot;mov %0,&quot;</span> <span class="nl">SP</span> <span class="p">:</span> <span class="o">:</span> <span class="s">&quot;g&quot;</span><span class="p">(</span><span class="n">__stack_backup</span><span class="p">));</span>
+  <span class="c1">// 如果不切换回堆栈，ret指令将会返回到不合法的地址(Segmentation Fault)</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div class="fenced fenced-green">
@@ -311,18 +326,20 @@ int main() {
 </div>
 <h3 id="_17">实现协程</h3>
 <p>我们给大家推荐的方案是<code>setjmp</code>/<code>longjmp</code>，这样就不必再纠结内嵌汇编、应该保存哪些寄存器之类的事情了。首先，我们需要维护“当前运行的协程”：</p>
-<pre class="codehilite"><code class="language-c">struct co *current;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">co</span> <span class="o">*</span><span class="n">current</span><span class="p">;</span>
+</pre></div>
 
 
 <p>这其实已经非常类似于在操作系统里实现线程了——我们会为每一个CPU维护一个“当前运行的线程”。因此，在协程执行时调用<code>co_yield</code>：</p>
-<pre class="codehilite"><code class="language-c">void co_yield() {
-  int val = setjmp(current-&gt;buf);
-  if (val == 0) {
-    // ???
-  } else {
-    // ???
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">co_yield</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">val</span> <span class="o">=</span> <span class="n">setjmp</span><span class="p">(</span><span class="n">current</span><span class="o">-&gt;</span><span class="n">buf</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">val</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// ???</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="c1">// ???</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>给大家的提示是，<code>setjmp</code>会返回两次：</p>

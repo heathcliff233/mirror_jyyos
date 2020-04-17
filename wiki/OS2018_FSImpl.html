@@ -56,31 +56,33 @@
 <h2 id="_2">什么是文件，什么是目录？</h2>
 <h3 id="inode">Inode</h3>
 <p>文件分成两部分，一部分是它的元数据(metadata)，是这个文件自身的属性，例如大小、访问权限、修改时间等等……在UNIX世界中，我们用一个inode (index node)来代表一个文件，并在inode中存储文件的元数据。inode通常大小固定(例如128 bytes或256 bytes)。ext2文件系统的inode结构如下：</p>
-<pre class="codehilite"><code class="language-c">struct ext2_inode {
-        __u16   i_mode;         /* File type and access rights */
-        __u16   i_uid;          /* Low 16 bits of Owner Uid */
-        __u32   i_size;         /* Size in bytes */
-        __u32   i_atime;        /* Access time */
-        __u32   i_ctime;        /* Creation time */
-        __u32   i_mtime;        /* Modification time */
-        __u32   i_dtime;        /* Deletion Time */
-        __u16   i_gid;          /* Low 16 bits of Group Id */
-        __u16   i_links_count;  /* Links count */
-        __u32   i_blocks;       /* Blocks count */
-        __u32   i_flags;        /* File flags */
-        ...
-        __u32   i_block[EXT2_N_BLOCKS];  /* Pointers to blocks */
-        ...
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">ext2_inode</span> <span class="p">{</span>
+        <span class="n">__u16</span>   <span class="n">i_mode</span><span class="p">;</span>         <span class="cm">/* File type and access rights */</span>
+        <span class="n">__u16</span>   <span class="n">i_uid</span><span class="p">;</span>          <span class="cm">/* Low 16 bits of Owner Uid */</span>
+        <span class="n">__u32</span>   <span class="n">i_size</span><span class="p">;</span>         <span class="cm">/* Size in bytes */</span>
+        <span class="n">__u32</span>   <span class="n">i_atime</span><span class="p">;</span>        <span class="cm">/* Access time */</span>
+        <span class="n">__u32</span>   <span class="n">i_ctime</span><span class="p">;</span>        <span class="cm">/* Creation time */</span>
+        <span class="n">__u32</span>   <span class="n">i_mtime</span><span class="p">;</span>        <span class="cm">/* Modification time */</span>
+        <span class="n">__u32</span>   <span class="n">i_dtime</span><span class="p">;</span>        <span class="cm">/* Deletion Time */</span>
+        <span class="n">__u16</span>   <span class="n">i_gid</span><span class="p">;</span>          <span class="cm">/* Low 16 bits of Group Id */</span>
+        <span class="n">__u16</span>   <span class="n">i_links_count</span><span class="p">;</span>  <span class="cm">/* Links count */</span>
+        <span class="n">__u32</span>   <span class="n">i_blocks</span><span class="p">;</span>       <span class="cm">/* Blocks count */</span>
+        <span class="n">__u32</span>   <span class="n">i_flags</span><span class="p">;</span>        <span class="cm">/* File flags */</span>
+        <span class="p">...</span>
+        <span class="n">__u32</span>   <span class="n">i_block</span><span class="p">[</span><span class="n">EXT2_N_BLOCKS</span><span class="p">];</span>  <span class="cm">/* Pointers to blocks */</span>
+        <span class="p">...</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>在inode中可以找到文件访问的各种信息——例如当我们在命令行中执行<code>./a.out</code>的时候，操作系统会检查<code>i_mode</code>是否具有<code>+x</code> (可执行)的权限，如果不能执行则会报告Permission Denied。</p>
 <div class="fenced fenced-green">
 <h4 id="ls-l">思考题：<code>ls -l</code>的结果</h4>
-<pre class="codehilite"><code class="language-text">...
+<div class="codehilite"><pre><span></span>...
 drwxr-xr-x  10 jyy  staff   340 Mar 29 13:49 pages
 -rwxr-xr-x   1 jyy  staff  4944 Apr  9 09:31 server.py
-...</code></pre>
+...
+</pre></div>
 
 
 <p>是一个典型的<code>ls -l</code>命令结果，你知道每一列的含义吗？哪些信息是在inode中的？</p>
@@ -98,22 +100,24 @@ drwxr-xr-x  10 jyy  staff   340 Mar 29 13:49 pages
 <p>我们假设磁盘以“块”为单位读写。不是一般性，我们假设一块的大小是4KB，关于一个文件系统的设计和实现，阅读<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/file-implementation.pdf">参考书</a>，其中讨论了如何管理磁盘上的数据结构(superblock, inode/data bitmap以及具体的inodes和磁盘数据的处理)。这里我们从一个不太一样的视角来重新解读一下文件系统的实现。</p>
 <h3 id="_7">实现文件</h3>
 <p>要用4KB的块实现<code>vector&lt;char&gt;</code>，很自然地我们能想到用<strong>链表</strong>：</p>
-<pre class="codehilite"><code class="language-c">struct block {
-  char payload[BLOCK_SIZE - sizeof(uint32_t)];
-  // 我没有想到更优雅的办法算出payload的长度；想到的同学请联系我。
-  uint32_t next_block;
-} __attribute__((packed));</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">block</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="n">payload</span><span class="p">[</span><span class="n">BLOCK_SIZE</span> <span class="o">-</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">)];</span>
+  <span class="c1">// 我没有想到更优雅的办法算出payload的长度；想到的同学请联系我。</span>
+  <span class="kt">uint32_t</span> <span class="n">next_block</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">));</span>
+</pre></div>
 
 
 <p>但这么实现有个非常显而易见的问题：如果我们想使用lseek移动到文件的最后一块，就必须遍历整个链表——而且需要把整个文件全部读一遍！如果我们的确不关心文件的数据，那整个文件的内容(可能很大，比如一个电影)就都白读了。</p>
 <p>所以很自然想到把链接都保存到一起，这就是FAT (File Allocation Table)文件系统——没错，就是大家曾经用过的文件系统。这样能够最大程度地增加链接的<strong>局部性</strong>，对于在理想情况下，无论是链接还是数据块都是连续的，能够最大程度提高文件系统的性能。</p>
 <p>但链表访问仍然有一个缺陷：遍历链表的时间是<math>O(n)</math>的(<math>n</math>是文件的大小)。UNIX文件系统则采用了类似于页表(但又有所不同)的间接索引。文件系统在inode中预留了12个直接索引，代表文件的头部的12个数据块：</p>
-<pre class="codehilite"><code class="language-c">struct inode {
-  uint32_t direct_blocks[12];
-  uint32_t indirect_l1;
-  uint32_t indirect_l2;
-  uint32_t indirect_l3;
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">inode</span> <span class="p">{</span>
+  <span class="kt">uint32_t</span> <span class="n">direct_blocks</span><span class="p">[</span><span class="mi">12</span><span class="p">];</span>
+  <span class="kt">uint32_t</span> <span class="n">indirect_l1</span><span class="p">;</span>
+  <span class="kt">uint32_t</span> <span class="n">indirect_l2</span><span class="p">;</span>
+  <span class="kt">uint32_t</span> <span class="n">indirect_l3</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>而对于更大的文件，则分别使用1级、2级、3级索引(最大4TB文件)。对于4KB的块大小，则小于48KB的文件都不会额外使用任何索引块。对比x86中，即便虚拟地址空间只映射一个物理页，也至少需要一个页目录、一个页表，总共12KB的空间。</p>
@@ -123,10 +127,11 @@ drwxr-xr-x  10 jyy  staff   340 Mar 29 13:49 pages
 </div>
 <h3 id="_9">实现目录</h3>
 <p>既然有了inode，目录就是文件名到inode的映射。很自然，我们可以把这个映射存储在目录文件的数据中：</p>
-<pre class="codehilite"><code class="language-c">struct dirent {
-  char filename[MAX_FILENAME_LEN];
-  uint32_t inode;
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">dirent</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="n">filename</span><span class="p">[</span><span class="n">MAX_FILENAME_LEN</span><span class="p">];</span>
+  <span class="kt">uint32_t</span> <span class="n">inode</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>然后在目录文件中存储一个<code>struct dirent</code>的数组即可。对早期的文件系统限制文件名的大小(FAT16限制文件名是8字节文件名+3字节扩展名)，这是个不错的主意；但随着存储器越来越大、计算机越来越快，更复杂的索引结构也随之引入到文件系统的实现中。</p>

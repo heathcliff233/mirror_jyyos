@@ -55,7 +55,8 @@
 <div class="fenced fenced-red">
 <h4 id="_3">提交方法</h4>
 <p>将所有待提交的文件保存到同一目录中(包括以学号命名的pdf实验报告)，设置好<code>STUID</code>和<code>STUNAME</code>环境变量后，在命令行中(当前工作目录为提交文件所在目录)，执行</p>
-<pre class="codehilite"><code>bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">bash -c &quot;$(curl -s http://moon.nju.edu.cn/people/yyjiang/teach/submit.sh)&quot;</span>
+</pre></div>
 
 
 <p>(复制上述命令，没有连字符)，输入<code>Lab4</code>提交(注意大小写)。</p>
@@ -77,11 +78,13 @@
 <p>这个编程实验需要模拟实现一个简单的cache, 并尝试实现各种替换算法来优化程序的性能. 所谓模拟, 即我们已有所有内存访问的序列, 你需要“模拟”出cache的行为, 从而评估不同配置的cache对程序运行的影响.
 请大家从<a href="../static/wiki/ics/ics2018-lab4.zip">框架代码</a>开始.</p>
 <p>在代码目录下执行</p>
-<pre class="codehilite"><code>make</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">make</span>
+</pre></div>
 
 
 <p>来编译, 生成可执行文件<code>a.out</code>. 其运行方式如下</p>
-<pre class="codehilite"><code>./a.out [-r seed] [trace]</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">.</span><span class="o">/</span><span class="n">a</span><span class="p">.</span><span class="k">out</span><span class="w"> </span><span class="o">[</span><span class="n">-r seed</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">trace</span><span class="o">]</span><span class="w"></span>
+</pre></div>
 
 
 <p>其中<code>seed</code>是随机种子, 可以用于确定性回放帮助调试, 缺省时会用系统时间作为种子;
@@ -112,9 +115,10 @@ DRAM每次读操作都会读出二维矩阵中的一行, 由于电容会漏电�
 CISC的运气就没那么好了, 指令多, 格式不规整, 硬件逻辑十分复杂,
 在芯片上一时间腾不出地方来放cache, 所以你在i386手册上找不到和cache相关的内容.
 当CISC架构师们意识到复杂的电路逻辑已经成为了提高性能的瓶颈时, 他们才向RISC取经, 把指令分解成微指令来执行:</p>
-<pre class="codehilite"><code>                              R[EAX] &lt;- M[var]
-addl $1, var        =&gt;        R[EAX] &lt;- R[EAX] + 1
-                              M[var] &lt;- R[EAX]</code></pre>
+<div class="codehilite"><pre><span></span><span class="w">                              </span><span class="n">R</span><span class="o">[</span><span class="n">EAX</span><span class="o">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">M</span><span class="o">[</span><span class="n">var</span><span class="o">]</span><span class="w"></span>
+<span class="n">addl</span><span class="w"> </span><span class="err">$</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nf">var</span><span class="w">        </span><span class="o">=&gt;</span><span class="w">        </span><span class="n">R</span><span class="o">[</span><span class="n">EAX</span><span class="o">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">R</span><span class="o">[</span><span class="n">EAX</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">                              </span><span class="n">M</span><span class="o">[</span><span class="n">var</span><span class="o">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">R</span><span class="o">[</span><span class="n">EAX</span><span class="o">]</span><span class="w"></span>
+</pre></div>
 
 
 <p>这样就减少了硬件的逻辑, 让微指令的执行流水化的同时, 也可以腾出面积来做cache了, 不过这些都是后话了.</p>
@@ -195,19 +199,20 @@ L2 cache通常比L1 cache要大, 所以查找所花时间要多一些, 但怎么
 <div class="fenced fenced-red">
 <h4 id="cache_2">实验要求: 实现cache</h4>
 <p>在<code>cache.c</code>中实现如下函数</p>
-<pre class="codehilite"><code class="language-c">// 从cache中读出`addr`地址处的4字节数据
-// 若缺失, 需要先从内存中读入数据
-uint32_t cache_read(uintptr_t addr);
+<div class="codehilite"><pre><span></span><span class="c1">// 从cache中读出`addr`地址处的4字节数据</span>
+<span class="c1">// 若缺失, 需要先从内存中读入数据</span>
+<span class="kt">uint32_t</span> <span class="nf">cache_read</span><span class="p">(</span><span class="kt">uintptr_t</span> <span class="n">addr</span><span class="p">);</span>
 
-// 往cache中`addr`地址所属的块写入数据`data`, 写掩码为`wmask`
-// 例如当`wmask`为`0xff`时, 只写入低8比特
-// 若缺失, 需要从先内存中读入数据
-void cache_write(uintptr_t addr, uint32_t data, uint32_t wmask);
+<span class="c1">// 往cache中`addr`地址所属的块写入数据`data`, 写掩码为`wmask`</span>
+<span class="c1">// 例如当`wmask`为`0xff`时, 只写入低8比特</span>
+<span class="c1">// 若缺失, 需要从先内存中读入数据</span>
+<span class="kt">void</span> <span class="nf">cache_write</span><span class="p">(</span><span class="kt">uintptr_t</span> <span class="n">addr</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">data</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">wmask</span><span class="p">);</span>
 
-// 初始化一个数据大小为`2^total_size_width`B, 关联度为`2^associativity_width`的cache
-// 例如`init_cache(14, 2)`将初始化一个16KB, 4路组相联的cache
-// 将所有valid bit置为无效即可
-void init_cache(int total_size_width, int associativity_width);</code></pre>
+<span class="c1">// 初始化一个数据大小为`2^total_size_width`B, 关联度为`2^associativity_width`的cache</span>
+<span class="c1">// 例如`init_cache(14, 2)`将初始化一个16KB, 4路组相联的cache</span>
+<span class="c1">// 将所有valid bit置为无效即可</span>
+<span class="kt">void</span> <span class="nf">init_cache</span><span class="p">(</span><span class="kt">int</span> <span class="n">total_size_width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">associativity_width</span><span class="p">);</span>
+</pre></div>
 
 
 <p>另外cache的一些特性如下:</p>
@@ -217,10 +222,11 @@ void init_cache(int total_size_width, int associativity_width);</code></pre>
 <li>写回, 写分配</li>
 </ul>
 <p><code>mem.c</code>中提供了如下两个函数, cache缺失/写回的时候需要用到它们:</p>
-<pre class="codehilite"><code class="language-c">// 从块号为`block_num`的内存地址中读出一整个cache块大小的内容到`buf`中
-void mem_read(uintptr_t block_num, uint8_t *buf);
-// 往块号为`block_num`的内存地址中写入一整个cache块大小的内容`buf`
-void mem_write(uintptr_t block_num, uint8_t *buf);</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// 从块号为`block_num`的内存地址中读出一整个cache块大小的内容到`buf`中</span>
+<span class="kt">void</span> <span class="nf">mem_read</span><span class="p">(</span><span class="kt">uintptr_t</span> <span class="n">block_num</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">buf</span><span class="p">);</span>
+<span class="c1">// 往块号为`block_num`的内存地址中写入一整个cache块大小的内容`buf`</span>
+<span class="kt">void</span> <span class="nf">mem_write</span><span class="p">(</span><span class="kt">uintptr_t</span> <span class="n">block_num</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">buf</span><span class="p">);</span>
+</pre></div>
 
 
 </div>

@@ -60,22 +60,24 @@
 </blockquote>
 <p>每一本操作系统教科书都会对死锁进行深入详细的讨论，包括我们的<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/threads-bugs.pdf">参考书</a>。</p>
 <p>死锁最基本的形式：</p>
-<pre class="codehilite"><code class="language-c">thread1      tread2
-lock(A);
-             lock(B);
+<div class="codehilite"><pre><span></span><span class="n">thread1</span>      <span class="n">tread2</span>
+<span class="nf">lock</span><span class="p">(</span><span class="n">A</span><span class="p">);</span>
+             <span class="n">lock</span><span class="p">(</span><span class="n">B</span><span class="p">);</span>
 
-lock(B); // 阻塞
-             lock(A); // 阻塞
-// 任何线程都不能进入临界区</code></pre>
+<span class="n">lock</span><span class="p">(</span><span class="n">B</span><span class="p">);</span> <span class="c1">// 阻塞</span>
+             <span class="n">lock</span><span class="p">(</span><span class="n">A</span><span class="p">);</span> <span class="c1">// 阻塞</span>
+<span class="c1">// 任何线程都不能进入临界区</span>
+</pre></div>
 
 
 <p>然而，在一个真实的项目(例如Linux Kernel)中，存在海量的lock/unlock的操作，即便大家再小心、在规定上锁的顺序，实际情况是在实现中依然很容易出现死锁。怎么办呢？</p>
 <p>注意到即便有上述死锁发生，它们发生的几率依然未必很大——必须在一个线程连续的两次lock之间发生另一个lock事件，死锁才会能触发。如果临界区和其他计算占了绝大部分的时间，即便死锁但风险存在，也未必会实际发生。但无论如何，只要我们同时看到了AB和BA，这就是非常危险的信号——值得我们报警。就好像<code>-Wall -Werror</code>里发出的警告一样。</p>
 <p>于是就有了一个很自然的想法，修改lock()的实现：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  printf(&quot;Thread %d tires to lock %lx\n&quot;, gettid(), (uintptr_t)lk);
-  ... // 实际的lock实现
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Thread %d tires to lock %lx</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">gettid</span><span class="p">(),</span> <span class="p">(</span><span class="kt">uintptr_t</span><span class="p">)</span><span class="n">lk</span><span class="p">);</span>
+  <span class="p">...</span> <span class="c1">// 实际的lock实现</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>然后根据打印的日志查看是否有循环依赖等待的可能性——这很适合作为问题求解的习题，问题求解中学习的算法在实际(即便是看似无关、写代码但计算机软件/系统领域)中都有很重要的价值。</p>
@@ -106,16 +108,18 @@ lock(B); // 阻塞
 <li>至少有一个是写。</li>
 </ul>
 <p>这个概念和数字逻辑电路中的数据竞争是十分类似的。数据竞争意味着存在<strong>线程间的数据流</strong>，并且这个数据流极有可能是程序员没有考虑到的，例如以下例子：</p>
-<pre class="codehilite"><code class="language-c">if (node-&gt;fd != -1) {
-                             node-&gt;fd = -1; // 另一个线程
-  write(node-&gt;fd, ...);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">fd</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                             <span class="n">node</span><span class="o">-&gt;</span><span class="n">fd</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="c1">// 另一个线程</span>
+  <span class="n">write</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">fd</span><span class="p">,</span> <span class="p">...);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>通常，现实中的并发程序一般都要求消除所有的数据竞争(通过锁或同步操作)，来消除这类线程间的数据流：数据竞争很可能伴随着原子性违反、顺序违反这类的bug (可以参考之前的论文)。</p>
 <p>和死锁一样，数据竞争的定义很明确，因此可以自动检测，我们只需要在所有同步操作(lock/unlock, wait/signal)和内存访问的时候打印日志：</p>
-<pre class="codehilite"><code class="language-c">printf(&quot;Thread %d (%s:%d) read(%lx)\n&quot;,
-  gettid(), __FILE__, __LINE__, uintptr_t(addr));</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Thread %d (%s:%d) read(%lx)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+  <span class="n">gettid</span><span class="p">(),</span> <span class="n">__FILE__</span><span class="p">,</span> <span class="n">__LINE__</span><span class="p">,</span> <span class="kt">uintptr_t</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+</pre></div>
 
 
 <p>然后分析日志就能预测程序执行中的数据竞争了。显然，如果连续的两个read/write事件满足数据竞争的定义，我们就在执行中找到了数据竞争。此外，还能通过排列日志中事件的顺序“预测”是否会存在数据竞争。这是目前一个比较热门的研究领域，可以参考一篇最近的<a href="http://umathur3.web.engr.illinois.edu/papers/wcp-pldi2017.pdf">研究论文</a>。</p>

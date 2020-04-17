@@ -1,0 +1,541 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>虚拟化：请页调度</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">虚拟化：请页调度</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">再次再次预告：期中测验</h2>
+<blockquote>
+<p>4.20 (<span class="red">下次课</span>) 随堂测验 (14:00 开始, 16:00 结束)</p>
+<ul>
+<li>一道上机题 (50%)<ul>
+<li>并发编程 (<code>threads.h</code>), Online Judge 提交，但无评测结果</li>
+</ul>
+</li>
+<li>一个问卷 (50%)<ul>
+<li>问卷系统提交</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>自觉维护学术诚信</p>
+<ul>
+<li><span class="blue">正确性不作为评分依据</span></li>
+<li>独立完成 (不借助互联网搜索、不讨论)<ul>
+<li><span class="red">如有特殊困难不能参加，请由辅导员向我说明</span></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>评分标准</p>
+<ul>
+<li>按时提交，得 100%</li>
+<li>当天提交，得 80%</li>
+<li>周三 (4.22) 前提交，得 70%</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>之前我们花了很多次课讲进程</p>
+<ul>
+<li>进程 = 运行的程序 = 状态机的执行<ul>
+<li>进程管理 (fork, execve, exit) = 状态机管理</li>
+<li>进程的地址空间 (分页机制, mmap, 动态链接和加载)</li>
+</ul>
+</li>
+<li>操作系统中的进程管理<ul>
+<li>进程调度的机制 (中断/上下文切换) 和策略</li>
+<li>如何管理进程的内存 ← 最后一个问题</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>如何在操作系统里实现 mmap？</p>
+<ul>
+<li>demand paging 和 mmap 的实现</li>
+<li>虚拟存储: OS 给我们的礼物<ul>
+<li>动态加载: ltrace 和 <code>LD_PRELOAD</code></li>
+<li>copy-on-write fork</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">进程的地址空间：回顾</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">进程视角的地址空间</h2>
+<p>使用 pmap (<code>/proc/[pid]/maps</code>) 可以查看进程的地址空间</p>
+<ul>
+<li>进程运行时越权访问会导致 Segmentation Fault (<code>SIGSEGV</code>)</li>
+<li>地址空间中的 “段” 使用 mmap 系统调用创建</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/process-address-space.png" width="700px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">进程视角的地址空间</h2>
+<blockquote>
+<p>mmap 的神奇之处：几乎总是在瞬间完成</p>
+<ul>
+<li>用 mmap 申请 8 GiB 内存空间</li>
+<li>用 mmap 映射整个磁盘 (128 GiB)</li>
+</ul>
+</blockquote>
+<p>一个很自然的问题，mmap 到底是如何在操作系统上实现的？</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="mmap">实现 mmap: 借助分页机制</h2>
+<p>分页机制</p>
+<ul>
+<li>一个存储在内存中的函数 <math>f: [0,M) \mapsto [0, M)</math> <ul>
+<li>把 “虚拟地址” 翻译成 “物理地址”</li>
+<li>通常是 Radix Tree</li>
+</ul>
+</li>
+<li>操作系统代码可以自由更换 <math>f</math></li>
+<li>访问 <math>f</math> 不允许的内存，产生异常 (page fault)</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>mmap 不需要分配任何实际的页面，只要 “记录” 下映射这件事发生</p>
+<ul>
+<li>page fault 的时候再做 lazy 的映射 (Lab 4)<ul>
+<li>这就是 <span class="red">demand paging</span> (on demand 加载页面)</li>
+</ul>
+</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">mm_area</span> <span class="p">{</span>
+  <span class="n">_Area</span> <span class="n">range</span><span class="p">;</span> <span class="c1">// 内存映射的区间</span>
+  <span class="kt">int</span> <span class="n">prot</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">offset</span><span class="p">;</span> <span class="c1">// 内存映射的属性</span>
+  <span class="k">struct</span> <span class="n">page</span> <span class="o">*</span><span class="n">pages</span><span class="p">;</span> <span class="c1">// 用于遍历所有映射的页面</span>
+<span class="p">};</span>
+<span class="k">struct</span> <span class="n">task</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">mm_area</span> <span class="n">areas</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+  <span class="p">...</span>
+</pre></div>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="demand-paging">请页调度 (Demand Paging)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="demand-paging">Demand Paging: 按进程需要分配页面</h2>
+<p>操作系统可以看到所有的物理页面</p>
+<ul>
+<li>Lab1: kalloc/kfree 我们已经理解了这一点</li>
+<li>所有的 free pages 都是可用的<ul>
+<li>用这些 free pages 组成进程的 <math>f_1,f_2,\ldots</math> 和它们实际的内存</li>
+</ul>
+</li>
+<li>进程创建 (execve) 时只要准备好 <code>mm_area</code> 就行<ul>
+<li>开始执行后会 page fault</li>
+<li>page fault 会实际调用 kalloc 分配一页，并填入正确的数据</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>这就是为什么 Lab1 那么重要了</p>
+<ul>
+<li>它是整个操作系统运行的基础！</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="demand-paging">Demand Paging: 分页机制的另一个用途</h2>
+<p>一个非常聪明地想法，更好地利用分页机制</p>
+<blockquote>
+<p>即便一个进程已经分配了一个页面</p>
+<ul>
+<li>我们也可以随时任意地 “hack” 进程的地址空间<ul>
+<li>把页面的数据 “swap out”<ul>
+<li>保存到 persistent storage</li>
+<li>取消这个页面的映射</li>
+</ul>
+</li>
+<li>之后进程 page fault 的时候再加载回来<ul>
+<li>non-present pate table entry 可以用来存储索引信息</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>思考题</p>
+<ul>
+<li>为什么这件事 make sense?<ul>
+<li>基本假设：<span class="red">程序的运行有 locality</span><ul>
+<li>在短时间内总是访问所有资源的一小部分 (working set)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Linux swap (kswapd)<ul>
+<li>memory low watermark 时开始把页面搬运到持久存储</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="swapping-why-make-sense">Swapping: Why Make Sense?</h2>
+<p>在过去</p>
+<ul>
+<li>内存很贵、很小</li>
+<li>希望运行程序总内存消耗可以 > 物理内存总数<ul>
+<li>内存不足的时候依然可以使用系统</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>在今天</p>
+<ul>
+<li>这个需求不那么强烈了<ul>
+<li>swapping 更像是一个让系统在高内存负载下不会 crash 的缓冲</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>但是 NVM (Non-Volatile Memory) 来了！<ul>
+<li><span class="green">与 DRAM 接近的吞吐率、更低的功耗、更好的性价比、巨大的容量</span></li>
+<li>但是，<span class="red">更高的延迟</span>，以及<span class="red">更短的寿命</span><ul>
+<li>A. Eisenman, et al. <a href="https://dl.acm.org/doi/10.1145/3190508.3190524">Reducing DRAM footprint with NVM in Facebook</a>. In <em>Proc. of EuroSys</em>, 2018.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="swapping">Swapping: 策略</h2>
+<blockquote>
+<p>Swapping 的策略设计：</p>
+<ul>
+<li>当我们的系统内存面临不足时，把哪些进程的哪些页面 swap out？</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>就像调度策略——Everything is about <em>prediction</em>.</p>
+<ul>
+<li>最优策略 (Belady's Algorithm)<ul>
+<li>swap out 未来最后使用的页面</li>
+<li>(如果我们能预测未来的话)<ul>
+<li>(以及公平性好像更难保证了……)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>实际：我们只要能近似准确地预测未来<ul>
+<li>内存不足时把未来大概率不使用的页面 swap out</li>
+<li>提前把可能使用的页面换入 (prefetch)</li>
+<li>page fault 时 swap in (进程才能继续执行)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="swapping">Swapping: 策略和实现</h2>
+<p>FIFO: First-In First-Out</p>
+<ul>
+<li>明显不太好——有些 “hot” 的页面 (代码/数据) 显然不该被 swap out</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>Random</p>
+<ul>
+<li>明显不太好——不小心就把重要的页面换出去了</li>
+</ul>
+</div>
+<div class="fragment">
+<hr></hr>
+<p>LRU (最近最少用，不错的预测)</p>
+<ul>
+<li>但不好实现 😂<ul>
+<li>注意 “LRU” 需要我们知道怎么 “use” 内存</li>
+<li>“use” 内存的方式是一条 load/store 指令！</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/pfnx86.png" width="640px"></img></p>
+<ul>
+<li>以及 NVM, AI, ... 的到来<ul>
+<li>可能会 fundamentally 改变计算机系统中的虚拟存储</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="oss-gift-1">虚拟存储: OS's Gift (1)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="shared-object">Shared Object 与外部符号</h2>
+<p>回顾还记得我们在代码课上的例子</p>
+<ul>
+<li>启动 1,000 个进程，加载 128 MiB 代码<ul>
+<li>page fault 时发现页面在内存中已经存在只读的物理拷贝</li>
+<li>直接映射 (保留唯一的物理页面) 即可</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<p>Shared object 想调用函数，那就得查表</p>
+<ul>
+<li><code>645: e8 c6 fe ff ff   callq 510 &lt;puts@plt&gt;</code></li>
+<li>如果我们 hack 一下表的地址...<ul>
+<li>用一个 wrapper 替代表里的函数，我们得到了什么？</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<hr></hr>
+<p>我们得到了 ltrace!</p>
+<ul>
+<li>ltrace 的行为是 “intercepts and records the dynamic library calls”<ul>
+<li>ltrace 的 log 比 strace 更 “高层”</li>
+<li>能观察到库函数一级的交互 (可能没有系统调用，例如 malloc)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="more-wrappers">More Wrappers...</h2>
+<p>如果两个动态链接库都定义了同一个变量……</p>
+<ul>
+<li><code>libc.so</code> - <code>printf</code></li>
+<li><code>libfoo.so</code> - <code>printf</code></li>
+</ul>
+<p>它们都被加载，会发生什么？</p>
+<ul>
+<li>“先到先得”<ul>
+<li>RTFM: ld.so (8); dlsym (3)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>在所库动态链接之前加载，是不是就可以 “劫持” 动态符号了？</p>
+<ul>
+<li>插桩 (instrumentation)/钩子 (hooking)</li>
+</ul>
+</blockquote>
+<p>我们的系统为我们提供了 <code>LD_PRELOAD</code> 环境变量</p>
+<ul>
+<li>加载器会 “preload” 其中的共享库</li>
+<li>使用 ldd (ld dependencies) 可以看到 <code>LD_PRELOAD</code> 生效<ul>
+<li>可以用来调试共享库等等</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ld_preload-hooking"><code>LD_PRELOAD</code> Hooking: 例子</h2>
+<p>例子：简易版 <a href="../static/wiki/os/2020/demos/lockdep.c">lockdep.c</a></p>
+<ul>
+<li>lockdep: 得到每个线程的 lock ordering 并检查是否存在 AB-BA<ul>
+<li>只考虑 <code>pthread_mutex_lock</code>/<code>pthread_mutex_unlock</code> </li>
+</ul>
+</li>
+<li>实现原理<ul>
+<li>先用 <code>LD_PRELOAD</code> 占坑</li>
+<li>程序中的 lock/unlock 将调用到我们预设的 hook<ul>
+<li>hook 是对实际 <code>pthread_mutex_lock/unlock</code> 的 wrapper</li>
+<li>但增加额外的记录</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>同理你可以 hook 任何其他库<ul>
+<li>malloc/free</li>
+<li>...</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>虚拟化部分的一个小结</p>
+<ul>
+<li>程序 = 状态机</li>
+<li>操作系统 = 状态机的管理者<ul>
+<li>用硬件 (物理状态机) 实现多个并发执行的虚拟状态机</li>
+</ul>
+</li>
+<li>虚拟存储 + 分页机制：一个美妙的礼物<ul>
+<li>可以用来做各种你们可能没有想象到的事情<ul>
+<li>hooking, copy-on-write, recovery, ...</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>尝试 <code>LD_PRELOAD</code> hooking</li>
+<li>准备下周的期中测验</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

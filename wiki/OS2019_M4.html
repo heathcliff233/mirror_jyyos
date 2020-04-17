@@ -70,7 +70,8 @@
 <h4 id="_6">获取实验代码与提交</h4>
 <p>本学期的所有代码(minilab, OSlab)都在同一个目录中完成。请参考<a href="OS2019_Code.html">代码获取与提交</a>。</p>
 <p>在你原先的os-workbench基础上，执行</p>
-<pre class="codehilite"><code class="language-bash">git pull origin M4</code></pre>
+<div class="codehilite"><pre><span></span>git pull origin M4
+</pre></div>
 
 
 <p>将本实验的框架代码下载到本地。在<code>crepl/</code>下编译能得到二进制文件<code>crepl-32</code>和<code>crepl-64</code>。</p>
@@ -95,11 +96,12 @@
 <p><strong>函数和表达式均可以调用之前定义过的函数</strong>，但不访问全局的状态。如果一行既不是函数，也不是表达式，<code>crepl</code>的行为未定义；重复定义重名函数行为未定义。你可以做出非常友好的假设——我们没有刁难你的测试用例，都和demo中的差不多。</p>
 <h3 id="_9">解释</h3>
 <p>你的输出不必和demo一致，只要在输入一行是表达式的前提下输出表达式的值即可，例如以下程序实现也是完全没问题的：</p>
-<pre class="codehilite"><code class="language-bash">$ ./crepl-64 &lt;&lt; EOF
-int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }
-gcd(256, 144) * gcd(56, 84)
-EOF
-[crepl] = 448.</code></pre>
+<div class="codehilite"><pre><span></span>$ ./crepl-64 <span class="s">&lt;&lt; EOF</span>
+<span class="s">int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }</span>
+<span class="s">gcd(256, 144) * gcd(56, 84)</span>
+<span class="s">EOF</span>
+<span class="o">[</span>crepl<span class="o">]</span> <span class="o">=</span> <span class="m">448</span>.
+</pre></div>
 
 
 <p>看起来很好玩吧，从前可能大家都觉得只有解释型的语言能这么做。但实际上，编译和解释并没有明确的边界——在openjdk的实现中，即便是“解释器”也是编译的(只是没有经过优化)；而传统的所谓解释型的语言，Python, JavaScript, ……都有编译到机器代码的过程。</p>
@@ -115,14 +117,16 @@ EOF
 <div class="fenced fenced-green">
 <h4 id="_10">检查外挂是否存在</h4>
 <p>JYY使用了pygmentize工具：</p>
-<pre class="codehilite"><code class="language-bash">echo 'int main() {}' | pygmentize -l c</code></pre>
+<div class="codehilite"><pre><span></span><span class="nb">echo</span> <span class="s1">&#39;int main() {}&#39;</span> <span class="p">|</span> pygmentize -l c
+</pre></div>
 
 
 <p>所以你的程序里可能会写：</p>
-<pre class="codehilite"><code class="language-c">if (pygmentize_exists()) {
-  // call pygmentize
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">if</span> <span class="p">(</span><span class="n">pygmentize_exists</span><span class="p">())</span> <span class="p">{</span>
+  <span class="c1">// call pygmentize</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但注意到操作系统里的进程是并发的。你可能在</p>
@@ -140,7 +144,8 @@ EOF
 </div>
 <h3 id="_13">函数的定义和加载</h3>
 <p>对于一个一行的函数，比如</p>
-<pre class="codehilite"><code class="language-c">int gcd(int a, int b) { return b ? gcd(b, a % b) : a; }</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">gcd</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">b</span> <span class="o">?</span> <span class="n">gcd</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span> <span class="o">:</span> <span class="n">a</span><span class="p">;</span> <span class="p">}</span>
+</pre></div>
 
 
 <p>我们可以把它写到一个临时文件里，比如<code>a.c</code>中，然后在命令行里调用<code>gcc -c a.c</code>，然后就能得到<code>a.o</code>，这里就包含了函数的代码，我们希望<strong>想办法把代码加载到本进程的地址空间中</strong>。</p>
@@ -157,21 +162,24 @@ EOF
 </div>
 <h3 id="_14">表达式的求值</h3>
 <p>对于一个表达式，我们也可以把它变成一个函数嘛！比如我们想求<code>gcd(256, 144)</code>，我们可以定义一个<strong>匿名</strong>的函数(也就是给它一个没有重名的名字)，比如</p>
-<pre class="codehilite"><code class="language-c">int __expr_wrap_123() {
-  return gcd(256, 144);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">__expr_wrap_123</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="n">gcd</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">144</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>换句话说，我们的临时文件好像是一个“模板”：</p>
-<pre class="codehilite"><code class="language-c">int __expr_wrap_XXX() {
-  return (EXPR);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">__expr_wrap_XXX</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">EXPR</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>我们只需要把这个函数编译，加载到当前进程的地址空间里，然后在当前进程里调用：</p>
-<pre class="codehilite"><code class="language-c">int (*func)() = func_lookup(cmd_id); // 查找XXX对应的函数
-int value = func(); // 通过函数指针调用
-printf(&quot;&gt;&gt; %s = %d.\n&quot;, cmd, value);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)()</span> <span class="o">=</span> <span class="n">func_lookup</span><span class="p">(</span><span class="n">cmd_id</span><span class="p">);</span> <span class="c1">// 查找XXX对应的函数</span>
+<span class="kt">int</span> <span class="n">value</span> <span class="o">=</span> <span class="n">func</span><span class="p">();</span> <span class="c1">// 通过函数指针调用</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;&gt;&gt; %s = %d.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+</pre></div>
 
 
 <p>至于<code>func_lookup</code>应该怎么实现呢？还记得每个二进制文件里都有很重要的一部分是<strong>符号表</strong>么？所有的函数都是一个符号，所以应该能根据符号查找到我们所需的内容。因此怎么调用<code>__expr_wrap_123()</code>这个问题就留给大家啦。</p>

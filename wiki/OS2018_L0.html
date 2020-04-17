@@ -90,7 +90,7 @@
 <p>因为编译到i386，所以需要32位的libc中的头文件。如果你是64位系统可能遇到编译通不过的情况，这时候你需要安装相应的库……你应该怎么安装呢？Google会告诉你答案。</p>
 </div>
 <p>代码里的主要文件有：</p>
-<pre class="codehilite"><code class="language-text">Makefile
+<div class="codehilite"><pre><span></span>Makefile
 git-commit.sh - Git追踪用脚本，相关代码请勿修改
 include/
   am.h - AM API
@@ -101,20 +101,23 @@ am/
   am-x86-qemu.a - AM API在x86上的实现
 build/ - 编译结果目录
 src/
-  main.c - 一小段测试代码，包含I/O设备使用的例子</code></pre>
+  main.c - 一小段测试代码，包含I/O设备使用的例子
+</pre></div>
 
 
 <p>所以操作系统实验很简单，就是写一个C程序——AM API利用底层硬件提供的<strong>机制</strong>，为C程序运行创建好了环境(代码、数据、堆栈、堆区)，然后C程序可以调用AM API (仍然是对底层硬件提供机制的封装)，来实现系统软件。</p>
 <p>哦对了，这次的Makefile里有的<code>SRCS = $(shell find src -name "*.c")</code>，你可以随意往里面添加<code>.c</code>文件，更像是一个真正的工程了。</p>
 <h3 id="_10">操作系统是如何运行的？</h3>
 <p>你依然困惑，C程序是怎么直接在计算机硬件上运行的？让我们向后退一步：任何程序都是编译、链接得到的。所以应该去观察Makefile，看看最后可执行文件是如何生成的。</p>
-<pre class="codehilite"><code class="language-bash">ld -melf_i386 -Ttext 0x00100000 -o kernel $(OBJS) am-x86-qemu.a
-cat mbr kernel &gt; os.img</code></pre>
+<div class="codehilite"><pre><span></span>ld -melf_i386 -Ttext 0x00100000 -o kernel <span class="k">$(</span>OBJS<span class="k">)</span> am-x86-qemu.a
+cat mbr kernel &gt; os.img
+</pre></div>
 
 
 <p>所以这里最重要的部分就是<code>os.img</code>：这是一个文件，它的前512字节是<code>mbr</code>文件，之后是<code>kernel</code>的二进制文件。这就是一个磁盘镜像。</p>
 <p>运行时，这个镜像文件会被传给QEMU，作为磁盘中的数据：</p>
-<pre class="codehilite"><code class="language-bash">qemu-system-i386 -serial stdio os.img</code></pre>
+<div class="codehilite"><pre><span></span>qemu-system-i386 -serial stdio os.img
+</pre></div>
 
 
 <p>这个命令相当于模拟了一台计算机，计算机的串口输出到Linux终端，并且磁盘(ATA0)用<code>os.img</code>模拟。系统启动后，MBR中的bootloader会负责创建好C语言运行的环境，将二进制文件kernel加载并运行——嗯，虽然是个看起来挺复杂的过程，但对操作系统来说，它只是想要C程序运行。</p>
@@ -135,8 +138,9 @@ cat mbr kernel &gt; os.img</code></pre>
 <p>关于详细的AM行为，请参考<a href="AMSPEC.html">AM Specifications</a>。</p>
 <h4 id="turing-machine">Turing Machine</h4>
 <p>Turing Machine的API非常简单：除了一个物理内存<code>_heap</code>表示了一段<math>[st, ed)</math>的内存之外，只有两个简单得不能再简单的函数：</p>
-<pre class="codehilite"><code class="language-c">void _putc(char ch);
-void _halt(int code);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">_putc</span><span class="p">(</span><span class="kt">char</span> <span class="n">ch</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">_halt</span><span class="p">(</span><span class="kt">int</span> <span class="n">code</span><span class="p">);</span>
+</pre></div>
 
 
 <p>但背后却是C程序如何在“裸机”上执行起来的过程，其中利用了很多计算机硬件为我们提供的<strong>机制</strong>。在此以x86-qemu为例讲述AM的实现：</p>
@@ -156,46 +160,48 @@ void _halt(int code);</code></pre>
 <p>当然I/O设备的实现就五花八门了。比如键盘就很简单——在x86里直接读写键盘控制器对应的端口就行。PCI Configuration Space其实也很简单，从别的地方偷个代码来就行。总的来说，硬件提供了足够的机制，能让我们访问各种I/O设备，这就够了：I/O Extension里的AM设备其实相当于为设备编写了驱动程序；而对于PCI/ATA这些设备，IOE只是做了最简单的控制寄存器级的封装，你还需要为它们编写驱动程序。</p>
 <h3 id="_11">实现游戏之前：实现库函数</h3>
 <p>我们的测试程序用到了函数：<code>int printf(const char *, ...);</code>。我们建议大家用AM API构造属于自己的libc中常用的库函数(我们只是建议，不要求全部实现，但你会体会到实现的好处的——比如你需要<code>printf</code>调试的时候，没办法在字符终端上打印真是太痛苦了)：</p>
-<pre class="codehilite"><code class="language-c">// string.h
-void *memset(void *b, int c, size_t n);
-void *memcpy(void *dst, const void *src, size_t n);
-size_t strlen(const char* s);
-char *strcpy(char *dst, const char *src);
-char *strncpy(char *dst, const char *src, size_t n);
-int strcmp(const char *s1, const char *s2);
-int strncmp(const char *s1, const char *s2, size_t n);
+<div class="codehilite"><pre><span></span><span class="c1">// string.h</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">memset</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">int</span> <span class="n">c</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">n</span><span class="p">);</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">memcpy</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">n</span><span class="p">);</span>
+<span class="kt">size_t</span> <span class="nf">strlen</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">s</span><span class="p">);</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">strcpy</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">);</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">strncpy</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">n</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">strcmp</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">s2</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">strncmp</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">s2</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">n</span><span class="p">);</span>
 
-// stdlib.h
-void srand(unsigned int seed);
-int rand();
+<span class="c1">// stdlib.h</span>
+<span class="kt">void</span> <span class="nf">srand</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">seed</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">rand</span><span class="p">();</span>
 
-// stdio.h
-int printf(const char* fmt, ...);
-int sprintf(char* out, const char* format, ...);
-int snprintf(char* s, size_t n, const char* format, ...);
+<span class="c1">// stdio.h</span>
+<span class="kt">int</span> <span class="nf">printf</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="p">...);</span>
+<span class="kt">int</span> <span class="nf">sprintf</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">out</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">format</span><span class="p">,</span> <span class="p">...);</span>
+<span class="kt">int</span> <span class="nf">snprintf</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">s</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">n</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">format</span><span class="p">,</span> <span class="p">...);</span>
 
-// assert.h
-#ifdef NDEBUG
-  #define assert(ignore) ((void)0)
-#else
-  #define assert(cond) \
-    do { \
-      if (!(cond)) { \
-        printf(&quot;Assertion fail at %s:%d\n&quot;, __FILE__, __LINE__); \
-        _halt(1); \
-      } \
-    } while (0)
-#endif</code></pre>
+<span class="c1">// assert.h</span>
+<span class="cp">#ifdef NDEBUG</span>
+  <span class="cp">#define assert(ignore) ((void)0)</span>
+<span class="cp">#else</span>
+  <span class="cp">#define assert(cond) \</span>
+<span class="cp">    do { \</span>
+<span class="cp">      if (!(cond)) { \</span>
+<span class="cp">        printf(&quot;Assertion fail at %s:%d\n&quot;, __FILE__, __LINE__); \</span>
+<span class="cp">        _halt(1); \</span>
+<span class="cp">      } \</span>
+<span class="cp">    } while (0)</span>
+<span class="cp">#endif</span>
+</pre></div>
 
 
 <p>实现这些最基本的库函数，以及一些你认为必要的数据结构(甚至可以实现<code>malloc</code>/<code>free</code>)，它们都能在你写游戏的时候帮到你，之后你写操作系统内核的时候，库函数也是用得上的。</p>
 <p>另外你也可以对设备访问做一些封装，这样就不用每次写出非常难看的代码用IOE API访问设备了：</p>
-<pre class="codehilite"><code>uint32_t uptime(); // 系统启动的时间(ms)
-int read_key(); // 读取一个按键
-void draw_rect(uint32_t *pixels, int x, int y, int w, int h); // 在屏幕上绘制
-void draw_sync(); // 同步屏幕
-int screen_width(); // 获得屏幕的宽度
-int screen_height(); // 获得屏幕的高度</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">uint32_t uptime(); // 系统启动的时间(ms)</span>
+<span class="err">int read_key(); // 读取一个按键</span>
+<span class="err">void draw_rect(uint32_t *pixels, int x, int y, int w, int h); // 在屏幕上绘制</span>
+<span class="err">void draw_sync(); // 同步屏幕</span>
+<span class="err">int screen_width(); // 获得屏幕的宽度</span>
+<span class="err">int screen_height(); // 获得屏幕的高度</span>
+</pre></div>
 
 
 <p>等实现了<code>printf</code>以后，就能正确运行我们的测试程序了(即便没有实现，也可以看到一部分运行的结果)：能看到屏幕上显示出“南大紫”的方块，以及系统中各个I/O设备的测试结果(即便<code>printf</code>只是输出格式字符串，也可以看到一定的效果)：</p>
@@ -208,16 +214,17 @@ int screen_height(); // 获得屏幕的高度</code></pre>
 </div>
 <h3 id="_13">最后：游戏是最简单的</h3>
 <p>游戏不过是个死循环：</p>
-<pre class="codehilite"><code class="language-c">next_frame = 0;
-while (1) {
-  while (uptime() &lt; next_frame) ; // 等待一帧的到来
-  while ((key = readkey()) != _KEY_NONE) {
-    kbd_event(key);         // 处理键盘事件
-  }
-  game_progress();          // 处理一帧游戏逻辑，更新物体的位置等
-  screen_update();          // 重新绘制屏幕
-  next_frame += 1000 / FPS; // 计算下一帧的时间
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">next_frame</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">uptime</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">next_frame</span><span class="p">)</span> <span class="p">;</span> <span class="c1">// 等待一帧的到来</span>
+  <span class="k">while</span> <span class="p">((</span><span class="n">key</span> <span class="o">=</span> <span class="n">readkey</span><span class="p">())</span> <span class="o">!=</span> <span class="n">_KEY_NONE</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">kbd_event</span><span class="p">(</span><span class="n">key</span><span class="p">);</span>         <span class="c1">// 处理键盘事件</span>
+  <span class="p">}</span>
+  <span class="n">game_progress</span><span class="p">();</span>          <span class="c1">// 处理一帧游戏逻辑，更新物体的位置等</span>
+  <span class="n">screen_update</span><span class="p">();</span>          <span class="c1">// 重新绘制屏幕</span>
+  <span class="n">next_frame</span> <span class="o">+=</span> <span class="mi">1000</span> <span class="o">/</span> <span class="n">FPS</span><span class="p">;</span> <span class="c1">// 计算下一帧的时间</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>大家见过的LiteNES和仙剑奇侠传，都是这样的循环。</p>

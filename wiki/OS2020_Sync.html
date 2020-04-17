@@ -87,33 +87,36 @@
 <li>导师：同学你等等我啊啊啊啊啊啊</li>
 </ul>
 <p>通常，实现忙等待 (spinning) 的同步 (等待) 通常都是非常简单的，你需要一个变量 <code>done</code>，然后不断询问条件是否发生即可。留意到这里有一个 “条件”——同步几乎总是 “等待某个条件发生”，也因此有了之后的条件变量。</p>
-<pre class="codehilite"><code class="language-c">int done[nworkers];
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">done</span><span class="p">[</span><span class="n">nworkers</span><span class="p">];</span>
 
-void worker(int tid) {
-  done[tid] = 1;
-  __sync_synchronize();
-}
+<span class="kt">void</span> <span class="nf">worker</span><span class="p">(</span><span class="kt">int</span> <span class="n">tid</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">done</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">__sync_synchronize</span><span class="p">();</span>
+<span class="p">}</span>
 
-int main() {
-  for (int tid = 0; tid &lt; nworkers; tid++)
-    while (!done[tid]);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">tid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">tid</span> <span class="o">&lt;</span> <span class="n">nworkers</span><span class="p">;</span> <span class="n">tid</span><span class="o">++</span><span class="p">)</span>
+    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done</span><span class="p">[</span><span class="n">tid</span><span class="p">]);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这个 trick 和我们之前实现互斥锁的非常像：用一个 <code>flag</code> 变量，<code>main_thread</code>不断地 spin 这个变量，直到读出它是 <code>1</code>。</p>
 <div markdown="1"><div class="fenced fenced-blue"><div>
 <h4 id="_1">还记得编译优化的故事吗？</h4>
 <p>我们又回来了：</p>
-<pre class="codehilite"><code>for (int i = 0; i &lt; N; i++)
-    sum++;</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">for (int i = 0; i &lt; N; i++)</span>
+<span class="err">    sum++;</span>
+</pre></div>
 
 
 <p>这么个简单的循环，在 <code>-O0</code>, <code>-O1</code>, <code>-O2</code> 的时候有截然不同的行为，那上面那个 spin loop…… 呢？</p>
 </div></div></div>
 
 <p>如果你定义 <code>int done[];</code>，gcc 会毫 (非) 不 (常) 客 (开) 气 (心) 地把这个循环优化成：</p>
-<pre class="codehilite"><code class="language-c">%eax = done[tid];
-while (%eax == 0) ;</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">%</span><span class="n">eax</span> <span class="o">=</span> <span class="n">done</span><span class="p">[</span><span class="n">tid</span><span class="p">];</span>
+<span class="k">while</span> <span class="p">(</span><span class="o">%</span><span class="n">eax</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">;</span>
+</pre></div>
 
 
 <p>也就是说，如果在循环开始前 <code>done[tid]</code> 还没有准备好，这个循环就陷入了死循环。这是因为编译器在进行优化时，是默认只有线程本地的数据流 (data flow) 的——如果假设有线程间的任意数据流，那么几乎任何优化都不正确了。</p>
@@ -128,12 +131,13 @@ while (%eax == 0) ;</code></pre>
 <h2 id="_2">条件变量</h2>
 <h3 id="_3">避免忙等待：条件变量</h3>
 <p>使用自旋虽然能正确解决同步问题，但仍然没有完美地解决好：为了等待 worker threads 的结束，主线程在一个 spin loop 里，白浪费了很多 CPU 资源。因此自然会想，如果库函数/操作系统能帮助我们实现这样的同步机制就好了——条件变量 (condition variables, CV)：</p>
-<pre class="codehilite"><code class="language-c">int pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *mutex);
-  // Unlock the specified mutex, wait for a condition, and relock the mutex.
-int pthread_cond_broadcast(pthread_cond_t *cond);
-  // Unblock all threads currently blocked on the specified condition variable.
-int pthread_cond_signal(pthread_cond_t *cond);
-  // Unblock at least one of the threads blocked on the specified condition variable.</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">pthread_cond_wait</span><span class="p">(</span><span class="n">pthread_cond_t</span> <span class="o">*</span><span class="p">,</span> <span class="n">pthread_mutex_t</span> <span class="o">*</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="c1">// Unlock the specified mutex, wait for a condition, and relock the mutex.</span>
+<span class="kt">int</span> <span class="nf">pthread_cond_broadcast</span><span class="p">(</span><span class="n">pthread_cond_t</span> <span class="o">*</span><span class="n">cond</span><span class="p">);</span>
+  <span class="c1">// Unblock all threads currently blocked on the specified condition variable.</span>
+<span class="kt">int</span> <span class="nf">pthread_cond_signal</span><span class="p">(</span><span class="n">pthread_cond_t</span> <span class="o">*</span><span class="n">cond</span><span class="p">);</span>
+  <span class="c1">// Unblock at least one of the threads blocked on the specified condition variable.</span>
+</pre></div>
 
 
 <p>教科书提供了非常详尽的条件变量解释，包括课堂上已经讲过的一些不能正确工作的例子。花一点时间理解这些例子，这是宝贵的并发编程经验——当然，比教科书更好的方式是用状态机 “证明” 程序的正确性 (或否定正确性)。这对于大家理解并发程序也是有很大好处的。状态机的视角帮助大家摆脱 “小作坊” 式的编程方式，正确性全靠运气，而是把程序正确与否的命运掌握在自己手中。</p>
@@ -158,34 +162,37 @@ int pthread_cond_signal(pthread_cond_t *cond);
 <div markdown="1"><div class="fenced fenced-green"><div>
 <h4 id="_1">想试试如何解决？</h4>
 <p>为了理解哲学家吃饭问题的难处，不妨考虑以下使用互斥锁的算法，它的 safety 没有问题——必须获得两把叉子的锁才能吃饭。但这个算法的 liveness 是由问题的。为什么？提示：所有哲学家同时拿起左手的叉子……</p>
-<pre class="codehilite"><code>// 为每一个叉子设置一把锁
-int philosopher(int id) {
-  mutex_lock(&locks[lhs(id)]);
-  mutex_lock(&locks[rhs(id)]);
-  ...
-  mutex_unlock(&locks[lhs(id)]);
-  mutex_unlock(&locks[rhs(id)]);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">// 为每一个叉子设置一把锁</span>
+<span class="err">int philosopher(int id) {</span>
+<span class="err">  mutex_lock(&locks[lhs(id)]);</span>
+<span class="err">  mutex_lock(&locks[rhs(id)]);</span>
+<span class="err">  ...</span>
+<span class="err">  mutex_unlock(&locks[lhs(id)]);</span>
+<span class="err">  mutex_unlock(&locks[rhs(id)]);</span>
+<span class="err">}</span>
+</pre></div>
 
 
 </div></div></div>
 
 <p>如果要实现正确的线程同步，不妨可以用以下 “万能” 手段。当一个线程需要同步，等待某件事发生时，我们用一个 while 循环 spin (类似于之前的忙等待，只是在条件不满足时会发生睡眠，不再浪费 CPU 时间执行)：</p>
-<pre class="codehilite"><code class="language-c">mutex_lock(&mutex);
-while (!cond) {
-  wait(&cv, &mutex);
-}
-assert(cond); // 顺序：while 循环退出时循环条件为假
-              // 并发：mutex 保证了 cond 检查和此处的原子性
-mutex_unlock(&mutex);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+<span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">cond</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">wait</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">,</span> <span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">assert</span><span class="p">(</span><span class="n">cond</span><span class="p">);</span> <span class="c1">// 顺序：while 循环退出时循环条件为假</span>
+              <span class="c1">// 并发：mutex 保证了 cond 检查和此处的原子性</span>
+<span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+</pre></div>
 
 
 <p>而当任何时候条件可能满足时，都小心地用互斥锁保护好条件的更新，并唤醒所有等待的线程 (注意是 broadcast; 如果只是 signal 唤醒一个线程，正确性是得不到保证的——可能被唤醒的线程恰好发现条件不满足，继续睡眠)：</p>
-<pre class="codehilite"><code class="language-c">// 当条件可能满足时
-mutex_lock(&mutex);
-// 更新 cond 相关的数据
-broadcast(&cv); // 唤醒所有等待的线程
-mutex_unlock(&mutex);</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// 当条件可能满足时</span>
+<span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+<span class="c1">// 更新 cond 相关的数据</span>
+<span class="n">broadcast</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">);</span> <span class="c1">// 唤醒所有等待的线程</span>
+<span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+</pre></div>
 
 
 <p>用这个万能的方法，实现哲 ♂ 学家吃饭问题就易如反掌了：</p>
@@ -212,22 +219,24 @@ mutex_unlock(&mutex);</code></pre>
 </ul>
 <p>信号量就是 “合三为一” 的线程同步手段。信号量也是一个结构体 <code>sem_t</code>，内部包含一个计数器 <code>count</code>，它的行为是：</p>
 <p>P (原子) 操作时，<code>count</code> 减 1，如果计数器数值小于零则线程睡眠等待。</p>
-<pre class="codehilite"><code class="language-c">void P(sem_t &sem) {
-  sem-&gt;count--;
-  if (sem-&gt;count &lt; 0) {
-    push(sem-&gt;queue, current);
-    suspend();
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">P</span><span class="p">(</span><span class="n">sem_t</span> <span class="o">&</span><span class="n">sem</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">sem</span><span class="o">-&gt;</span><span class="n">count</span><span class="o">--</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">count</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">push</span><span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">queue</span><span class="p">,</span> <span class="n">current</span><span class="p">);</span>
+    <span class="n">suspend</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>V (原子) 操作时，<code>count</code> 加 1，同时如果有正在睡眠的线程，则把睡眠的线程唤醒。</p>
-<pre class="codehilite"><code class="language-c">void V(sem_t &sem) {
-  sem-&gt;count++;
-  if (!empty(sem-&gt;queue)) {
-    wakeup(pop(sem-&gt;queue));
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">V</span><span class="p">(</span><span class="n">sem_t</span> <span class="o">&</span><span class="n">sem</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">sem</span><span class="o">-&gt;</span><span class="n">count</span><span class="o">++</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">empty</span><span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">queue</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">wakeup</span><span class="p">(</span><span class="n">pop</span><span class="p">(</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">queue</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-green"><div>
@@ -243,19 +252,20 @@ mutex_unlock(&mutex);</code></pre>
 <p><center><img alt="" src="../2018/img/sem.jpg.html"></img></center></p>
 <p>池子里的 “锁” 就是用来同步的资源。如果 <code>count</code> 的初始值为 1，我们可以直接把 P/V 当作互斥锁来使用——池子里只有一把锁，进入临界区必须取得锁，临界区结束后归还。</p>
 <p>信号量可以说是为生产者/消费者问题量身定制的同步原语 (<a href="../static/wiki/os/2020/demos/producer-consumer.c"><code>producer-consumer.c</code></a>)</p>
-<pre class="codehilite"><code class="language-c">#include &lt;threads.h&gt;
-sem_t fill, empty;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;threads.h&gt;</span><span class="cp"></span>
+<span class="n">sem_t</span> <span class="n">fill</span><span class="p">,</span> <span class="n">empty</span><span class="p">;</span>
 
-void producer() { while (1) { P(&empty); printf("("); V(&fill);  } }
-void consumer() { while (1) { P(&fill);  printf(")"); V(&empty); } }
+<span class="kt">void</span> <span class="nf">producer</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">);</span> <span class="n">printf</span><span class="p">(</span><span class="s">"("</span><span class="p">);</span> <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>  <span class="p">}</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">consumer</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>  <span class="n">printf</span><span class="p">(</span><span class="s">")"</span><span class="p">);</span> <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
 
-int main() {
-  SEM_INIT(fill,  0);
-  SEM_INIT(empty, 6);
-  for (int i = 0; i &lt; 4; i++) create(producer);
-  for (int i = 0; i &lt; 4; i++) create(consumer);
-  join(NULL);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">SEM_INIT</span><span class="p">(</span><span class="n">fill</span><span class="p">,</span>  <span class="mi">0</span><span class="p">);</span>
+  <span class="n">SEM_INIT</span><span class="p">(</span><span class="n">empty</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="n">create</span><span class="p">(</span><span class="n">producer</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="n">create</span><span class="p">(</span><span class="n">consumer</span><span class="p">);</span>
+  <span class="n">join</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这就搞定了！如果我们用刚才锁的池子的方式来理解，就是生产者必须从 <code>empty</code> 里取得一把锁，即保证缓冲区中有空位，然后向 <code>fill</code> 归还一把锁；而消费者则执行完全对称的操作，实现 <code>P(empty) -&gt; V(fill) -&gt; P(fill) -&gt; V(empty) -&gt; ...</code> 的生产-消费循环。同时因为池子里的锁总共只有 <math>n</math> 把，因此缓冲区操作总是成功。</p>
@@ -263,22 +273,23 @@ int main() {
 <h3 id="masterslave">信号量：实现 Master/Slave</h3>
 <p>信号量使用比较方便的场景像是 “不配对” 的互斥锁——请求的资源任何时候存在时，就使用 <code>V</code> 操作唤醒一个需要资源的线程；如果此时没有等待的线程，资源对应的 token 也会保留下载，下次需要资源的线程可以直接获得。</p>
 <p>例如，用信号量很容易实现课程上提到的 master/slave 结构，为每个线程设置一个 “放行” 的信号量，在发出请求后立即执行 <code>P</code> 操作等待这个信号量；在允许放行时执行 <code>V</code> 操作。无论双方谁先到达，都能正确实现同步。</p>
-<pre class="codehilite"><code class="language-c">void master() {
-  while (1) {
-    P(request);
-    req = dequeue(req_queue);
-    tid = schedule();
-    V(ready_to_go[tid]);
-  }
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">master</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">P</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+    <span class="n">req</span> <span class="o">=</span> <span class="n">dequeue</span><span class="p">(</span><span class="n">req_queue</span><span class="p">);</span>
+    <span class="n">tid</span> <span class="o">=</span> <span class="n">schedule</span><span class="p">();</span>
+    <span class="n">V</span><span class="p">(</span><span class="n">ready_to_go</span><span class="p">[</span><span class="n">tid</span><span class="p">]);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void slave(int tid) {
-  while (1) {
-    enqueue(req_queue, my_request);
-    P(read_to_go[tid]); // 如果不收到允许就不能执行
-    ...
-  }
-}</code></pre>
+<span class="kt">void</span> <span class="nf">slave</span><span class="p">(</span><span class="kt">int</span> <span class="n">tid</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">enqueue</span><span class="p">(</span><span class="n">req_queue</span><span class="p">,</span> <span class="n">my_request</span><span class="p">);</span>
+    <span class="n">P</span><span class="p">(</span><span class="n">read_to_go</span><span class="p">[</span><span class="n">tid</span><span class="p">]);</span> <span class="c1">// 如果不收到允许就不能执行</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在操作系统实验 (L2) 中，我们会自己动手实现自旋锁和信号量，并且在自己的操作系统中使用——很酷吧！先要把 kalloc/kfree 做对哦！</p>

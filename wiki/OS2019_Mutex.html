@@ -55,11 +55,13 @@
 <h2 id="_3">硬件层的互斥</h2>
 <h3 id="lock">LOCK指令</h3>
 <p>为了应对”顺序、原子性、可见性的丧失“，计算机硬件提供了能保证这三点的原子指令。在上一讲中我们已经介绍了x86处理器的LOCK prefix指令：</p>
-<pre class="codehilite"><code class="language-assembly">lock addl $1, (sum)</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">lock addl $1, (sum)</span>
+</pre></div>
 
 
 <p>就能实现多处理器之间的原子操作；</p>
-<pre class="codehilite"><code class="language-assembly">lock xchg %rax,(x)</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">lock xchg %rax,(x)</span>
+</pre></div>
 
 
 <p>就可以把RAX寄存器的值和x的值原子地交换。LOCK指令同时满足了顺序、原子性、可见性：LOCK保护的指令保证原子执行，即所有带LOCK的指令都能排出一个顺序，使得在一个LOCK指令之前所有指令的写值，在LOCK指令之后都可见。</p>
@@ -78,14 +80,15 @@
 </ul>
 <p><center><img alt="" src="../static/wiki/os/2019/img/ll-sc.png" width="500px" /></center></p>
 <p>我们很容易可以用LL/SC实现xchg/add/compare-and-swap:</p>
-<pre class="codehilite"><code class="language-c">int xchg(int *ptr, int newval) {
-  int oldval;
-  while (1) {
-    oldval = LL(ptr);
-    // 任何处理器本地计算，例如newval = oldval +1等
-    if (SC(ptr, newval) == SUCC) break;
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">xchg</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">ptr</span><span class="p">,</span> <span class="kt">int</span> <span class="n">newval</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">oldval</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">oldval</span> <span class="o">=</span> <span class="n">LL</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+    <span class="c1">// 任何处理器本地计算，例如newval = oldval +1等</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">SC</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">newval</span><span class="p">)</span> <span class="o">==</span> <span class="n">SUCC</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div class="fenced fenced-green">
@@ -98,19 +101,21 @@
 <p>原子指令和LL/SC实际上只提供了非常有限的并发控制——它们只能实现<strong>一个load和一个store</strong>的顺序、原子性和可见性。当我们希望实现更复杂的并发对象(例如并发的链表、散列表等)时，使用原子指令就非常复杂了。因此，我们希望能把原子指令扩展到任意长的代码。</p>
 </div>
 <p>借助硬件提供的机制，我们可以<strong>延长</strong>原子指令(或LL/SC)提供非常有限的临界区。我们实现能满足互斥的锁:</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk);
-void unlock(lock_t *lk);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+</pre></div>
 
 
 <p>其中任何一段代码，只要被同一个锁<code>lk</code>保护，就能获得顺序、原子性、可见性。</p>
 <p><center><img alt="" src="../static/wiki/os/2019/img/mutex-lock.png" width="500px" /></center></p>
 <p>用上一次课我们末尾时实现的“自旋”方式，就能实现互斥：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  while (atomic_xchg(&amp;lk-&gt;locked, 1)) ;
-}
-void unlock(lock_t *lk) {
-  atomic_xchg(&amp;lk-&gt;locked, 0);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但这个实现有个非常明显的问题：</p>
@@ -118,35 +123,38 @@ void unlock(lock_t *lk) {
 <p>在实际系统中，线程的数量是远远大于处理器的数量的。因此，多个线程必须共享处理器——这是由中断驱动的上下文切换实现的(请大家复习计算机系统基础课的PA)。因此，如果T1获得锁，但被切换到其他线程时，可能出现如上图所示的，所有处理器都在等待一个睡眠线程的情况。更严重地，还可能导致系统中的优先级反转。</p>
 <h3 id="stop-the-world">单处理器：Stop the World</h3>
 <p>为了实现互斥，我们不妨考虑简单一点的情况——我们只有一个处理器。既然罪魁祸首是中断驱动的上下文切换，不如我们直接关中断了事：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  cli();
-}
-void unlock(lock_t *lk) {
-  sti();
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">cli</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">sti</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>没错，关闭中断就相当于单处理器上的stop the world，实际上，在老旧的操作系统书上，关中断就是实现互斥的基本方法(而不是原子指令)。</p>
 <div class="fenced fenced-green">
 <h4 id="_6">何时开中断？</h4>
-<pre class="codehilite"><code class="language-c">lock(&amp;lk1);
-lock(&amp;lk2);
-unlock(&amp;lk2); // 1
-unlock(&amp;lk1); // 2</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk1</span><span class="p">);</span>
+<span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk2</span><span class="p">);</span>
+<span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk2</span><span class="p">);</span> <span class="c1">// 1</span>
+<span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk1</span><span class="p">);</span> <span class="c1">// 2</span>
+</pre></div>
 
 
 <p>在什么时候开中断？答案稍后揭晓。</p>
 </div>
 <h3 id="stop-the-world_1">多处理器：Stop the World + 自旋</h3>
 <p>我们把关中断和自旋结合起来，就能得到多处理器系统适用的方案了：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  cli();
-  while (atomic_xchg(&amp;lk-&gt;locked, 1)) ;
-}
-void unlock(lock_t *lk) {
-  atomic_xchg(&amp;lk-&gt;locked, 0);
-  sti();
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">cli</span><span class="p">();</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">sti</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div class="fenced fenced-green">
@@ -154,23 +162,24 @@ void unlock(lock_t *lk) {
 <p>先<code>cli</code>还是先自旋？先释放锁还是先<code>sti</code>？注意我们必须保证在获得锁期间处理器不会被中断。在<code>cli()</code>返回前的任意时刻，处理器都会被中断；在<code>sti()</code>后的一瞬间，处理器也可能被中断。</p>
 </div>
 <p>大家不妨考虑一下这个算法的正确性。在世界上只有一把锁的情况下，算法是没问题的。不过现实世界对锁的使用，要稍微考虑复杂一些的情形：</p>
-<pre class="codehilite"><code class="language-c">void case1() {
-  assert((read_eflags() &amp; FL_IF) == 0);
-  lock(&amp;lk):
-  unlock(&amp;lk);
-  assert((read_eflags() &amp; FL_IF) == 0);
-  // 上锁/解锁前后IF标志位不变，不得随意打开中断
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">case1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="p">)</span><span class="o">:</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="c1">// 上锁/解锁前后IF标志位不变，不得随意打开中断</span>
+<span class="p">}</span>
 
-void case2() {
-  assert((read_eflags() &amp; FL_IF) != 0); // 初始时中断打开
-  lock(&amp;lk1);
-  lock(&amp;lk2);
-  unlock(&amp;lk2);
-  assert((read_eflags() &amp; FL_IF) == 0); // 持有锁时不得开中断
-  unlock(&amp;lk1);
-  assert((read_eflags() &amp; FL_IF) != 0); // 在释放所有锁后开中断
-}</code></pre>
+<span class="kt">void</span> <span class="nf">case2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 初始时中断打开</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk1</span><span class="p">);</span>
+  <span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk2</span><span class="p">);</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk2</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 持有锁时不得开中断</span>
+  <span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk1</span><span class="p">);</span>
+  <span class="n">assert</span><span class="p">((</span><span class="n">read_eflags</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">FL_IF</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 在释放所有锁后开中断</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div class="fenced fenced-green">
@@ -200,28 +209,30 @@ void case2() {
 <p>自旋锁虽然保证了多处理器资源不会被完全浪费(在没有死锁的前提下，至少有一个处理器能一直执行)，但关中断对于长临界区来说是非常糟糕的一件事——一方面，中断丢失可能严重损害I/O性能，另一方面，一段互斥的代码本身就需要等待中断。</p>
 </div>
 <p>因此，我们希望在进入临界区后允许中断和线程切换，但同时不希望处理器在任何时候“空转”，即消除自旋。进一步想，假如某个线程执行<code>lock(&amp;lk)</code>已经获得了锁正在执行，此时另一个线程执行了<code>lock(&amp;lk)</code>但需要等待——这个等待预期的时间会比较长，因此与其不停地自旋，我们不如在自旋失败的时候，主动切换到其他线程执行：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  while (atomic_xchg(&amp;lk-&gt;locked, 1)) {
-    give_up_time_slice_and_yield(); // 切换    
-  }
-}
-void unlock(lock_t *lk) {
-  atomic_xchg(&amp;lk-&gt;locked, 0);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">give_up_time_slice_and_yield</span><span class="p">();</span> <span class="c1">// 切换    </span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但这还是不够好——如果等待锁的线程很多，轮着调度一遍也要花费很多的开销，我们不如做得彻底一点：</p>
-<pre class="codehilite"><code class="language-c">void lock(lock_t *lk) {
-  while (atomic_xchg(&amp;lk-&gt;locked, 1)) {
-    list_add(&amp;lk-&gt;list, myself);
-    give_up_processor();
-  }
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">list_add</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">list</span><span class="p">,</span> <span class="n">myself</span><span class="p">);</span>
+    <span class="n">give_up_processor</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void unlock(lock_t *lk) {
-  atomic_xchg(&amp;lk-&gt;locked, 0);
-  wake_up(list_remove(&amp;lk-&gt;list));
-}</code></pre>
+<span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">lock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">locked</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">wake_up</span><span class="p">(</span><span class="n">list_remove</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lk</span><span class="o">-&gt;</span><span class="n">list</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>如果lock调用失败，我们干脆不要自旋了，而是把自己加到一个等待的队列里，等到有人释放锁的时候再唤醒，这就好像是我们的lock/unlock不再直接粗暴地去抢这把锁的使用权，而是类似于游泳馆那样的管理方法，现在先假设游泳池同一时间只能容纳一个人：</p>

@@ -66,11 +66,13 @@
 <h2 id="_4">文件：存储设备虚拟化</h2>
 <p>我们需要一个抽象层，来更好地管理存储设备(和其他设备)。很自然地，CPU能虚拟化、内存能虚拟化，存储设备也一样能虚拟化！文件系统可以理解成是一种存储设备的虚拟化机制。</p>
 <p>所以让我们看一看磁盘。在设备驱动之上，磁盘可以看成是一个很长的字节序列(<code>uint8_t disk[DISK_CAP]</code>)。如果要把一个磁盘虚拟成多个磁盘，我们不妨让每一个虚拟磁盘都是一个可以变长的(相对较小)的字节序列：</p>
-<pre class="codehilite"><code class="language-c++">using vdisk_t = std::vector&lt;uint8_t&gt;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">using</span> <span class="n">vdisk_t</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span>
+</pre></div>
 
 
 <p>而“文件系统”就是管理系统中各种虚拟磁盘的机制，我们不妨把它实现成是一个“路径名”到“虚拟磁盘”的映射：</p>
-<pre class="codehilite"><code class="language-c++">using filesystem_t = std::map&lt;std::string, disk_t&gt;;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">using</span> <span class="n">filesystem_t</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">disk_t</span><span class="o">&gt;</span><span class="p">;</span>
+</pre></div>
 
 
 <p>让我们来重新认识一下我们熟悉的文件系统。例如我们熟悉的<code>/etc/apt/sources.list</code>文件。我们虽然很习惯地认为它是“根目录”下的“etc”目录下的“apt”目录下的一个名为“sources.list”的<strong>文件</strong>，但这的确不妨碍我们把它理解成一个名为<code>/etc/apt/sources.list</code>的<strong>虚拟存储设备</strong>(磁盘)，我们可以对这个虚拟磁盘中执行写入数据、扩展大小等操作。</p>

@@ -62,45 +62,48 @@
 <li>对象/类访问的成员 (或数组的下标)</li>
 </ul>
 <p>你可以将你的工具实现成命令行工具，用法同 <code>java</code> (你会在你的命令行工具中调用 java)：</p>
-<pre class="codehilite"><code class="language-text">$ jmtrace -jar something.jar &quot;hello world&quot; # jmtrace 用法用 java
+<div class="codehilite"><pre><span></span>$ jmtrace -jar something.jar &quot;hello world&quot; # jmtrace 用法用 java
 R 1032 b026324c6904b2a9 cn.edu.nju.ics.Foo.someField
 W 1031 e7df7cd2ca07f4f1 java.lang.Object[0]
 W 1031 e7df7cd2ca07f4f2 java.lang.Object[1]
-...</code></pre>
+...
+</pre></div>
 
 
 <p>你可以只输出 jar 包中类的内存访问日志，忽略库函数 (<code>java.lang</code>, <code>java.util</code> 等) 中的内存访问。</p>
 <h2 id="mtrace">实现 mtrace</h2>
 <p>不同于 ltrace (通过劫持 GOT 表中的跳转地址) 和 strace (使用操作系统提供的 ptrace 机制)，如果希望在更细的粒度上追踪程序的行为，通常需要对程序进行一些改写，即插桩 (program instrumentation)，例如，我们可以在源代码级进行插桩：</p>
-<pre class="codehilite"><code class="language-java">static void foo() {
-  int[] a = new int [10];
-  for (int i = 0; i &lt; a.length; i++) {
-    a[i] = 0;
-  }
-  SomeClass.staticField = 1;
-  someObj.otherField = someObj.field;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kd">static</span> <span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span><span class="o">[]</span> <span class="n">a</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span> <span class="o">[</span><span class="mi">10</span><span class="o">]</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">a</span><span class="p">.</span><span class="na">length</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">a</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">SomeClass</span><span class="p">.</span><span class="na">staticField</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">someObj</span><span class="p">.</span><span class="na">otherField</span> <span class="o">=</span> <span class="n">someObj</span><span class="p">.</span><span class="na">field</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>通过自动化的改写工具 (改写 AST 后再生成程序)，我们可以得到 “插桩” 后的版本： </p>
-<pre class="codehilite"><code class="language-java">static void foo() {
-  int[] a = new int [10];
-  for (int i = 0; i &lt; a.length; i++) {
-    int $t0 = 0;
-    a[i] = $t0;
-    mtrace.traceArrayWrite(a, i, $t0); // instrument added
-  }
+<div class="codehilite"><pre><span></span><span class="kd">static</span> <span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span><span class="o">[]</span> <span class="n">a</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span> <span class="o">[</span><span class="mi">10</span><span class="o">]</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">a</span><span class="p">.</span><span class="na">length</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">$t0</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">a</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">=</span> <span class="n">$t0</span><span class="p">;</span>
+    <span class="n">mtrace</span><span class="p">.</span><span class="na">traceArrayWrite</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">$t0</span><span class="p">);</span> <span class="c1">// instrument added</span>
+  <span class="p">}</span>
 
-  int $t1 = 1;
-  SomeClass.staticField = $t1;
-  mtrace.traceStaticWrite(SomeClass, &quot;staticField&quot;, $t1); // instrument added
+  <span class="kt">int</span> <span class="n">$t1</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">SomeClass</span><span class="p">.</span><span class="na">staticField</span> <span class="o">=</span> <span class="n">$t1</span><span class="p">;</span>
+  <span class="n">mtrace</span><span class="p">.</span><span class="na">traceStaticWrite</span><span class="p">(</span><span class="n">SomeClass</span><span class="p">,</span> <span class="s">&quot;staticField&quot;</span><span class="p">,</span> <span class="n">$t1</span><span class="p">);</span> <span class="c1">// instrument added</span>
 
-  SomeType $t2 = someObj.field;
-  mtrace.traceFieldRead(someObj, &quot;field&quot;, $t2); // instrument add
+  <span class="n">SomeType</span> <span class="n">$t2</span> <span class="o">=</span> <span class="n">someObj</span><span class="p">.</span><span class="na">field</span><span class="p">;</span>
+  <span class="n">mtrace</span><span class="p">.</span><span class="na">traceFieldRead</span><span class="p">(</span><span class="n">someObj</span><span class="p">,</span> <span class="s">&quot;field&quot;</span><span class="p">,</span> <span class="n">$t2</span><span class="p">);</span> <span class="c1">// instrument add</span>
 
-  someObj.otherField = $t2;
-  mtrace.traceFieldWrite(someObj, &quot;otherField&quot;, $t2); // instrument add
-}</code></pre>
+  <span class="n">someObj</span><span class="p">.</span><span class="na">otherField</span> <span class="o">=</span> <span class="n">$t2</span><span class="p">;</span>
+  <span class="n">mtrace</span><span class="p">.</span><span class="na">traceFieldWrite</span><span class="p">(</span><span class="n">someObj</span><span class="p">,</span> <span class="s">&quot;otherField&quot;</span><span class="p">,</span> <span class="n">$t2</span><span class="p">);</span> <span class="c1">// instrument add</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>可以看到，插桩前后程序的行为是完全一样的，但变量访问进行了一定的改写，并且在每次 field 或 array 读写之后都插入了一条 log。本质上，这是一种文本的替换，只是我们一般借助 AST 能简化这样的转换。插桩后的程序功能与原先程序等价，但可以输出额外的 trace log (在 <code>mtrace</code> 的方法中实现)。</p>

@@ -88,63 +88,70 @@
 <li><code>qemu-system</code> (全系统模拟器)</li>
 </ul>
 <p>如果你希望建立自己的 AbstractMachine 项目 (例如之后的 Hello World 例子) 或编译运行 AbstractMachine 代码中自带的例子 (microbench, fceux, litenes, ...)，需要先配置好 <code>AM_HOME</code> 环境变量 (请 STFW 什么是环境变量。可以用 <code>env</code> 命令查看当前的环境变量)，把它设置为 <code>os-workbench/abstract-machine</code> 目录的<strong>绝对路径</strong>：</p>
-<pre class="codehilite"><code class="language-bash">export AM_HOME=/.../os-workbench/abstract-machine</code></pre>
+<div class="codehilite"><pre><span></span><span class="nb">export</span> <span class="nv">AM_HOME</span><span class="o">=</span>/.../os-workbench/abstract-machine
+</pre></div>
 
 
 <p>你可以把这一行写在 <code>.bashrc</code>/<code>.zshrc</code> 中，使得不必每次打开终端都重新配置。如果你第一次使用 Linux，这会是一个比较痛苦的过程——你需要学习 Shell 有关的基础知识。请先阅读<a href="OS_Guide.html">生存指南</a>。</p>
 <h2 id="hello-abstractmachine">Hello, AbstractMachine</h2>
 <p>完成必要软件的安装和正确的 <code>AM_HOME</code> 配置后，我们就可以在 AbstractMachine 上编程了。在文件系统的任意目录中创建一个 <code>.c</code> 文件和 <code>Makefile</code> (参考 <code>man 3 stdarg</code>)：</p>
-<pre class="codehilite"><code class="language-c">// hello.c
-#include &lt;am.h&gt;
-#include &lt;stdarg.h&gt;
+<div class="codehilite"><pre><span></span><span class="c1">// hello.c</span>
+<span class="cp">#include</span> <span class="cpf">&lt;am.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdarg.h&gt;</span><span class="cp"></span>
 
-void print(const char *s, ...) {
-  va_list ap;
-  va_start(ap, s);
-  while (s) {
-    for (; *s; s ++) _putc(*s);
-    s = va_arg(ap, const char *);
-  }
-  va_end(ap);
-}
+<span class="kt">void</span> <span class="nf">print</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="p">...)</span> <span class="p">{</span>
+  <span class="kt">va_list</span> <span class="n">ap</span><span class="p">;</span>
+  <span class="n">va_start</span><span class="p">(</span><span class="n">ap</span><span class="p">,</span> <span class="n">s</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">(;</span> <span class="o">*</span><span class="n">s</span><span class="p">;</span> <span class="n">s</span> <span class="o">++</span><span class="p">)</span> <span class="n">_putc</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">);</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">va_arg</span><span class="p">(</span><span class="n">ap</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">va_end</span><span class="p">(</span><span class="n">ap</span><span class="p">);</span>
+<span class="p">}</span>
 
-int main(const char *args) {
-  print("\"", args, "\"", " from " __ISA__ " program!\n", NULL);
-  return 0;
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">print</span><span class="p">(</span><span class="s">"</span><span class="se">\"</span><span class="s">"</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="s">"</span><span class="se">\"</span><span class="s">"</span><span class="p">,</span> <span class="s">" from "</span> <span class="n">__ISA__</span> <span class="s">" program!</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
-<pre class="codehilite"><code class="language-Makefile"># Makefile
-NAME := hello
-SRCS := hello.c
-include $(AM_HOME)/Makefile.app # 复制粘贴 AbstractMachine 下的 Makefile</code></pre>
+<div class="codehilite"><pre><span></span><span class="c"># Makefile</span>
+<span class="nv">NAME</span> <span class="o">:=</span> hello
+<span class="nv">SRCS</span> <span class="o">:=</span> hello.c
+<span class="cp">include $(AM_HOME)/Makefile.app # 复制粘贴 AbstractMachine 下的 Makefile</span>
+</pre></div>
 
 
 <p>编译、链接、运行都是 AbstractMachine 中的代码帮忙搞定。用 <code>ARCH</code> 环境变量指定编译的目标体系结构：</p>
-<pre class="codehilite"><code>make ARCH=x86_64-qemu</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">make ARCH=x86_64-qemu</span>
+</pre></div>
 
 
 <p>会自动完成编译，得到 <code>build/</code> 目录下的若干文件：</p>
-<pre class="codehilite"><code class="language-text">build
+<div class="codehilite"><pre><span></span>build
 ├── hello-x86_64-qemu    // 可运行、包含 bootloader 等的磁盘镜像
 ├── hello-x86_64-qemu.o  // hello 项目的二进制文件
 └── x86_64-qemu
     ├── hello.d          // hello.c 依赖的头文件 (gcc -MMD 生成)
-    └── hello.o          // 编译 hello.c 得到的目标文件</code></pre>
+    └── hello.o          // 编译 hello.c 得到的目标文件
+</pre></div>
 
 
 <p>不妨用 <code>objdump -d</code> 命令查看 <code>hello-x86_64-qemu.o</code> 反汇编后的代码，是直接运行在裸机上的 C 程序代码，程序的入口是 <code>_start</code>。Makefile 也自带了运行功能，传入 <code>mainargs</code> 环境变量，即可将参数传递给 <code>main</code> 函数：</p>
-<pre class="codehilite"><code class="language-text">$ make run ARCH=x86_64-qemu mainargs="Hello World"
+<div class="codehilite"><pre><span></span>$ make run ARCH=x86_64-qemu mainargs="Hello World"
 ...
 "Hello World" from x86_64 program!
-CPU #0 Halt (00).</code></pre>
+CPU #0 Halt (00).
+</pre></div>
 
 
 <p>你可以尝试其他的 <code>ARCH</code> 环境变量：<code>x86-qemu</code>, <code>native</code>，在不同平台下运行。你也可以 export 默认的 <code>ARCH=x86_64-qemu</code>，避免每次键入。</p>
 <div markdown="1"><div class="fenced fenced-green"><div>
 <h4 id="__isa__">思考题：<code>__ISA__</code></h4>
 <p>这个宏不是 C 标准里定义的，那么是谁定义的？当我们设置不同的 <code>ARCH</code>，打印的 <code>__ISA__</code> 也各不相同。这一定是 Makefile 做的。怎么知道呢？UNIX 世界早就给我们提供了足够的工具来搞定这些日常琐事：</p>
-<pre class="codehilite"><code>find . -type f | xargs grep -ne __ISA__</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">find . -type f | xargs grep -ne __ISA__</span>
+</pre></div>
 
 
 <p>(请 RTFM 理解这个命令的含义)。我们能定位到 <code>Makefile.compile</code> 中的一行代码，将 <code>__ISA__</code> 的定义使用 gcc 的 <code>-D</code> 选项加入了 <code>CFLAGS</code>。</p>

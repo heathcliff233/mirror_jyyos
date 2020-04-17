@@ -266,27 +266,29 @@ open source operating systems</a>. In <em>Proc. of ESEC/FSE</em>, 2011.</li>
 <li>错误实现的 popcli</li>
 <li>不应该发生的 <code>_yield()</code></li>
 </ul>
-<pre class="codehilite"><code class="language-c">void os_run() {
-  spin_lock(&list_lock);
-  spin_lock(&xxx);
-  spin_unlock(&xxx); // ---------+
-}                          //    |
-                           //    |
-void on_interrupt() {      //    |
-  spin_lock(&list_lock);   // &lt;--+
-  spin_unlock(&list_lock);
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">os_run</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">list_lock</span><span class="p">);</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">xxx</span><span class="p">);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">xxx</span><span class="p">);</span> <span class="c1">// ---------+</span>
+<span class="p">}</span>                          <span class="c1">//    |</span>
+                           <span class="c1">//    |</span>
+<span class="kt">void</span> <span class="nf">on_interrupt</span><span class="p">()</span> <span class="p">{</span>      <span class="c1">//    |</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">list_lock</span><span class="p">);</span>   <span class="c1">// &lt;--+</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">list_lock</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="abba-deadlock">ABBA-Deadlock</h2>
-<pre class="codehilite"><code class="language-c">void obj_move(int i, int j) {
-  spin_lock(&lock[i]);
-  spin_lock(&lock[j]);
-  arr[i] = NULL;
-  arr[j] = arr[i];
-  spin_unlock(&lock[j]);
-  spin_unlock(&lock[i]);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">obj_move</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lock</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lock</span><span class="p">[</span><span class="n">j</span><span class="p">]);</span>
+  <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">arr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lock</span><span class="p">[</span><span class="n">j</span><span class="p">]);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lock</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="p">}</span>
+</pre></div>
 <div class="fragment">
 <p>上锁的顺序很重要……</p>
 <ul>
@@ -347,27 +349,28 @@ void on_interrupt() {      //    |
 <section>
 <div class="slide-container"><div class=""><h2 id="lock-ordering">Lock Ordering: 应用</h2>
 <p>按照正确的顺序上锁很重要……</p>
-<pre class="codehilite"><code class="language-c">/* Lock ordering in mm:
- * inode-&gt;i_mutex (while writing or truncating, not reading or faulting)
- *  mm-&gt;mmap_sem
- *   page-&gt;flags PG_locked (lock_page)
- *    hugetlbfs_i_mmap_rwsem_key (in huge_pmd_share)
- *     mapping-&gt;i_mmap_rwsem
- *      anon_vma-&gt;rwsem
- *       mm-&gt;page_table_lock or pte_lock
- *        pgdat-&gt;lru_lock (in mark_page_accessed, isolate_lru_page)
- *        swap_lock (in swap_duplicate, swap_info_get)
- *         mmlist_lock (in mmput, drain_mmlist and others)
- *         mapping-&gt;private_lock (in __set_page_dirty_buffers)
- *          mem_cgroup_{begin,end}_page_stat (memcg-&gt;move_lock)
- *           i_pages lock (widely used)
- *         inode-&gt;i_lock (in set_page_dirty's __mark_inode_dirty)
- *         bdi.wb-&gt;list_lock (in set_page_dirty's __mark_inode_dirty)
- *          sb_lock (within inode_lock in fs/fs-writeback.c)
- *          i_pages lock (widely used, in set_page_dirty,
- *               in arch-dependent flush_dcache_mmap_lock,
- *               within bdi.wb-&gt;list_lock in __sync_single_inode)
- */</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="cm">/* Lock ordering in mm:</span>
+<span class="cm"> * inode-&gt;i_mutex (while writing or truncating, not reading or faulting)</span>
+<span class="cm"> *  mm-&gt;mmap_sem</span>
+<span class="cm"> *   page-&gt;flags PG_locked (lock_page)</span>
+<span class="cm"> *    hugetlbfs_i_mmap_rwsem_key (in huge_pmd_share)</span>
+<span class="cm"> *     mapping-&gt;i_mmap_rwsem</span>
+<span class="cm"> *      anon_vma-&gt;rwsem</span>
+<span class="cm"> *       mm-&gt;page_table_lock or pte_lock</span>
+<span class="cm"> *        pgdat-&gt;lru_lock (in mark_page_accessed, isolate_lru_page)</span>
+<span class="cm"> *        swap_lock (in swap_duplicate, swap_info_get)</span>
+<span class="cm"> *         mmlist_lock (in mmput, drain_mmlist and others)</span>
+<span class="cm"> *         mapping-&gt;private_lock (in __set_page_dirty_buffers)</span>
+<span class="cm"> *          mem_cgroup_{begin,end}_page_stat (memcg-&gt;move_lock)</span>
+<span class="cm"> *           i_pages lock (widely used)</span>
+<span class="cm"> *         inode-&gt;i_lock (in set_page_dirty's __mark_inode_dirty)</span>
+<span class="cm"> *         bdi.wb-&gt;list_lock (in set_page_dirty's __mark_inode_dirty)</span>
+<span class="cm"> *          sb_lock (within inode_lock in fs/fs-writeback.c)</span>
+<span class="cm"> *          i_pages lock (widely used, in set_page_dirty,</span>
+<span class="cm"> *               in arch-dependent flush_dcache_mmap_lock,</span>
+<span class="cm"> *               within bdi.wb-&gt;list_lock in __sync_single_inode)</span>
+<span class="cm"> */</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">你大约察觉了……</h2>
@@ -527,12 +530,13 @@ void on_interrupt() {      //    |
 <p>想糊弄？糊弄不过去的。</p>
 </blockquote>
 <p>来构造 kalloc 的 workload 吧！</p>
-<pre class="codehilite"><code class="language-c">void os_run() {
-  while (1) {
-    pmm-&gt;alloc(random_size());
-    // Insufficient: pmm-&gt;alloc(32);
-  }
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">os_run</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="n">random_size</span><span class="p">());</span>
+    <span class="c1">// Insufficient: pmm-&gt;alloc(32);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="workload-kalloc">创建合理的 Workload: <code>kalloc</code></h2>
@@ -541,17 +545,18 @@ void on_interrupt() {      //    |
 <li>为每一种分配大小 <math class="inline-math">(2^{i-1} + 1) \ldots 2^{i}</math> 设置概率</li>
 <li>频繁的小内存分配、频繁的大内存分配 (4 KiB)、混合的内存分配……</li>
 </ul>
-<pre class="codehilite"><code class="language-c">struct workload {
-  int prob[N], sum; // sum = prob[0] + prob[1] + ... prob[N-1]
-                    // roll(0, sum-1) =&gt; allocation size
-};
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">workload</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">prob</span><span class="p">[</span><span class="n">N</span><span class="p">],</span> <span class="n">sum</span><span class="p">;</span> <span class="c1">// sum = prob[0] + prob[1] + ... prob[N-1]</span>
+                    <span class="c1">// roll(0, sum-1) =&gt; allocation size</span>
+<span class="p">};</span>
 
-static struct workload
-  wl_typical = {.prob = {10,0,0, 40, 50, 40,30,20,10,4,2,1} },
-  wl_stress  = {.prob = { 1,0,0,400,200,100, 1, 1, 1,1,1,1} },
-  wl_page    = {.prob = {10,0,0,  1,  1,  1, 1, 1, 1,1,1,1} }
-;
-static struct workload *workload = &wl_typical;</code></pre></div></div>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">workload</span>
+  <span class="n">wl_typical</span> <span class="o">=</span> <span class="p">{.</span><span class="n">prob</span> <span class="o">=</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">}</span> <span class="p">},</span>
+  <span class="n">wl_stress</span>  <span class="o">=</span> <span class="p">{.</span><span class="n">prob</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">400</span><span class="p">,</span><span class="mi">200</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">}</span> <span class="p">},</span>
+  <span class="n">wl_page</span>    <span class="o">=</span> <span class="p">{.</span><span class="n">prob</span> <span class="o">=</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">}</span> <span class="p">}</span>
+<span class="p">;</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">workload</span> <span class="o">*</span><span class="n">workload</span> <span class="o">=</span> <span class="o">&</span><span class="n">wl_typical</span><span class="p">;</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="workload-kfree">创建合理的 Workload: <code>kfree</code></h2>
@@ -639,25 +644,26 @@ static struct workload *workload = &wl_typical;</code></pre></div></div>
 <li>kalloc(<math>s</math>) 返回的 <math>[l, r)</math> 满足 <math>[l, r) \cap S = \varnothing</math></li>
 <li>如果实现了 thread-local allocation + 并发的 free，其实很容易弄错</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void *wl_kalloc(size_t size) {
-  u32 *arr = kalloc(size);
-  if (arr) {
-    for (int i = 0; (i + 1) * sizeof(u32) &lt;= size) {
-      panic_on(arr[i] == MAGIC, "double-allocation");
-      arr[i] = MAGIC;
-    }
-  }
-  return arr;
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">wl_kalloc</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">u32</span> <span class="o">*</span><span class="n">arr</span> <span class="o">=</span> <span class="n">kalloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">panic_on</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">MAGIC</span><span class="p">,</span> <span class="s">"double-allocation"</span><span class="p">);</span>
+      <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">MAGIC</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">arr</span><span class="p">;</span>
+<span class="p">}</span>
 
-void wl_kfree(void *ptr) {
-  u32 *arr = ptr;
-  for (int i = 0; (i + 1) * sizeof(u32) &lt;= size) { // Compile Error
-    panic_on(arr[i] == 0, "double-free");
-    arr[i] = 0;
-  }
-  kfree(ptr);
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">wl_kfree</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">u32</span> <span class="o">*</span><span class="n">arr</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// Compile Error</span>
+    <span class="n">panic_on</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s">"double-free"</span><span class="p">);</span>
+    <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">kfree</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="buffer-overrun">更多的检查: Buffer Overrun</h2>
@@ -676,31 +682,32 @@ void wl_kfree(void *ptr) {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="canary">Canary 的例子：保护内核栈</h2>
-<pre class="codehilite"><code class="language-c">#define MAGIC 0x5a5aa5a5
-typedef u32 canary_t[N];
+<div class="codehilite"><pre><span></span><span class="cp">#define MAGIC 0x5a5aa5a5</span>
+<span class="k">typedef</span> <span class="n">u32</span> <span class="n">canary_t</span><span class="p">[</span><span class="n">N</span><span class="p">];</span>
 
-struct kernel_stack {
-  canary_t __c1;
-  char data[4096 - sizeof(canary_t) * 2];
-  canary_t __c2;
-} __attribute__((packed));
+<span class="k">struct</span> <span class="n">kernel_stack</span> <span class="p">{</span>
+  <span class="n">canary_t</span> <span class="n">__c1</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="n">data</span><span class="p">[</span><span class="mi">4096</span> <span class="o">-</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">canary_t</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">];</span>
+  <span class="n">canary_t</span> <span class="n">__c2</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">));</span>
 
-void canary_init(canary_t *c) {
-  for (int i = 0; i &lt; N; i++) (*c)[i] = MAGIC;
-}
-void canary_check(canary_t *c, const char *msg) {
-  for (int i = 0; i &lt; N; i++) panic_on((*c)[i] != MAGIC, msg);
-}
+<span class="kt">void</span> <span class="nf">canary_init</span><span class="p">(</span><span class="n">canary_t</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="n">c</span><span class="p">)[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">MAGIC</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">canary_check</span><span class="p">(</span><span class="n">canary_t</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="n">panic_on</span><span class="p">((</span><span class="o">*</span><span class="n">c</span><span class="p">)[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">MAGIC</span><span class="p">,</span> <span class="n">msg</span><span class="p">);</span>
+<span class="p">}</span>
 
-void kstack_check(struct kernel_stack *stk) {
-  canary_check(&stk-&gt;__c1, "kernel stack overflow");
-  canary_check(&stk-&gt;__c2, "kernel stack underflow");
-}
+<span class="kt">void</span> <span class="nf">kstack_check</span><span class="p">(</span><span class="k">struct</span> <span class="n">kernel_stack</span> <span class="o">*</span><span class="n">stk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">canary_check</span><span class="p">(</span><span class="o">&</span><span class="n">stk</span><span class="o">-&gt;</span><span class="n">__c1</span><span class="p">,</span> <span class="s">"kernel stack overflow"</span><span class="p">);</span>
+  <span class="n">canary_check</span><span class="p">(</span><span class="o">&</span><span class="n">stk</span><span class="o">-&gt;</span><span class="n">__c2</span><span class="p">,</span> <span class="s">"kernel stack underflow"</span><span class="p">);</span>
+<span class="p">}</span>
 
-void kstack_init(struct kernel_stack *stk) {
-  canary_init(&stk-&gt;__c1);
-  canary_init(&stk-&gt;__c2);
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">kstack_init</span><span class="p">(</span><span class="k">struct</span> <span class="n">kernel_stack</span> <span class="o">*</span><span class="n">stk</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">canary_init</span><span class="p">(</span><span class="o">&</span><span class="n">stk</span><span class="o">-&gt;</span><span class="n">__c1</span><span class="p">);</span>
+  <span class="n">canary_init</span><span class="p">(</span><span class="o">&</span><span class="n">stk</span><span class="o">-&gt;</span><span class="n">__c2</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">烫烫烫和屯屯屯</h2>
@@ -712,11 +719,12 @@ void kstack_init(struct kernel_stack *stk) {
 <li>对象头尾: <code>0xfdfdfdfd</code></li>
 <li>已回收内存: <code>0xdddddddd</code></li>
 </ul>
-<pre class="codehilite"><code class="language-text">python3
+<div class="codehilite"><pre><span></span>python3
 &gt;&gt;&gt; (b'\xcc' * 80).decode('gb2312')
 '烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫烫'
 &gt;&gt;&gt; (b'\xcd' * 80).decode('gb2312')
-'屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯'</code></pre>
+'屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯屯'
+</pre></div>
 
 
 <blockquote>

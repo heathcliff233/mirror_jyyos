@@ -377,15 +377,16 @@
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="fork-bomb">代码解析: Fork Bomb</h2>
-<pre class="codehilite"><code class="language-bash">:(){:|:&};:   # 刚才的一行版本
+<div class="codehilite"><pre><span></span>:<span class="o">(){</span>:<span class="p">|</span>:<span class="p">&</span><span class="o">}</span><span class="p">;</span>:   <span class="c1"># 刚才的一行版本</span>
 
-:() {         # 格式化一下
-  : | : &
-}; :
+:<span class="o">()</span> <span class="o">{</span>         <span class="c1"># 格式化一下</span>
+  : <span class="p">|</span> : <span class="p">&</span>
+<span class="o">}</span><span class="p">;</span> :
 
-fork() {      # bash: 允许冒号作为标识符……
-  fork | fork &
-}; fork</code></pre>
+fork<span class="o">()</span> <span class="o">{</span>      <span class="c1"># bash: 允许冒号作为标识符……</span>
+  fork <span class="p">|</span> fork <span class="p">&</span>
+<span class="o">}</span><span class="p">;</span> fork
+</pre></div>
 
 
 <p><img alt="" class="center" src="../static/wiki/os/2019/img/fork-bomb.png" width="300px"></img></p></div></div>
@@ -396,7 +397,7 @@ fork() {      # bash: 允许冒号作为标识符……
 <ul>
 <li>因此有了进程树 (pstree)</li>
 </ul>
-<pre class="codehilite"><code class="language-text">systemd(1)─┬─ModemManager(924)─┬─{ModemManager}(992)
+<div class="codehilite"><pre><span></span>systemd(1)─┬─ModemManager(924)─┬─{ModemManager}(992)
            │                   └─{ModemManager}(1026)
            ├─NetworkManager(1008)─┬─{NetworkManager}(1252)
            │                      └─{NetworkManager}(1257)
@@ -409,7 +410,8 @@ fork() {      # bash: 允许冒号作为标识符……
            ├─dbus-daemon(928)
            ...
            ├─sshd(1562)───sshd(27620)───sshd(27702)───zsh(27703)...
-           ...</code></pre></div></div>
+           ...
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="fork-1">理解 fork: 习题 (1)</h2>
@@ -421,10 +423,11 @@ fork() {      # bash: 允许冒号作为标识符……
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">pid_t pid1 = fork();
-pid_t pid2 = fork();
-pid_t pid3 = fork();
-printf("Hello World from (%d, %d, %d)\n", pid1, pid2, pid3);</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">pid_t</span> <span class="n">pid1</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="kt">pid_t</span> <span class="n">pid2</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="kt">pid_t</span> <span class="n">pid3</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">"Hello World from (%d, %d, %d)</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">pid1</span><span class="p">,</span> <span class="n">pid2</span><span class="p">,</span> <span class="n">pid3</span><span class="p">);</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="fork-2">理解 fork: 习题 (2)</h2>
@@ -435,14 +438,15 @@ printf("Hello World from (%d, %d, %d)\n", pid1, pid2, pid3);</code></pre></div><
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">#define n 2
+<div class="codehilite"><pre><span></span><span class="cp">#define n 2</span>
 
-int main() {
-  for (int i = 0; i &lt; n; i++) {
-    fork();
-    printf("Hello\n");
-  }
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fork</span><span class="p">();</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"Hello</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <blockquote>
@@ -473,9 +477,10 @@ int main() {
 </ul>
 <hr></hr>
 <p>这刚好对应了<code>main()</code>的参数</p>
-<pre class="codehilite"><code class="language-c">int main(int argc, char **argv, char **envp) {
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">envp</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 <ul>
 <li><a href="../static/wiki/os/2019/demos/execve-demo.c">execve-demo.c</a></li>
@@ -506,18 +511,20 @@ int main() {
 <ul>
 <li>还记得 gcc 的 strace 结果吗？</li>
 </ul>
-<pre class="codehilite"><code class="language-text">[pid 28369] execve("/usr/local/sbin/as", ["as", "--64", ...
+<div class="codehilite"><pre><span></span>[pid 28369] execve("/usr/local/sbin/as", ["as", "--64", ...
 [pid 28369] execve("/usr/local/bin/as", ["as", "--64", ...
 [pid 28369] execve("/usr/sbin/as", ["as", "--64", ...
-[pid 28369] execve("/usr/bin/as", ["as", "--64", ...</code></pre>
+[pid 28369] execve("/usr/bin/as", ["as", "--64", ...
+</pre></div>
 
 
 <ul>
 <li>这个搜索顺序恰好是 <code>PATH</code> 里指定的顺序</li>
 </ul>
-<pre class="codehilite"><code class="language-text">$ PATH="" /usr/bin/gcc fork-demo.c
+<div class="codehilite"><pre><span></span>$ PATH="" /usr/bin/gcc fork-demo.c
 gcc: error trying to exec 'as': execvp: No such file or directory
-$ PATH="/usr/bin/" gcc fork-demo.c</code></pre>
+$ PATH="/usr/bin/" gcc fork-demo.c
+</pre></div>
 
 
 <blockquote>

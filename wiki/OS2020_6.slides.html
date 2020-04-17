@@ -90,20 +90,21 @@
 <ul>
 <li>为什么讲链表？——操作系统中非常常用</li>
 </ul>
-<pre class="codehilite"><code class="language-c">typedef struct node {
-  void *ptr;
-  struct node *prev, *next;
-} node_t;
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">node</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">node</span> <span class="o">*</span><span class="n">prev</span><span class="p">,</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">node_t</span><span class="p">;</span>
 
-node_t head; // 注意不是指针
+<span class="n">node_t</span> <span class="n">head</span><span class="p">;</span> <span class="c1">// 注意不是指针</span>
 
-void list_init(node_t *head) {
-  head-&gt;prev = head-&gt;next = head;
-}
+<span class="kt">void</span> <span class="nf">list_init</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">head</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">head</span><span class="o">-&gt;</span><span class="n">prev</span> <span class="o">=</span> <span class="n">head</span><span class="o">-&gt;</span><span class="n">next</span> <span class="o">=</span> <span class="n">head</span><span class="p">;</span>
+<span class="p">}</span>
 
-void list_insert_before(node_t *node, node_t *new) { TODO(); }
-void list_insert_after (node_t *node, node_t *new) { TODO(); }
-void list_remove(node_t *node) { TODO(); }</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">list_insert_before</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">,</span> <span class="n">node_t</span> <span class="o">*</span><span class="n">new</span><span class="p">)</span> <span class="p">{</span> <span class="n">TODO</span><span class="p">();</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">list_insert_after</span> <span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">,</span> <span class="n">node_t</span> <span class="o">*</span><span class="n">new</span><span class="p">)</span> <span class="p">{</span> <span class="n">TODO</span><span class="p">();</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">list_remove</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">)</span> <span class="p">{</span> <span class="n">TODO</span><span class="p">();</span> <span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="1">编程建议 (1): 试试白板 (纸)</h2>
@@ -120,36 +121,38 @@ void list_remove(node_t *node) { TODO(); }</code></pre></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="2">编程建议 (2): 不言自明、不言自证</h2>
-<pre class="codehilite"><code class="language-c">void list_remove(node_t *node) {
-  // 中文搜索关键字 “双向链表 删除” 第一个回答
-  node-&gt;prev-&gt;next = node-&gt;next;
-  node-&gt;next-&gt;prev = node-&gt;prev;
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">list_remove</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 中文搜索关键字 “双向链表 删除” 第一个回答</span>
+  <span class="n">node</span><span class="o">-&gt;</span><span class="n">prev</span><span class="o">-&gt;</span><span class="n">next</span> <span class="o">=</span> <span class="n">node</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span>
+  <span class="n">node</span><span class="o">-&gt;</span><span class="n">next</span><span class="o">-&gt;</span><span class="n">prev</span> <span class="o">=</span> <span class="n">node</span><span class="o">-&gt;</span><span class="n">prev</span><span class="p">;</span>
+<span class="p">}</span>
 
-// -------------------- v.s. --------------------
+<span class="c1">// -------------------- v.s. --------------------</span>
 
-static inline void list_check(node_t *node) {
-  assert(node == node-&gt;prev-&gt;next); // circular list's offer
-  assert(node == node-&gt;next-&gt;prev);
-}
+<span class="k">static</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">list_check</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">node</span> <span class="o">==</span> <span class="n">node</span><span class="o">-&gt;</span><span class="n">prev</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">);</span> <span class="c1">// circular list's offer</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">node</span> <span class="o">==</span> <span class="n">node</span><span class="o">-&gt;</span><span class="n">next</span><span class="o">-&gt;</span><span class="n">prev</span><span class="p">);</span>
+<span class="p">}</span>
 
-void list_remove(node_t *node) {
-  node_t *prev = node-&gt;prev;
-  node_t *next = node-&gt;next;
-  assert(node != prev   // defensive
-      && node != next); // more checks than necessary
-                        // may find bugs in other parts of the system
-  prev-&gt;next = next;
-  next-&gt;prev = prev; // possibly prev == next
-  list_check(prev); list_check(next);
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">list_remove</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">node_t</span> <span class="o">*</span><span class="n">prev</span> <span class="o">=</span> <span class="n">node</span><span class="o">-&gt;</span><span class="n">prev</span><span class="p">;</span>
+  <span class="n">node_t</span> <span class="o">*</span><span class="n">next</span> <span class="o">=</span> <span class="n">node</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">node</span> <span class="o">!=</span> <span class="n">prev</span>   <span class="c1">// defensive</span>
+      <span class="o">&&</span> <span class="n">node</span> <span class="o">!=</span> <span class="n">next</span><span class="p">);</span> <span class="c1">// more checks than necessary</span>
+                        <span class="c1">// may find bugs in other parts of the system</span>
+  <span class="n">prev</span><span class="o">-&gt;</span><span class="n">next</span> <span class="o">=</span> <span class="n">next</span><span class="p">;</span>
+  <span class="n">next</span><span class="o">-&gt;</span><span class="n">prev</span> <span class="o">=</span> <span class="n">prev</span><span class="p">;</span> <span class="c1">// possibly prev == next</span>
+  <span class="n">list_check</span><span class="p">(</span><span class="n">prev</span><span class="p">);</span> <span class="n">list_check</span><span class="p">(</span><span class="n">next</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="list-head-from-linux-kernel">List Head (from Linux Kernel)</h2>
 <p><span class="red">嵌入在其他对象 (数据结构)</span> 中的双向循环链表</p>
-<pre class="codehilite"><code class="language-c">struct list_head {
-  struct list_head *next, *prev;
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">list_head</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">list_head</span> <span class="o">*</span><span class="n">next</span><span class="p">,</span> <span class="o">*</span><span class="n">prev</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <ul>
@@ -167,10 +170,11 @@ void list_remove(node_t *node) {
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">struct task {
-  struct list_head wait_queue; // for mutex
-  struct list_head task_list;  // for procfs
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">task</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">list_head</span> <span class="n">wait_queue</span><span class="p">;</span> <span class="c1">// for mutex</span>
+  <span class="k">struct</span> <span class="n">list_head</span> <span class="n">task_list</span><span class="p">;</span>  <span class="c1">// for procfs</span>
+<span class="p">};</span>
+</pre></div>
 <div class="fragment">
 <hr></hr>
 <p>内存友好</p>
@@ -182,21 +186,23 @@ void list_remove(node_t *node) {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="list-head">List Head: 使用</h2>
-<pre class="codehilite"><code class="language-c">struct task {
-  ...
-  struct list_head wait_queue;
-  ...
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">task</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="k">struct</span> <span class="n">list_head</span> <span class="n">wait_queue</span><span class="p">;</span>
+  <span class="p">...</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>从 <code>struct list_head</code> 到 <code>struct task</code>:</p>
-<pre class="codehilite"><code class="language-c">#define list_entry(ptr, type, member) \
-  ((type *) \
-    ( (char *)(ptr) - (uintptr_t)(&((type *)0)-&gt;member) ) \
-  )
+<div class="codehilite"><pre><span></span><span class="cp">#define list_entry(ptr, type, member) \</span>
+<span class="cp">  ((type *) \</span>
+<span class="cp">    ( (char *)(ptr) - (uintptr_t)(&((type *)0)-&gt;member) ) \</span>
+<span class="cp">  )</span>
 
-// ptr to struct list_head
-struct task *task = list_entry(ptr, struct task, wait_queue);</code></pre></div></div>
+<span class="c1">// ptr to struct list_head</span>
+<span class="k">struct</span> <span class="n">task</span> <span class="o">*</span><span class="n">task</span> <span class="o">=</span> <span class="n">list_entry</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="k">struct</span> <span class="n">task</span><span class="p">,</span> <span class="n">wait_queue</span><span class="p">);</span>
+</pre></div></div></div>
 </section>
 </section>
 
@@ -232,10 +238,11 @@ struct task *task = list_entry(ptr, struct task, wait_queue);</code></pre></div>
 <ul>
 <li>系统中可能有不止一种类型的锁</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void you_did_it_1() { lock(&a); lock(&a); ... }
-void you_did_it_2() { lock(&a); lock(&b); ... }
-void you_did_it_3() { lock(&b); lock(&a); ... }
-void you_did_it_4() { lock(&a); ... if (...) return; ... unlock(&a); }</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">you_did_it_1</span><span class="p">()</span> <span class="p">{</span> <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">a</span><span class="p">);</span> <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">a</span><span class="p">);</span> <span class="p">...</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">you_did_it_2</span><span class="p">()</span> <span class="p">{</span> <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">a</span><span class="p">);</span> <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">b</span><span class="p">);</span> <span class="p">...</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">you_did_it_3</span><span class="p">()</span> <span class="p">{</span> <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">b</span><span class="p">);</span> <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">a</span><span class="p">);</span> <span class="p">...</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">you_did_it_4</span><span class="p">()</span> <span class="p">{</span> <span class="n">lock</span><span class="p">(</span><span class="o">&</span><span class="n">a</span><span class="p">);</span> <span class="p">...</span> <span class="k">if</span> <span class="p">(...)</span> <span class="k">return</span><span class="p">;</span> <span class="p">...</span> <span class="n">unlock</span><span class="p">(</span><span class="o">&</span><span class="n">a</span><span class="p">);</span> <span class="p">}</span>
+</pre></div>
 
 <ul>
 <li>并发 bug 时会专门介绍</li>
@@ -248,35 +255,37 @@ void you_did_it_4() { lock(&a); ... if (...) return; ... unlock(&a); }</code></p
 <li>非常常见的编码规范</li>
 </ul>
 <hr></hr>
-<pre class="codehilite"><code class="language-c++">class HoldLock {
-  pthread_mutex_t *mutex;
-public:
-  HoldLock(pthread_mutex_t *m): mutex(m) {
-    pthread_mutex_lock(mutex);
-  }
-  ~HoldLock() {
-    pthread_mutex_unlock(mutex);
-  }
-}
-void insert(node_t *node, node_t *cur) {
-  HoldLock lk(&list_lock);
-  ...
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">HoldLock</span> <span class="p">{</span>
+  <span class="n">pthread_mutex_t</span> <span class="o">*</span><span class="n">mutex</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+  <span class="n">HoldLock</span><span class="p">(</span><span class="n">pthread_mutex_t</span> <span class="o">*</span><span class="n">m</span><span class="p">)</span><span class="o">:</span> <span class="n">mutex</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="o">~</span><span class="n">HoldLock</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="n">insert</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">,</span> <span class="n">node_t</span> <span class="o">*</span><span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">HoldLock</span> <span class="n">lk</span><span class="p">(</span><span class="o">&</span><span class="n">list_lock</span><span class="p">);</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="c-raii">轻松一下: C RAII</h2>
 <p>不妨让我们 hack 一下</p>
-<pre class="codehilite"><code class="language-c">#define HoldLock(lk) \
-  for (int __lock_var = (pthread_mutex_lock(lk), 0); \
-           __lock_var &lt; 1; \
-           pthread_mutex_unlock(lk), __lock_var++)
+<div class="codehilite"><pre><span></span><span class="cp">#define HoldLock(lk) \</span>
+<span class="cp">  for (int __lock_var = (pthread_mutex_lock(lk), 0); \</span>
+<span class="cp">           __lock_var &lt; 1; \</span>
+<span class="cp">           pthread_mutex_unlock(lk), __lock_var++)</span>
 
-void insert(node_t *node, node_t *cur) {
-  HoldLock(&list_lock) {
-    ...
-    // 此处不能调用break/return等跳出此块
-  }
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">insert</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">,</span> <span class="n">node_t</span> <span class="o">*</span><span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">HoldLock</span><span class="p">(</span><span class="o">&</span><span class="n">list_lock</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 此处不能调用break/return等跳出此块</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 </section>
 
@@ -315,17 +324,19 @@ void insert(node_t *node, node_t *cur) {
 <ul>
 <li>古代方法 (演示：<a href="../static/wiki/os/2020/demos/brk-demo.c">brk-demo.c</a>)</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void *sbrk(intptr_t increment);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">sbrk</span><span class="p">(</span><span class="kt">intptr_t</span> <span class="n">increment</span><span class="p">);</span>
+</pre></div>
 
 <ul>
 <li>现代方法 (SunOS 4.0, 1989)</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void *mmap(void *addr,    // 建议的分配位置，可为 NULL
-           size_t length, // 大小
-           int port,      // 访问权限 PROT_READ | PROT_WRITE
-           int flags,     // MAP_ANONYMOUS，匿名映射 = 内存分配
-           int fd,        // 不涉及任何文件描述符；-1
-           off_t offset); // 0</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">mmap</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span>    <span class="c1">// 建议的分配位置，可为 NULL</span>
+           <span class="kt">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="c1">// 大小</span>
+           <span class="kt">int</span> <span class="n">port</span><span class="p">,</span>      <span class="c1">// 访问权限 PROT_READ | PROT_WRITE</span>
+           <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span>     <span class="c1">// MAP_ANONYMOUS，匿名映射 = 内存分配</span>
+           <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span>        <span class="c1">// 不涉及任何文件描述符；-1</span>
+           <span class="kt">off_t</span> <span class="n">offset</span><span class="p">);</span> <span class="c1">// 0</span>
+</pre></div>
 
 
 <hr></hr>

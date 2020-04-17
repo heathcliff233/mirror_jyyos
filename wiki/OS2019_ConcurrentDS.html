@@ -61,11 +61,12 @@
 <div class="fenced fenced-green">
 <h4 id="_3">当数据结构被并发访问的时候，我们还需要考虑什么？</h4>
 <p>换句话说，我们的系统中可能有多个线程，它们每个可能同时对一个数据结构操作，例如向一个集合中添加元素。这时候，我们首先必保证的是数据结构在并发意义下的正确性。鉴于之前我们的经验，还是上个锁比较安全：</p>
-<pre class="codehilite"><code class="language-c">void insert(Set *s, int x) {
-  spin_lock(&amp;s-&gt;lock);
-  insert_serial(s, x);
-  spin_unlock(&amp;s-&gt;lock);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">insert</span><span class="p">(</span><span class="n">Set</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">int</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+  <span class="n">insert_serial</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">x</span><span class="p">);</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这样我们可以把并发数据结构转换为了串行执行，从而能保证其正确性。在大部分时候，这样的处理都是很安全的，但有时候多个线程对数据结构的访问非常频繁，此时再使用锁，就等于让其他线程白白等待了。</p>
@@ -91,16 +92,17 @@
 <p>这也是为什么很多研究都需要<a href="https://en.wikipedia.org/wiki/Benchmark_(computing)">基准程序</a>，它们代表了各种典型应用场景下的workloads。“不服跑个分”对吧？</p>
 </div>
 <p>那怎么从程序的运行或者基准程序得到workloads呢？课堂上我们给了一个很短的脚本，它把程序的stdout丢弃，并且把ltrace的输出从stderr重定向到stdout。</p>
-<pre class="codehilite"><code class="language-bash">#!/bin/bash
+<div class="codehilite"><pre><span></span><span class="ch">#!/bin/bash</span>
 
-trace() {
-  # ltrace outputs to stderr, so discard stdout
-  # -f: trace threads/sub-processes
-  # -e 'malloc+free-@libc.so*': only trace malloc/free
-  ltrace -f -e 'malloc+free-@libc.so*' $@ &gt; /dev/null
-}
+trace<span class="o">()</span> <span class="o">{</span>
+  <span class="c1"># ltrace outputs to stderr, so discard stdout</span>
+  <span class="c1"># -f: trace threads/sub-processes</span>
+  <span class="c1"># -e &#39;malloc+free-@libc.so*&#39;: only trace malloc/free</span>
+  ltrace -f -e <span class="s1">&#39;malloc+free-@libc.so*&#39;</span> <span class="nv">$@</span> &gt; /dev/null
+<span class="o">}</span>
 
-trace $@ 2&gt;&amp;1 # move stderr to stdout</code></pre>
+trace <span class="nv">$@</span> <span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="c1"># move stderr to stdout</span>
+</pre></div>
 
 
 <p>它能够输出一个程序(包含它内部的多个线程)调用glibc中malloc/free的序列。你可以观察一下很多workload重的应用，它们是如何使用内存的。</p>

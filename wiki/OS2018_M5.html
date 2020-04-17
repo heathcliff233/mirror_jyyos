@@ -105,12 +105,13 @@ lookup应该有增量式过滤的功能，例如第一次执行lookup时，找�
 <div class="fenced fenced-green">
 <h4 id="_12">锁定生命值</h4>
 <p>游戏也是程序。在最简单的情况下，生命值是通过类似对象/结构体来存储的：</p>
-<pre class="codehilite"><code class="language-c++">std::vector&lt;Player&gt; players;
-class Player {
-  ...
-  int hit_point_;
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Player</span><span class="o">&gt;</span> <span class="n">players</span><span class="p">;</span>
+<span class="k">class</span> <span class="nc">Player</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="kt">int</span> <span class="n">hit_point_</span><span class="p">;</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>因此游戏的binary里，<code>players</code>的地址是静态编译时确定的；而vector的内部实现也是明确的——因此外挂可以针对游戏的特定实现解析出内存中的数据结构，从而实现锁血/锁钱(定期设置数值)、无敌(设置断点; 把条件判断patch成无条件判断)等功能。对游戏进行逆向工程是个不折不扣的黑客活。</p>

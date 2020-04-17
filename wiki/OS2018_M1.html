@@ -77,24 +77,25 @@
 <p>上图是Deepin的任务管理器，除了系统的状态，还可以显示进程的信息。任务管理器当然也是操作系统支持的应用程序，本学期的第一个实验就是实现任务管理器中进程列表的部分。用类似的办法，可以从Linux系统中读取出CPU占用率、内存使用等信息，你其实就已经获得了实现任务管理器的足够数据。</p>
 <h2 id="_5">实验描述</h2>
 <p><code>pstree</code> - 打印进程之间的树状的父子关系。在这个实验中，你可以自由选择展示树的方式(例如使用缩进表示父子关系，这是最容易的)。在Linux中，进程树会以非常漂亮的格式排版(每个进程的第一个孩子都与它处在同一行，之后的孩子保持相同的缩进)：</p>
-<pre class="codehilite"><code>systemd─┬─accounts-daemon─┬─{gdbus}
-        │                 └─{gmain}
-        ├─acpid
-        ├─agetty
-        ├─atd
-        ├─cron
-        ├─dbus-daemon
-        ├─dhclient
-        ├─2*[iscsid]
-        ├─lvmetad
-        ├─lxcfs───10*[{lxcfs}]
-        ├─mdadm
-        ├─polkitd─┬─{gdbus}
-        │         └─{gmain}
-        ├─rsyslogd─┬─{in:imklog}
-        │          ├─{in:imuxsock}
-        │          └─{rs:main Q:Reg}
-        ...</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">systemd</span><span class="err">─┬─</span><span class="n">accounts</span><span class="o">-</span><span class="n">daemon</span><span class="err">─┬─{</span><span class="n">gdbus</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">                 </span><span class="err">└─{</span><span class="n">gmain</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">acpid</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">agetty</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">atd</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">cron</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">dbus</span><span class="o">-</span><span class="n">daemon</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">dhclient</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="mi">2</span><span class="o">*[</span><span class="n">iscsid</span><span class="o">]</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">lvmetad</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">lxcfs</span><span class="err">───</span><span class="mi">10</span><span class="o">*[</span><span class="n">{lxcfs}</span><span class="o">]</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">mdadm</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">polkitd</span><span class="err">─┬─{</span><span class="n">gdbus</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">         </span><span class="err">└─{</span><span class="n">gmain</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">rsyslogd</span><span class="err">─┬─{</span><span class="ow">in</span><span class="err">:</span><span class="n">imklog</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">          </span><span class="err">├─{</span><span class="ow">in</span><span class="err">:</span><span class="n">imuxsock</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">          </span><span class="err">└─{</span><span class="nl">rs</span><span class="p">:</span><span class="n">main</span><span class="w"> </span><span class="nl">Q</span><span class="p">:</span><span class="n">Reg</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">...</span><span class="w"></span>
+</pre></div>
 
 
 <p>Linux的psmisc中<code>pstree</code>的实现大约有1300行，支持多种命令行参数。这个实验里实现最简单的就行。大家可以先玩一下Linux的<code>pstree</code>，它真的很简单。</p>
@@ -131,10 +132,11 @@
 </ol>
 </div>
 <p>在命令行使用<code>git clone https://github.com/NJU-ProjectN/pstree.git</code>将代码下载(将会创建一个名为<code>pstree</code>的目录)。目录结构：</p>
-<pre class="codehilite"><code class="language-text">.git/ - Git相关文件，请不要删除
+<div class="codehilite"><pre><span></span>.git/ - Git相关文件，请不要删除
 Makefile - 用于编译的脚本
 Makefile.git - 用于Git追踪的相关脚本
-pstree.c - 唯一的源文件</code></pre>
+pstree.c - 唯一的源文件
+</pre></div>
 
 
 <p>使用<code>make</code>编译(名为生成<code>pstree</code>的二进制文件)；使用<code>./pstree</code>执行。</p>
@@ -160,18 +162,19 @@ pstree.c - 唯一的源文件</code></pre>
 <p>因为人的脑容量有限，通常解决问题的办法就是把比较复杂的问题分解成小问题，再把小问题继续分解下去。而在学校里所做的训练就是<strong>建立问题分解的思路和培养解决问题的能力</strong>。</p>
 <h3 id="1">1. 命令行参数</h3>
 <p>获取命令行参数的一小段代码：</p>
-<pre class="codehilite"><code class="language-c">#include &lt;stdio.h&gt;
-#include &lt;assert.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;assert.h&gt;</span><span class="cp"></span>
 
-int main(int argc, char *argv[]) {
-  int i;
-  for (i = 0; i &lt; argc; i++) {
-    assert(argv[i]); // specification
-    printf(&quot;argv[%d] = %s\n&quot;, i, argv[i]);
-  }
-  assert(!argv[argc]); // specification
-  return 0;
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span> <span class="c1">// specification</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;argv[%d] = %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+  <span class="p">}</span>
+  <span class="n">assert</span><span class="p">(</span><span class="o">!</span><span class="n">argv</span><span class="p">[</span><span class="n">argc</span><span class="p">]);</span> <span class="c1">// specification</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>可以在终端里试试给这个程序传入不同的参数会输出什么，获取命令行参数的。这个问题就算是很好地解决啦：<code>argv[0], ..., argv[argc-1]</code>就是所有命令行的参数，这是操作系统与C程序之间的约定。</p>
@@ -199,13 +202,14 @@ int main(int argc, char *argv[]) {
 <h3 id="3">3. 得到进程之间的关系</h3>
 <p>procfs里还有很多有趣的东西，每个进程的父进程也隐藏在<code>/proc/[pid]/</code>中的某个文件里。试试<code>man 5 proc</code>，里面有详细的文档。还有，你们的OJ就是读取<code>/proc/[pid]/</code>中的信息得到时间/内存等统计信息的。</p>
 <p>就像一个普通的文件一样，你可以用你熟悉的方式打开它，把你要的信息读出来就行了:</p>
-<pre class="codehilite"><code class="language-c">FILE *fp = fopen(filename, &quot;r&quot;);
-if (fp) {
-  // 用fscanf, fgets等函数读取
-  fclose(fp);
-} else {
-  // 错误处理
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">FILE</span> <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">fp</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 用fscanf, fgets等函数读取</span>
+  <span class="n">fclose</span><span class="p">(</span><span class="n">fp</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="c1">// 错误处理</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>procfs里的信息足够让你写一个非常不错的任务管理器。</p>

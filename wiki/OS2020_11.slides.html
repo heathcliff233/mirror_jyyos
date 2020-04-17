@@ -1,0 +1,747 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>虚拟化：处理器调度 (2)</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="2">虚拟化：处理器调度 (2)</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">再次预告：期中测验</h2>
+<blockquote>
+<p>4.20 (<span class="red">下周一</span>) 随堂测验 (14:00 开始, 16:00 结束)</p>
+<ul>
+<li>一道上机题 (50%)<ul>
+<li>并发编程 (<code>threads.h</code>), Online Judge 提交，但无评测结果</li>
+</ul>
+</li>
+<li>一个问卷 (50%)<ul>
+<li>问卷系统提交</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>自觉维护学术诚信</p>
+<ul>
+<li><span class="blue">正确性不作为评分依据</span></li>
+<li>独立完成 (不借助互联网搜索、不讨论)<ul>
+<li><span class="red">如有特殊困难不能参加，请由辅导员向我说明</span></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>评分标准</p>
+<ul>
+<li>按时提交，得 100%</li>
+<li>当天提交，得 80%</li>
+<li>周三 (4.22) 前提交，得 70%</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>在中断/上下文切换机制上可以实现各种调度策略</p>
+<ul>
+<li>Round-Robin</li>
+<li>多级反馈调度</li>
+<li>完全公平调度 (CFS)<ul>
+<li>故事到此结束？</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>实际的处理器调度？</p>
+<ul>
+<li>CFS 回顾</li>
+<li>优先级翻转</li>
+<li>多处理器调度</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="cfs">CFS: 复习</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">让进程 (线程) 公平地共享处理器</h2>
+<blockquote>
+<p>记录每个线程的执行时间</p>
+<ul>
+<li>每次中断时调度 (补偿) 执行时间最少的那个，使总体保持公平</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>优先级</p>
+<ul>
+<li>使用 vruntime<ul>
+<li>高优先级的进程时间过得比较慢</li>
+<li>低优先级的进程时间过得比较快</li>
+</ul>
+</li>
+</ul>
+<p>创建进程 (fork)</p>
+<ul>
+<li>子进程继承父进程的 vruntime (位于同一起跑线)</li>
+</ul>
+<p>睡眠和恢复</p>
+<ul>
+<li>获得系统中最小的 vruntime</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="1">被低估的复杂性 (1)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">单处理器调度：不仅是计算</h2>
+<blockquote>
+<p>线程不是 <code>while (1)</code> 的循环</p>
+<p>进程/线程不是纯粹的计算或 (长时间) I/O</p>
+<ul>
+<li><span class="red">等待互斥锁/信号量</span></li>
+<li>或是非常短暂的 I/O 等待 (比一个时间片短很多)</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>在此情形下，会发生什么？</p>
+<ul>
+<li>round-robin?<ul>
+<li>考虑三个进程/线程: producer, consumer, <code>while (1)</code></li>
+<li>Lab 2 你们就会遇到这个问题了<ul>
+<li>主要是因为没有精确的时间统计</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>CFS?<ul>
+<li>(似乎没问题？) 线程有精确的 accounting 信息</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<blockquote>
+<p>并发 bugs 还在等着大家呢！</p>
+<ul>
+<li>处理器调度中有一类非常有趣的并发 bug</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="priority-inversion">优先级反转 (Priority Inversion)</h2>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">bad_guy</span><span class="p">()</span> <span class="p">{</span> <span class="c1">// 高优先级</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">nice_guy</span><span class="p">()</span> <span class="p">{</span> <span class="c1">// 中优先级</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">very_nice_guy</span><span class="p">()</span> <span class="p">{</span> <span class="c1">// 最低优先级</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">lk</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<ul>
+<li>very nice guy 在持有锁的时候让出了处理器……<ul>
+<li>bad guy 顺便也无法运行了 (nice guy 抢在了它前面 👎)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="the-first-bug-on-mars"><a href="https://news.ycombinator.com/item?id=13210478">The First Bug on Mars</a></h2>
+<blockquote>
+<p>Sojourner “探路者” (PathFinder), 1997 年 7 月 4 日着陆火星</p>
+<ul>
+<li>大家出生前发生的事情，但我依然有印象</li>
+<li>着陆几天后，出现系统重启和数据丢失</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/PATHCOV.jpg" width="300px"></img>
+硬件配置</p>
+<ul>
+<li>Lander: IBM RISC 6000 Single Chip (Rad6000 SC) 20 MIPS CPU, 128 MiB RAM, 6 MiB EEPROM<ul>
+<li>操作系统: VxWorks 实时操作系统<ul>
+<li>实时：任务可以在指定的时间内完成</li>
+<li>ASI/MET task: 大气成分监测 (低优先级)</li>
+<li><code>bc_dist</code> task: 分发任务 (中优先级)</li>
+<li><code>bc_sched</code> task: 总线调度 (高优先级)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Rover: 0.1 MIPS Intel 80C85 CPU, 512 KiB RAM, 176 KiB Flash SSD</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="the-first-bug-on-mars-contd">The First Bug on Mars (cont'd)</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/marsbot.png" width="750px"></img></p>
+<ul>
+<li>(低优先级) <code>select -&gt; pipeIoctl -&gt; selNodeAdd -&gt; mutex_lock</code></li>
+<li>(高优先级) <code>pipeWrite -&gt; mutex_lock</code></li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">解决优先级反转问题</h2>
+<blockquote>
+<p>非实时系统：CFS 凑合用吧</p>
+<ul>
+<li>实际情况太复杂了</li>
+</ul>
+<p>实时系统：如何解决？</p>
+</blockquote>
+<ul>
+<li>优先级继承 (Priority Inheritance)/优先级提升 (Priority Ceiling)<ul>
+<li>持有 mutex 的线程/进程会继承 block 在该 mutex 上的最高优先级</li>
+<li>不总是能 work (例如条件变量唤醒)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>在系统中动态维护资源依赖关系<ul>
+<li>优先级继承是它的特例</li>
+<li>似乎更困难了……</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>避免高/低优先级的任务争抢资源<ul>
+<li>对潜在的优先级反转进行预警 (lockdep)</li>
+<li>TX-based: 冲突的 TX 发生时，总是低优先级的 abort</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">复杂系统的行为</h2>
+<blockquote>
+<p>复杂的系统，即便规则很简单，行为也可能很复杂</p>
+<ul>
+<li>互斥锁 + 按优先级调度 → 优先级翻转</li>
+<li>Conway's Game of Life → Turing Completeness<ul>
+<li>John Conway: 1937-2020</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>所以真实的系统充满了</p>
+<ul>
+<li>bugs</li>
+<li>设计缺陷</li>
+<li>安全漏洞</li>
+<li>……</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">一入并发深似海，从此写对是路人</h2>
+<blockquote>
+<p>你们体会到 OSLab 的体验差了吧哈哈哈哈哈哈</p>
+<ul>
+<li>实际中的并发程序，想写对？<del>根本不可能的</del></li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>如果使用不同的优先级 (速度) 运行程序，是不是就能找到并发 bugs?</p>
+<ul>
+<li><span class="red">Yes!</span></li>
+<li>我们的工作: D. Chen, et al. <a href="https://dl.acm.org/doi/abs/10.1145/3236024.3236077">Testing multithreaded programs via thread speed control</a>. In <em>Proc. of ESE/FSE</em>, 2018. (<a href="https://zhuanlan.zhihu.com/p/51341151">科普版本</a>)<ul>
+<li>我们是测试的专家，所以稍微出一下手，你们的程序就挂了</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<p>Linux Kernel 也有并发 bugs?</p>
+<ul>
+<li>简直太多了……</li>
+<li>P. Fonseca, et al. <a href="https://www.usenix.org/conference/osdi14/technical-sessions/presentation/fonseca">SKI: Exposing Kernel concurrency bugs through systematic schedule exploration</a>. In <em>Proc. of OSDI</em>, 2014.</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="2">被低估的复杂性 (2)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多处理器调度</h2>
+<blockquote>
+<p>我们的 CPU 里有多个共享内存的处理器啊！</p>
+</blockquote>
+<p>多处理器调度的例子</p>
+<ul>
+<li>组里有一台 AMD EPYC 7401 x 2<ul>
+<li>共 96 个逻辑 CPU, 128 GiB RAM</li>
+</ul>
+</li>
+<li>创建 192 个线程，每个 CPU 上有两个线程执行</li>
+<li>然后刚好前 48 个 CPU 上的 96 个线程 sleep 了<ul>
+<li>后 48 个 CPU 在出力 (per-cpu runqueue = 2)</li>
+<li>前 48 个 CPU 在围观 (per-cpu runqueue = 0)</li>
+</ul>
+</li>
+<li>怎么办？</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">道理很简单：允许处理器间的线程迁移</h2>
+<p>每隔一段时间，负载低的 CPU 可以从负载高的 CPU 中偷一些线程</p>
+<ul>
+<li>(load balancing)</li>
+<li>但策略就复杂了</li>
+</ul>
+<blockquote>
+<p>如何定义 “负载”？</p>
+<p>每隔多久做一次 load balancing?</p>
+<p>如何做 load balancing?</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">例子</h2>
+<p>如果前 48 个 CPU 上的 96 个线程 sleep 了</p>
+<ul>
+<li>我们该不把所有线程均分到 CPU?</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>如果 sleep 了 1us 就被唤醒？</li>
+</ul>
+<blockquote>
+<p>Load balance 面对的难题 (trade-off)</p>
+<ul>
+<li><p>线程在处理器之间迁移是需要代价的</p>
+<ul>
+<li>多处理器之间的数据传送 (这是小事)</li>
+<li>额外的 cache/TLB miss</li>
+</ul>
+</li>
+<li><p>迁移？可能过一会儿还得移回来</p>
+</li>
+<li><p>不迁移？造成处理器的浪费</p>
+<ul>
+<li>一核出力，他人围观</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">多处理器调度：被低估的复杂性</h2>
+<blockquote>
+<p>“And you have to realize that there are not very many things that have aged as well as the scheduler. Which is just another proof that scheduling is easy.”<span class="float-right">——Linus Torvalds, 2001</span></p>
+</blockquote>
+<div class="fragment">
+<p>Linus 以为调度是个挺简单的问题？</p>
+<ul>
+<li>As a central part of resource management, the OS thread scheduler must maintain the following, simple, invariant: make sure that ready threads are scheduled on available cores.</li>
+<li>As simple as it may seem, we found that this invariant is often broken in Linux. Cores may stay idle for seconds while ready threads are waiting in runqueues.<ul>
+<li>J. Lozi, et al. <a href="https://dl.acm.org/doi/10.1145/2901318.2901326">The Linux scheduler: A decade of wasted cores</a>. In <em>Proc. of EuroSys</em>, 2016. <ul>
+<li>这篇 paper 在狂黑 Linus 😂</li>
+</ul>
+</li>
+<li>多处理器调度依然是 open problem</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">多处理器调度的几个挑战</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1">实际情况 (1): 多用户、多任务</h2>
+<blockquote>
+<p>还是组里服务器的例子……</p>
+<ul>
+<li>马上要到 paper deadline 了，A 和 B 要在服务器上跑实验</li>
+</ul>
+</blockquote>
+<ul>
+<li>A 要跑一个任务，因为要调用一个库，只能单线程跑</li>
+<li>B 跑并行的任务，创建 1000 个线程跑<ul>
+<li>CFS 会发生什么？</li>
+<li>提示: CFS 公平地在线程之间共享 CPU</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>更糟糕的是，优先级解决不了这个问题……</p>
+<ul>
+<li>B 不能随便提高自己进程的优先级<ul>
+<li>“An unprivileged user can only increase the nice value and such changes are irreversible...”</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="linux-control-groups-cgroups">Linux Control Groups (cgroups)</h2>
+<p>man 7 cgroups</p>
+<ul>
+<li>没有 cgroups 就没有 Docker<ul>
+<li>也就没有 Online Judge </li>
+</ul>
+</li>
+<li>(在课程最后专题讲解时会涉及)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/cgroups.jpg" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2-biglittle">实际情况 (2): Big.LITTLE/能耗</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/A12SoC.jpg" width="640px"></img></p>
+<p>处理器的计算能力并不相同——均分 workloads 会让小核上的任务饥饿</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="power-curve">处理器的 Power Curve 是非线性的</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/power-curve.png" width="640px"></img></p>
+<p>对移动平台至关重要 (能耗 vs. 延迟 vs. 吞吐量)</p>
+<ul>
+<li>频率越低，IPC (Instruction per Cycle) 和能效都更好</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="3-non-uniform-memory-access">实际情况 (3): Non-Uniform Memory Access</h2>
+<p>线程看起来在 “共享内存”</p>
+<ul>
+<li>但共享内存却是 memory hierarchy 造就的假象</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/EPYC-NUMA.png" width="640px"></img></p>
+<ul>
+<li>producer/consumer 位于同一个/不同 module 性能差距可能很大</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="4-cpu-hot-plug">实际情况 (4): CPU Hot-plug</h2>
+<p>😂😂😂 我讲不下去了</p>
+<ul>
+<li>实在是太复杂了</li>
+<li>我不是代码的维护者，并不清楚这些细节<ul>
+<li>把上面都加起来<ul>
+<li>这得考虑多少情况，写多少代码……</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">多处理器调度的研究机遇</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">数据中心的处理器调度</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/data-center.jpg" width="500px"></img></p>
+<blockquote>
+<p>互联网企业如何为数十亿用户提供低延迟高质量的服务？</p>
+</blockquote>
+<p>高优先级的任务 (搜索、购物车、……) → 质量必须得到保证</p>
+<ul>
+<li>Amazon: 100ms 延迟 = 少卖 1% 的货物<ul>
+<li>想想淘宝/京东/拼多多...的 1% 是多么天大的数额……</li>
+</ul>
+</li>
+</ul>
+<p>低优先级的任务 (小广告投放、索引、转码、……) → 尽可能把服务器填满</p>
+<ul>
+<li>估计 Google 有 2.5 million 台服务器 (2016)<ul>
+<li>提高 1% 的利用率都节约巨大的机器/能量</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">数据中心的处理器调度 (cont'd)</h2>
+<p>如何把任务分配到 1,000,000 台机器上？</p>
+<ul>
+<li>容器集群 (Kubernetes, Docker Swarm, ...)</li>
+<li>依然热门的操作系统研究领域<ul>
+<li>(<a href="https://queue.acm.org/detail.cfm?id=3173558">延伸阅读</a>)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>如何在一台机器上保证高优先级任务执行的效率？</p>
+<ul>
+<li>cgroup + 优先级？<ul>
+<li><span class="red">没那么简单</span></li>
+<li>并行的任务可能会占用 I/O, pollute cache/buffer, ...<ul>
+<li>就算有绝对高的优先级</li>
+<li>在混合部署的时候延迟依然会增长</li>
+<li>(依然是 open problem)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">甚至……有些基本假设都是不成立的</h2>
+<blockquote>
+<p>例子: more CPU time, more progress</p>
+</blockquote>
+<div class="fragment">
+<p>我们课堂上的例子就可以 challenge 这一点</p>
+<ul>
+<li><a href="../static/wiki/os/2020/demos/sum-atomic.c">sum-atomic.c</a> 创建 4 个 <code>do_sum</code> 执行</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">do_sum</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">10000000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">"lock addq $1, %0"</span><span class="o">:</span> <span class="s">"=m"</span><span class="p">(</span><span class="n">sum</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div>
+
+<div class="codehilite"><pre><span></span>$ time taskset -c 0   ./sum-atomic.out 
+sum = 40000000
+(0.168s)
+$ time taskset -c 0,1 ./sum-atomic.out
+sum = 40000000
+(0.587s)
+</pre></div>
+
+
+<ul>
+<li>分配了 1/2 的处理器资源，反而加速了 3.5 倍<ul>
+<li><span class="red">系统里进程的行为和交互是非常复杂的……</span>; NUMA 里尤其重要</li>
+<li>(依然是 open problem)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">异构计算系统</h2>
+<p>完成 “同一件事” 的部件可能不止一个</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/huawei-990.jpg" width="640px"></img></p>
+<ul>
+<li>CPU, GPU, NPU, DSP, DSM/RDMA/远程执行<ul>
+<li>M. S. Gordon. <a href="https://www.usenix.org/system/files/conference/osdi12/osdi12-final-11.pdf">COMET: Code offload by migrating execution transparently</a>. In <em>Proc. of OSDI</em>, 2012.</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">调度日益复杂的系统：难题</h2>
+<p>一个巨大的 design space</p>
+<ul>
+<li>建模<ul>
+<li>理解 workload (过去发生了什么)<ul>
+<li>profiling 和 trace; PMU</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>预测<ul>
+<li>试图预知未来可能发生什么<ul>
+<li>CPU 里非常常见的技术: branch prediction/BTB; prefetching; speculative/run-ahead execution; ...</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>决策<ul>
+<li>如何调整系统的行为，使得约束 (如公平) 满足，且整体效率更高？<ul>
+<li>例如, migration or not?</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>AI and everything 时代的到来</p>
+<ul>
+<li>我们开始有 FPGA/硬件加速器 (NPU, TPU, ...)</li>
+<li>M. Mass, et al. <a href="https://dl.acm.org/doi/abs/10.1145/3373376.3378525">Learning-based memory allocation for C++ server workloads</a>. In <em>Proc. of ASPLOS</em>, 2020.</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<ul>
+<li>机制<ul>
+<li>中断/系统调用时，进入操作系统代码执行</li>
+<li>操作系统代码可以选择任何一个线程/进程继续执行</li>
+<li><span class="red">设计 rock-solid 的机制，支持任何策略</span></li>
+</ul>
+</li>
+<li>策略<ul>
+<li>Round-Robin, MLFQ, CFS, ...</li>
+<li><span class="red">根据实际情况 (workload) 尝试各种策略</span></li>
+</ul>
+</li>
+<li>真正的 system: 需要在非常复杂的情况下工作<ul>
+<li><code>kernel/sched/fair.c</code> 总共有 10979 行代码 (5.6.3)</li>
+<li>教科书/文档上完全是 overly simplified 描述<ul>
+<li>但也有非常多的研究机遇——世界还太不完美，需要你改进</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>阅读: J. Bouron, et al. <a href="https://www.usenix.org/system/files/conference/atc18/atc18-bouron.pdf">The battle of the schedulers: FreeBSD ULE vs. Linux CFS</a>. In <em>Proc. of USENIX ATC</em>, 2018.</li>
+<li>开始做 Lab2!</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

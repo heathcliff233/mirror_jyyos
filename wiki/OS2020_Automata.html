@@ -85,7 +85,7 @@
 <li>对指令进行译码、执行，指令将按照手册上约定的行为，修改 CPU 的寄存器或内存。</li>
 </ul>
 <p>在《计算机系统基础》的编程实验中，我们已经切实地体会过这个过程。而在 gdb 中，我们也可以查看 (被暂停的) 进程运行时的状态：</p>
-<pre class="codehilite"><code class="language-text">(gdb) info registers   // 查看寄存器
+<div class="codehilite"><pre><span></span>(gdb) info registers   // 查看寄存器
 rax            0x55555555463a   93824992233018
 rbx            0x0  0
 ...
@@ -98,7 +98,8 @@ eflags         0x246    [ PF ZF IF ]
    0x55555555464a &lt;main+16&gt;:  mov    $0x0,%eax
    0x55555555464f &lt;main+21&gt;:  pop    %rbp
    0x555555554650 &lt;main+22&gt;:  retq   
-   ...</code></pre>
+   ...
+</pre></div>
 
 
 <p>如果使用单步执行一条指令，我们将会看到状态的变化，而且状态的变化符合是 <code>rip</code> 寄存器位置指令的行为。因此，我们不妨把所有的寄存器/内存的<strong>数值</strong>作为程序的状态，程序在两个时刻寄存器/内存数值只要有任何不同，就认为是两个不同的状态。</p>
@@ -110,14 +111,15 @@ eflags         0x246    [ PF ZF IF ]
 <p><img alt="" class="center" src="../static/wiki/os/2020/notes/img/fsm-det.png" width="450px"></img></p>
 <p>如果做一个极端一些的假设，程序中所有的指令都是确定的，且由于状态空间是有限的，因此一定会形成 “循环”，即指令执行一段时间后，会到达一个已经经过的状态，然后继续周而复始执行。的确如此，你可以试着编写一个没有不确定性指令、没有系统调用、没有 undefined behavior 的程序，它将无法终止！</p>
 <p>程序的不确定性来自于有不确定性的指令，例如，Intel 处理器提供了 <code>rdrand</code> 指令：</p>
-<pre class="codehilite"><code class="language-c">#include &lt;stdio.h&gt;
-#include &lt;stdint.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdint.h&gt;</span><span class="cp"></span>
 
-int main() {
-  uint64_t val;
-  asm volatile ("rdrand %0": "=r"(val));
-  printf("rdrand returns %016lx\n", val);
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">uint64_t</span> <span class="n">val</span><span class="p">;</span>
+  <span class="k">asm</span> <span class="k">volatile</span> <span class="p">(</span><span class="s">"rdrand %0"</span><span class="o">:</span> <span class="s">"=r"</span><span class="p">(</span><span class="n">val</span><span class="p">));</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"rdrand returns %016lx</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">val</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>将会生成一条 <code>rdrand %rax</code> 的汇编代码。如果用 gdb 调试，会发现每次程序运行，<code>rax</code> 寄存器都将被赋值为随机值，也就是在 <code>rdrand</code> 指令执行的状态，可能有多种不同的运行结果，状态机也在此产生了 <math>2^{64}</math> 个 “分岔”：</p>
@@ -157,7 +159,7 @@ int main() {
 <p>也就是说，<strong>并发程序执行的每一步都是不确定的</strong>！并发程序的状态机模型如下图所示：</p>
 <p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/state-space.png" width="500px"></img></p>
 <p>想要在实际的多线程程序上验证这个模型，我们不妨使用 <code>pmap</code> 命令打印一个多线程程序的地址空间映射：</p>
-<pre class="codehilite"><code class="language-text">$ ./hello-mt.out &
+<div class="codehilite"><pre><span></span>$ ./hello-mt.out &
 [1] 18401
 $ pmap $!  # $! 是上一个后台进程的 pid
 18401:   ./hello-mt.out
@@ -170,7 +172,8 @@ $ pmap $!  # $! 是上一个后台进程的 pid
 00007fde9dd7c000      4K -----   [ anon ]
 00007fde9dd7d000   8192K rw---   [ anon ]
 00007fde9e57d000      4K -----   [ anon ]
-00007fde9e57e000   8192K rw---   [ anon ]</code></pre>
+00007fde9e57e000   8192K rw---   [ anon ]
+</pre></div>
 
 
 <p>如果在每个线程打印局部变量的地址，机会发现局部变量的确位于不同的 8192 KiB 内存映射区域，即我们假想的状态机模型的确符合操作系统上线程的实现。</p>
@@ -180,20 +183,21 @@ $ pmap $!  # $! 是上一个后台进程的 pid
 </div></div></div>
 
 <p>事实上，将线程的堆栈放置在同一个地址空间中，在实现上既比较容易，同时对 C 程序的执行也是非常必要的，例如我们可以写出以下代码：</p>
-<pre class="codehilite"><code class="language-c">int *shared;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="o">*</span><span class="n">shared</span><span class="p">;</span>
 
-void thread1() {
-  int x;
-  ...
-  shared = &x; // 局部变量的地址
-  ...
-}
-void thread2() {
-  ...
-  *shared = 1; // 向另一个线程的堆栈中写入输入；
-               // 只要 `thread1()` 不返回，这个写入就是合法的
-  ...
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="n">shared</span> <span class="o">=</span> <span class="o">&</span><span class="n">x</span><span class="p">;</span> <span class="c1">// 局部变量的地址</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="o">*</span><span class="n">shared</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="c1">// 向另一个线程的堆栈中写入输入；</span>
+               <span class="c1">// 只要 `thread1()` 不返回，这个写入就是合法的</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这个模型帮我们更好地理解了什么是 “多线程程序”。所谓 “多线程程序是若干个共享内存的执行流”，不再是一个抽象、虚幻的概念，而是可以形式化地精确定义行为的数学对象。</p>
@@ -205,47 +209,50 @@ void thread2() {
 
 <h2 id="_6">理解并发程序的执行</h2>
 <p>并发程序的状态机模型把并发程序的理解问题转换成了图论问题。在这里，我们举的是 Peterson 算法的例子——互联网上有大量的解释，因此我们在这里不再赘述。请大家跟随上课视频，画出 Peterson 算法的状态机，并证明它的正确性：</p>
-<pre class="codehilite"><code class="language-c">int turn = T1, x = 0, y = 0;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">turn</span> <span class="o">=</span> <span class="n">T1</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void thread1() {
-  [1] x = 1; turn = T2;
-  [2] while (y && turn == T2) ;
-  [3] // critical section
-  [4] x = 0;
-}
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">turn</span> <span class="o">=</span> <span class="n">T2</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">while</span> <span class="p">(</span><span class="n">y</span> <span class="o">&&</span> <span class="n">turn</span> <span class="o">==</span> <span class="n">T2</span><span class="p">)</span> <span class="p">;</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="c1">// critical section</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
 
-void thread2() {
-  [1] y = 1; turn = T1;
-  [2] while (x && turn == T1) ;
-  [3] // critical section
-  [4] y = 0;
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">turn</span> <span class="o">=</span> <span class="n">T1</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">while</span> <span class="p">(</span><span class="n">x</span> <span class="o">&&</span> <span class="n">turn</span> <span class="o">==</span> <span class="n">T1</span><span class="p">)</span> <span class="p">;</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="c1">// critical section</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-green"><div>
 <h4 id="_1">思考题：为什么多此一举？</h4>
 <p>Peterson 算法中有三个变量，对应了现实中 <math class="inline-math">T_1</math> 的旗子、<math class="inline-math">T_2</math> 的旗子和一块牌子。这似乎是必不可少的——你可以试试如果只用旗子的互斥，例如：</p>
-<pre class="codehilite"><code class="language-c">void thread1() {
-  x = 1;
-  while (y);
-}
-void thread2() {
-  y = 1;
-  while (x);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">y</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>上述代码将在两个人同时举旗之后陷入僵局。当然，你可以试着把旗子在举起后，如果观察到对方也举起旗子，就把自己的旗子放下：</p>
-<pre class="codehilite"><code class="language-c">void thread1() {
-  x = 1;
-  if (y) x = 0;
-  if (!x) goto [1];
-}
-void thread2() {
-  y = 1;
-  if (x) y = 0;
-  if (!y) goto [1];
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">x</span><span class="p">)</span> <span class="k">goto</span> <span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">y</span><span class="p">)</span> <span class="k">goto</span> <span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但这将可能会陷入 “举起-放下” 的无限循环……在共享内存上 (假设指令可以每次原子性地读取/写入一个变量) 实现线程的互斥困扰了学术界很多年，并在此基础上发展出了非常深刻的研究分支。有兴趣的同学可以选修秋季学期的《并发算法与理论》课程。</p>

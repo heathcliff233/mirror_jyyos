@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="../static/css/reveal-slides.css"/>
 
 
-    <title>虚拟化：处理器调度</title>
+    <title>虚拟化：处理器调度 (1)</title>
   </Head>
   <body>
    
@@ -29,7 +29,7 @@
 <div class="reveal">
   <div class="slides">
     <section>
-<div class="slide-container"><div class="center middle"><h1 id="_1">虚拟化：处理器调度</h1>
+<div class="slide-container"><div class="center middle"><h1 id="1">虚拟化：处理器调度 (1)</h1>
 <div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
 <p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
 </div>
@@ -45,6 +45,38 @@
     <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
   </div></p>
 </div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">预告：期中测验</h2>
+<blockquote>
+<p>4.20 (周一) 随堂测验 (14:00 开始, 16:00 结束)</p>
+<ul>
+<li>一道上机题 (50%)<ul>
+<li>并发编程 (<code>threads.h</code>), Online Judge 提交，但无评测结果</li>
+</ul>
+</li>
+<li>一个问卷 (50%)<ul>
+<li>问卷系统提交</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>自觉维护学术诚信</p>
+<ul>
+<li><span class="blue">正确性不作为评分依据</span></li>
+<li>独立完成 (不借助互联网搜索、不讨论)<ul>
+<li><span class="red">如有特殊困难不能参加，请由辅导员向我说明</span></li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>评分标准</p>
+<ul>
+<li>按时提交，得 100%</li>
+<li>当天提交，得 80%</li>
+<li>周三 (4.22) 前提交，得 70%</li>
+</ul></div></div>
 </section>
 
 <section>
@@ -261,19 +293,20 @@
 <li>子进程继承父进程的 vruntime</li>
 </ul>
 </blockquote>
-<pre class="codehilite"><code class="language-c">static void task_fork_fair(struct task_struct *p) {
-  struct sched_entity *se = &p-&gt;se, *curr;
-  ...
-  rq_lock(rq, &rf);
-  update_rq_clock(rq);
-  cfs_rq = task_cfs_rq(current);
-  curr = cfs_rq-&gt;curr;
-  if (curr) {
-    update_curr(cfs_rq);
-    se-&gt;vruntime = curr-&gt;vruntime; // 继承父进程的 vruntime
-  }
-  place_entity(cfs_rq, se, 1);
-  ...</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">task_fork_fair</span><span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">sched_entity</span> <span class="o">*</span><span class="n">se</span> <span class="o">=</span> <span class="o">&</span><span class="n">p</span><span class="o">-&gt;</span><span class="n">se</span><span class="p">,</span> <span class="o">*</span><span class="n">curr</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="n">rq_lock</span><span class="p">(</span><span class="n">rq</span><span class="p">,</span> <span class="o">&</span><span class="n">rf</span><span class="p">);</span>
+  <span class="n">update_rq_clock</span><span class="p">(</span><span class="n">rq</span><span class="p">);</span>
+  <span class="n">cfs_rq</span> <span class="o">=</span> <span class="n">task_cfs_rq</span><span class="p">(</span><span class="n">current</span><span class="p">);</span>
+  <span class="n">curr</span> <span class="o">=</span> <span class="n">cfs_rq</span><span class="o">-&gt;</span><span class="n">curr</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">curr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">update_curr</span><span class="p">(</span><span class="n">cfs_rq</span><span class="p">);</span>
+    <span class="n">se</span><span class="o">-&gt;</span><span class="n">vruntime</span> <span class="o">=</span> <span class="n">curr</span><span class="o">-&gt;</span><span class="n">vruntime</span><span class="p">;</span> <span class="c1">// 继承父进程的 vruntime</span>
+  <span class="p">}</span>
+  <span class="n">place_entity</span><span class="p">(</span><span class="n">cfs_rq</span><span class="p">,</span> <span class="n">se</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+  <span class="p">...</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="complete-fair-scheduling-contd">Complete Fair Scheduling (cont'd)</h2>
@@ -288,8 +321,9 @@
 <ul>
 <li>获得 “最小” 的 vruntime (可以立即被执行)</li>
 </ul>
-<pre class="codehilite"><code class="language-c">if (renorm && curr)
-  se-&gt;vruntime += cfs_rq-&gt;min_vruntime;</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="k">if</span> <span class="p">(</span><span class="n">renorm</span> <span class="o">&&</span> <span class="n">curr</span><span class="p">)</span>
+  <span class="n">se</span><span class="o">-&gt;</span><span class="n">vruntime</span> <span class="o">+=</span> <span class="n">cfs_rq</span><span class="o">-&gt;</span><span class="n">min_vruntime</span><span class="p">;</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="complete-fair-scheduling-contd">Complete Fair Scheduling (cont'd)</h2>
@@ -300,16 +334,17 @@
 <li>vrt[i] / vrt[j] 的增加比例 = wt[j] / wt[i]</li>
 </ul>
 </blockquote>
-<pre class="codehilite"><code class="language-c">const int sched_prio_to_weight[40] = {
-  /* -20 */ 88761, 71755, 56483, 46273, 36291,
-  /* -15 */ 29154, 23254, 18705, 14949, 11916,
-  /* -10 */  9548,  7620,  6100,  4904,  3906,
-  /*  -5 */  3121,  2501,  1991,  1586,  1277,
-  /*   0 */  1024,   820,   655,   526,   423,
-  /*   5 */   335,   272,   215,   172,   137,
-  /*  10 */   110,    87,    70,    56,    45,
-  /*  15 */    36,    29,    23,    18,    15,
-};</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="k">const</span> <span class="kt">int</span> <span class="n">sched_prio_to_weight</span><span class="p">[</span><span class="mi">40</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="cm">/* -20 */</span> <span class="mi">88761</span><span class="p">,</span> <span class="mi">71755</span><span class="p">,</span> <span class="mi">56483</span><span class="p">,</span> <span class="mi">46273</span><span class="p">,</span> <span class="mi">36291</span><span class="p">,</span>
+  <span class="cm">/* -15 */</span> <span class="mi">29154</span><span class="p">,</span> <span class="mi">23254</span><span class="p">,</span> <span class="mi">18705</span><span class="p">,</span> <span class="mi">14949</span><span class="p">,</span> <span class="mi">11916</span><span class="p">,</span>
+  <span class="cm">/* -10 */</span>  <span class="mi">9548</span><span class="p">,</span>  <span class="mi">7620</span><span class="p">,</span>  <span class="mi">6100</span><span class="p">,</span>  <span class="mi">4904</span><span class="p">,</span>  <span class="mi">3906</span><span class="p">,</span>
+  <span class="cm">/*  -5 */</span>  <span class="mi">3121</span><span class="p">,</span>  <span class="mi">2501</span><span class="p">,</span>  <span class="mi">1991</span><span class="p">,</span>  <span class="mi">1586</span><span class="p">,</span>  <span class="mi">1277</span><span class="p">,</span>
+  <span class="cm">/*   0 */</span>  <span class="mi">1024</span><span class="p">,</span>   <span class="mi">820</span><span class="p">,</span>   <span class="mi">655</span><span class="p">,</span>   <span class="mi">526</span><span class="p">,</span>   <span class="mi">423</span><span class="p">,</span>
+  <span class="cm">/*   5 */</span>   <span class="mi">335</span><span class="p">,</span>   <span class="mi">272</span><span class="p">,</span>   <span class="mi">215</span><span class="p">,</span>   <span class="mi">172</span><span class="p">,</span>   <span class="mi">137</span><span class="p">,</span>
+  <span class="cm">/*  10 */</span>   <span class="mi">110</span><span class="p">,</span>    <span class="mi">87</span><span class="p">,</span>    <span class="mi">70</span><span class="p">,</span>    <span class="mi">56</span><span class="p">,</span>    <span class="mi">45</span><span class="p">,</span>
+  <span class="cm">/*  15 */</span>    <span class="mi">36</span><span class="p">,</span>    <span class="mi">29</span><span class="p">,</span>    <span class="mi">23</span><span class="p">,</span>    <span class="mi">18</span><span class="p">,</span>    <span class="mi">15</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="complete-fair-scheduling">Complete Fair Scheduling: 实现</h2>
@@ -332,297 +367,6 @@
 <p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/rbtree.svg" width="500px"></img></p>
 </div></div></div>
 </section>
-<section>
-<div class="slide-container"><div class=""><h2 id="_1">一个小细节：整数溢出</h2>
-<p>64-bit 无符号整数如果存储以纳秒为单位的时间</p>
-<ul>
-<li><math>2^{64} / 10^9 / 3600 / 24 / 365 = 584.9</math> (年)</li>
-<li>假如真的有运行的那么久的系统……</li>
-</ul>
-<div class="fragment">
-<blockquote>
-<p>基本假设：系统的所有时间都是相对 “最近” 的</p>
-<ul>
-<li>signed integer overflow → UB<ul>
-<li>但 unsigned integer overflow 保证 wrap-around</li>
-</ul>
-</li>
-<li>始终使用 time-delta 的正负来判定大小</li>
-</ul>
-</blockquote>
-<pre class="codehilite"><code class="language-c">static inline u64 min_vruntime(u64 min_vruntime, u64 vruntime) {
-  s64 delta = (s64)(vruntime - min_vruntime);
-  if (delta &lt; 0) min_vruntime = vruntime;
-  return min_vruntime;
-}
-
-static inline int entity_before(struct sched_entity *a,
-                                struct sched_entity *b) {
-  return (s64)(a-&gt;vruntime - b-&gt;vruntime) &lt; 0;
-}</code></pre>
-</div></div></div>
-</section>
-</section>
-
-<section>
-<section>
-<div class="slide-container"><div class="center middle"><h1 id="2">单处理器分时调度 (2)</h1></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="io">实际情况：不止是计算和 I/O</h2>
-<blockquote>
-<p>调度策略的复杂性来源</p>
-<ul>
-<li>因为线程不是 <code>while (1)</code> 的循环</li>
-<li>进程/线程不是纯粹的计算或 (长时间) I/O<ul>
-<li><span class="red">等待互斥锁/信号量</span></li>
-<li>或是非常短暂的 I/O 等待 (比一个时间片短很多)</li>
-</ul>
-</li>
-</ul>
-</blockquote>
-<div class="fragment">
-<p>在此情形下，会发生什么？</p>
-<ul>
-<li>round-robin?<ul>
-<li>考虑三个进程/线程: producer, consumer, <code>while (1)</code></li>
-<li>Lab 2 你们就会遇到这个问题了<ul>
-<li>主要是因为没有精确的时间统计</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>CFS?<ul>
-<li>似乎没有这个问题：线程有精确的 accounting 信息<ul>
-<li>producer/consumer 被唤醒后会正确分享 CPU</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</div></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="so-far-so-good">So Far, So Good...</h2>
-<p>进程/线程公平地共享 CPU</p>
-<ul>
-<li>支持睡眠、等待、fork</li>
-<li>坏人有更高的优先级，能更多地获得被执行的机会</li>
-</ul>
-<div class="fragment">
-<blockquote>
-<p>并发 bugs 还在等着大家呢！</p>
-<ul>
-<li>处理器调度中有一类非常有趣的并发 bug</li>
-</ul>
-</blockquote>
-</div></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="priority-inversion">优先级反转 (Priority Inversion)</h2>
-<pre class="codehilite"><code class="language-c">void bad_guy() { // 高优先级
-  while (1) {
-    mutex_lock(&lk);
-    ...
-    mutex_unlock(&lk);
-  }
-}
-
-void nice_guy() { // 中优先级
-  while (1) ;
-}
-
-void very_nice_guy() { // 最低优先级
-  while (1) {
-    mutex_lock(&lk);
-    ...
-    mutex_unlock(&lk);
-  }
-}</code></pre>
-
-
-<ul>
-<li>very nice guy 在持有锁的时候让出了处理器……<ul>
-<li>bad guy 顺便也无法运行了 (nice guy 抢在了它前面 👎)</li>
-</ul>
-</li>
-</ul></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="the-first-bug-on-mars"><a href="https://news.ycombinator.com/item?id=13210478">The First Bug on Mars</a></h2>
-<blockquote>
-<p>Sojourner “探路者号” (PathFinder), 1997 年 7 月 4 日着陆</p>
-<ul>
-<li>大家出生前发生的事情，但我依然有印象</li>
-<li>着陆几天后，出现系统重启和数据丢失</li>
-</ul>
-</blockquote>
-<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/PATHCOV.jpg" width="300px"></img>
-硬件配置</p>
-<ul>
-<li>Lander: IBM RISC 6000 Single Chip (Rad6000 SC) 20 MIPS CPU, 128 MiB RAM, 6 MiB EEPROM<ul>
-<li>操作系统: VxWorks 实时操作系统<ul>
-<li>实时：任务可以在指定的时间内完成</li>
-<li>ASI/MET task: 大气成分监测 (低优先级)</li>
-<li><code>bc_dist</code> task: 分发任务 (中优先级)</li>
-<li><code>bc_sched</code> task: 总线调度 (高优先级)</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>Rover: 0.1 MIPS Intel 80C85 CPU, 512 KiB RAM, 176 KiB Flash SSD</li>
-</ul></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="the-first-bug-on-mars-contd">The First Bug on Mars (cont'd)</h2>
-<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/marsbot.png" width="750px"></img></p>
-<ul>
-<li>(低优先级) <code>select -&gt; pipeIoctl -&gt; selNodeAdd -&gt; mutex_lock</code></li>
-<li>(高优先级) <code>pipeWrite -&gt; mutex_lock</code></li>
-</ul></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="_1">优先级反转：修复</h2>
-<blockquote>
-<p>非实时系统：CFS 基本满足要求</p>
-<ul>
-<li>低优先级进程也能获得时间执行</li>
-<li>一旦释放锁，高优先级进程就能执行了</li>
-</ul>
-<p>实时系统：如何解决？</p>
-</blockquote>
-<ul>
-<li>优先级继承 (Priority Inheritance)/优先级提升 (Priority Ceiling)<ul>
-<li>持有 mutex 的线程/进程会继承 block 在该 mutex 上的最高优先级</li>
-<li>不总是能 work (例如条件变量唤醒)</li>
-</ul>
-</li>
-</ul>
-<div class="fragment">
-<ul>
-<li>在系统中动态维护资源依赖关系<ul>
-<li>优先级继承是它的特例</li>
-<li>似乎更困难了……</li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="fragment">
-<ul>
-<li>避免高/低优先级的任务争抢资源<ul>
-<li>对潜在的优先级反转进行预警 (lockdep)</li>
-<li>TX-based: 冲突的 TX 发生时，总是低优先级的 abort</li>
-</ul>
-</li>
-</ul>
-</div></div></div>
-</section>
-</section>
-
-<section>
-<section>
-<div class="slide-container"><div class="center middle"><h1 id="_1">多处理器调度</h1></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="_1">多处理器调度</h2>
-<blockquote>
-<p>调度策略的复杂性来源</p>
-<ul>
-<li>因为系统中有多个处理器</li>
-<li><span class="red">进程在处理器间迁移对缓存非常不友好</span></li>
-</ul>
-</blockquote>
-<p>Trade-offs</p>
-<ul>
-<li>不迁移吧：处理器 workload 不平衡</li>
-<li>迁移吧：付出一些难以估计的成本</li>
-</ul>
-<hr></hr>
-<p>本质 (也是困难): 对系统未来的行为进行预测</p>
-<ul>
-<li>通常假设系统 workload 短时间不会变化<ul>
-<li>定时的 load balancing (Linux Kernel)</li>
-</ul>
-</li>
-<li>但这明显不对啊<ul>
-<li>线程少、同步多的时候<ul>
-<li>load balance 频率不足, “一核出力，他人围观”</li>
-<li>不要笑，你们的 Lab2 也会</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="contd">多处理器调度 (cont'd)</h2>
-<blockquote>
-<p>“And you have to realize that there are not very many things that have aged as well as the scheduler. Which is just another proof that scheduling is easy.”<span class="float-right">——Linus Torvalds, 2001</span></p>
-</blockquote>
-<div class="fragment">
-<p>真以为调度是个挺简单的问题？</p>
-<ul>
-<li>As a central part of resource management, the OS thread scheduler must maintain the following, simple, invariant: make sure that ready threads are scheduled on available cores.</li>
-<li>As simple as it may seem, we found that this invariant is often broken in Linux. Cores may stay idle for seconds while ready threads are waiting in runqueues.<ul>
-<li>J. Lozi, et al. <a href="https://dl.acm.org/doi/10.1145/2901318.2901326">The Linux scheduler: A decade of wasted cores</a>. In <em>Proc. of EuroSys</em>, 2016. </li>
-<li>多处理器调度依然是 open problem</li>
-</ul>
-</li>
-</ul>
-</div></div></div>
-</section>
-<section>
-<div class="slide-container"><div class=""><h2 id="_1">数据中心的多处理器调度</h2>
-<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/data-center.jpg" width="500px"></img></p>
-<p>高优先级的任务 (搜索、购物车、……) → 质量必须得到保证</p>
-<ul>
-<li>Amazon: 100ms 延迟 = 少卖 1% 的货物<ul>
-<li>想想淘宝/京东/拼多多...的 1% 是多么天大的数额……</li>
-</ul>
-</li>
-</ul>
-<p>低优先级的任务 (索引、视频转码、……) → 尽可能把服务器填满</p>
-<ul>
-<li>估计 Google 有 2.5 million 台服务器 (2016)<ul>
-<li>提高 1% 的利用率都节约巨大的机器/能量</li>
-</ul>
-</li>
-</ul>
-<blockquote>
-<p>给高优先级的任务无穷小的 nice 值？</p>
-<ul>
-<li><span class="red">不，没用</span>。并行的任务可能会占用 I/O, pollute cache/buffer, ...</li>
-</ul>
-</blockquote></div></div>
-</section>
-</section>
-
-<section>
-<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
-<p>处理器调度</p>
-<ul>
-<li>机制<ul>
-<li>中断/系统调用时，进入操作系统代码执行</li>
-<li>操作系统代码可以选择任何一个线程/进程继续执行</li>
-<li><span class="red">设计 rock-solid 的机制，支持任何策略</span></li>
-</ul>
-</li>
-<li>策略<ul>
-<li>Round-Robin, MLFQ, CFS, ...</li>
-<li><span class="red">根据实际情况 (workload) 尝试各种策略</span></li>
-</ul>
-</li>
-<li>真实系统的复杂性来源<ul>
-<li>优先级、优先级反转、多处理器……</li>
-</ul>
-</li>
-</ul>
-<hr></hr>
-<p>复习题</p>
-<ul>
-<li>阅读: J. Bouron, et al. <a href="https://www.usenix.org/system/files/conference/atc18/atc18-bouron.pdf">The battle of the schedulers: FreeBSD ULE vs. Linux CFS</a>. In <em>Proc. of USENIX ATC</em>, 2018.</li>
-<li>开始做 Lab2!</li>
-</ul></div></div>
 </section>
   </div>
 </div>

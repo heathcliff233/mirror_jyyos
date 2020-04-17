@@ -168,17 +168,19 @@
 <section>
 <div class="slide-container"><div class=""><h2 id="1">失败的尝试 #1</h2>
 <p>希望实现一个操作系统上 “最小” 的 Hello World</p>
-<pre class="codehilite"><code class="language-c">int main() {
-  printf("Hello World!\n");
-  // C 标准默认 main 返回 0
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"Hello World!</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+  <span class="c1">// C 标准默认 main 返回 0</span>
+<span class="p">}</span>
+</pre></div>
 
 <p>(失败)</p>
-<pre class="codehilite"><code class="language-text">$ gcc -c hello.c
+<div class="codehilite"><pre><span></span>$ gcc -c hello.c
 $ ld hello.o
 ld: warning: cannot find entry symbol _start; defaulting to 00000000004000b0
 hello.o: In function `main':
-hello.c:(.text+0xc): undefined reference to `puts'</code></pre></div></div>
+hello.c:(.text+0xc): undefined reference to `puts'
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">为什么？</h2>
@@ -214,17 +216,19 @@ hello.c:(.text+0xc): undefined reference to `puts'</code></pre></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="2">失败的尝试 #2</h2>
-<pre class="codehilite"><code class="language-c">int main() {
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这总行了吧？</p>
 <p>(失败)</p>
-<pre class="codehilite"><code class="language-text">$ gcc -c hello.c
+<div class="codehilite"><pre><span></span>$ gcc -c hello.c
 $ ld -e main hello.o
 $ ./a.out
 zsh: segmentation fault (core dumped)  ./a.out
-$ </code></pre>
+$ 
+</pre></div>
 
 
 <p>为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么为什么？</p></div></div>
@@ -300,13 +304,14 @@ $ </code></pre>
 <li><code>-d</code>: disassemble; <code>-S</code>: source (需要 <code>-g</code> 选项支持)</li>
 </ul>
 <hr></hr>
-<pre class="codehilite"><code class="language-text">syscall(SYS_write, 1, hello, LENGTH(hello));
+<div class="codehilite"><pre><span></span>syscall(SYS_write, 1, hello, LENGTH(hello));
   1139: b9 1d 00 00 00          mov    $0x1d,%ecx
   113e: 48 8d 15 cb 0e 00 00    lea    0xecb(%rip),%rdx  # 2010 &lt;hello&gt;
   1145: be 01 00 00 00          mov    $0x1,%esi
   114a: bf 01 00 00 00          mov    $0x1,%edi
   114f: b8 00 00 00 00          mov    $0x0,%eax
-  1154: e8 d7 fe ff ff          callq  1030 &lt;syscall@plt&gt;</code></pre>
+  1154: e8 d7 fe ff ff          callq  1030 &lt;syscall@plt&gt;
+</pre></div>
 
 <ul>
 <li><code>syscall@plt</code> - 动态链接 (来自 libc 的代码)<ul>
@@ -329,14 +334,15 @@ $ </code></pre>
 </ul>
 </div>
 <div class="fragment">
-<pre class="codehilite"><code class="language-text">(gdb) starti
+<div class="codehilite"><pre><span></span>(gdb) starti
 Starting program: /tmp/a.out 
 
 Program stopped.
 0x00007ffff7dd6090 in _start () from /lib64/ld-linux-x86-64.so.2
 (gdb) bt
 #0  0x00007ffff7dd6090 in _start () from /lib64/ld-linux-x86-64.so.2
-#1  0x0000000000000001 in ?? ()</code></pre>
+#1  0x0000000000000001 in ?? ()
+</pre></div>
 
 
 <ul>

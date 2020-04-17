@@ -49,18 +49,20 @@
     <div class="article">
       <h1 id="_1">互斥</h1>
 <p>为了防止多个线程之间出现“打架”的情况，保证一段代码能在不被干扰的情况下执行，就是互斥，就像之间我们看到的：</p>
-<pre class="codehilite"><code class="language-c">sum++; // 实际是tmp = sum;
-       //      tmp += 1;
-       //      sum = tmp;
-       // 如果多个线程同时执行会出现问题</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">sum</span><span class="o">++</span><span class="p">;</span> <span class="c1">// 实际是tmp = sum;</span>
+       <span class="c1">//      tmp += 1;</span>
+       <span class="c1">//      sum = tmp;</span>
+       <span class="c1">// 如果多个线程同时执行会出现问题</span>
+</pre></div>
 
 
 <p>因此，我们希望能有一组API，能让一段代码原子(atomically)地执行，消除特定的并发调度，这就是互斥(mutual exclusion, <em>mutex</em>)锁：</p>
-<pre class="codehilite"><code class="language-c">lock_t mutex;
+<div class="codehilite"><pre><span></span><span class="n">lock_t</span> <span class="n">mutex</span><span class="p">;</span>
 
-lock(&amp;mutex);    // -
-sum++;           // | &lt;- 保证其他lock(mutex)-unlock(mutex)不会与之并发
-unlock(&amp;mutex);  // -</code></pre>
+<span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>    <span class="c1">// -</span>
+<span class="n">sum</span><span class="o">++</span><span class="p">;</span>           <span class="c1">// | &lt;- 保证其他lock(mutex)-unlock(mutex)不会与之并发</span>
+<span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>  <span class="c1">// -</span>
+</pre></div>
 
 
 <p>如果互斥锁实现正确并且所有的<code>sum++</code>都被同一互斥锁保护，则<code>sum++</code>执行<math>n</math>次，最终就能看<math>n</math>。</p>
@@ -69,59 +71,63 @@ unlock(&amp;mutex);  // -</code></pre>
 <p>参考书实在是写得太好了，我完全没必要写这部分的讲义啊……</p>
 <h2 id="_3">互斥锁：应用</h2>
 <p>我们就沿用<code>mutex_t</code>, <code>lock</code>和<code>unlock</code>，它们在并发编程中，除了让<code>sum++</code>能正确执行外，有什么用呢？它们有大用处：体现了我们建模并发程序时做的抽象，降低理解并发程序的难度，例如如果我们想向链表中插入一个数据：</p>
-<pre class="codehilite"><code class="language-c">void insert(node_t *node, node_t *cur) {
-  node_t *prev = node;
-  node_t *next = node-&gt;next;
-  prev-&gt;next = next-&gt;prev = cur;
-  cur-&gt;prev = prev;
-  cur-&gt;next = next;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">insert</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">,</span> <span class="n">node_t</span> <span class="o">*</span><span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">node_t</span> <span class="o">*</span><span class="n">prev</span> <span class="o">=</span> <span class="n">node</span><span class="p">;</span>
+  <span class="n">node_t</span> <span class="o">*</span><span class="n">next</span> <span class="o">=</span> <span class="n">node</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span>
+  <span class="n">prev</span><span class="o">-&gt;</span><span class="n">next</span> <span class="o">=</span> <span class="n">next</span><span class="o">-&gt;</span><span class="n">prev</span> <span class="o">=</span> <span class="n">cur</span><span class="p">;</span>
+  <span class="n">cur</span><span class="o">-&gt;</span><span class="n">prev</span> <span class="o">=</span> <span class="n">prev</span><span class="p">;</span>
+  <span class="n">cur</span><span class="o">-&gt;</span><span class="n">next</span> <span class="o">=</span> <span class="n">next</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>你希望建模<code>insert</code>的并发行为——有点困难。不过呢：</p>
-<pre class="codehilite"><code class="language-c">// not very good practice
-// pthread_mutex系列操作都可能失败！
-#define atomic(lk) \
-  for (int __lock_var = pthread_mutex_lock(lk), i = 0; \
-       i &lt; 1; \
-       pthread_mutex_unlock(lk), i++)
+<div class="codehilite"><pre><span></span><span class="c1">// not very good practice</span>
+<span class="c1">// pthread_mutex系列操作都可能失败！</span>
+<span class="cp">#define atomic(lk) \</span>
+<span class="cp">  for (int __lock_var = pthread_mutex_lock(lk), i = 0; \</span>
+<span class="cp">       i &lt; 1; \</span>
+<span class="cp">       pthread_mutex_unlock(lk), i++)</span>
 
-void insert(node_t *node, node_t *cur) {
-  atomic(&amp;global_lock) {
-    ...
-    // NO early return!
-  }
-}</code></pre>
+<span class="kt">void</span> <span class="nf">insert</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">,</span> <span class="n">node_t</span> <span class="o">*</span><span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">atomic</span><span class="p">(</span><span class="o">&amp;</span><span class="n">global_lock</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// NO early return!</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>以及C++版本：</p>
-<pre class="codehilite"><code class="language-c++">class HoldLock {
-  pthread_mutex_t *mutex;
-public:
-  HoldLock(pthread_mutex_t *m): mutex(m) {
-    pthread_mutex_lock(mutex);
-  }
-  ~HoldLock() {
-    pthread_mutex_unlock(mutex);
-  }
-}
-void insert(node_t *node, node_t *cur) {
-  HoldLock lk(&amp;global_lock);
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">HoldLock</span> <span class="p">{</span>
+  <span class="n">pthread_mutex_t</span> <span class="o">*</span><span class="n">mutex</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+  <span class="n">HoldLock</span><span class="p">(</span><span class="n">pthread_mutex_t</span> <span class="o">*</span><span class="n">m</span><span class="p">)</span><span class="o">:</span> <span class="n">mutex</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="o">~</span><span class="n">HoldLock</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="n">insert</span><span class="p">(</span><span class="n">node_t</span> <span class="o">*</span><span class="n">node</span><span class="p">,</span> <span class="n">node_t</span> <span class="o">*</span><span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">HoldLock</span> <span class="n">lk</span><span class="p">(</span><span class="o">&amp;</span><span class="n">global_lock</span><span class="p">);</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这个trick称为“<a href="https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization">RAII</a>” (Resource Acquisition Is Initialization)，并且已经是C++11(及后续)标准的一部分，例如可以使用<code>std::lock_guard&lt;std::mutex&gt; lock(mutex);</code>。比起在代码里手动的释放，使用RAII无论函数在何时return，锁都能正确释放。</p>
 <p>Java也提供了类似的机制：</p>
-<pre class="codehilite"><code class="language-java">synchronized (list.lock) {
-  ...
-}
+<div class="codehilite"><pre><span></span><span class="kd">synchronized</span> <span class="p">(</span><span class="n">list</span><span class="p">.</span><span class="na">lock</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+<span class="p">}</span>
 
-class MyList {
-  synchronized void insert(...) {
-    ...
-  }
-}</code></pre>
+<span class="kd">class</span> <span class="nc">MyList</span> <span class="p">{</span>
+  <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">insert</span><span class="p">(...)</span> <span class="p">{</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>所以互斥锁最大的应用就是把并发的逻辑编程“代码块”的逻辑。对于正确同步的代码来说，我们只需要考虑粗粒度的并发行为是否正确，通常这比细粒度的并发程序行为建模要容易得多。</p>

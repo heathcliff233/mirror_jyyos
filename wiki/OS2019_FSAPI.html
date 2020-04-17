@@ -74,23 +74,26 @@
 <p>Linux启动后，initramfs系统被Linux内核挂载。此时，系统中并没有大家熟悉的<code>/proc</code>, <code>/dev</code>, <code>/sys</code>，甚至也没有<code>/home</code>…。这些文件系统都是init和之后的应用程序使用mount系统调用挂载的。mount完成的工作是<strong>把一个设备和一个文件系统实现联系起来，在设备上创建一个文件系统实例，并且把创建的文件系统“放置”到文件系统中的一个路径里</strong>。</p>
 <p><center><img alt="" src="../static/wiki/os/2019/img/mount-illustration.png" width="400px" /></center></p>
 <p>首先可以使用</p>
-<pre class="codehilite"><code class="language-bash">mount -l</code></pre>
+<div class="codehilite"><pre><span></span>mount -l
+</pre></div>
 
 
 <p>命令查看系统中挂载的文件系统。<code>mount</code>系统的描述：</p>
-<pre class="codehilite"><code class="language-c">int mount(const char *source, const char *target,
-          const char *filesystemtype, unsigned long mountflags,
-          const void *data);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">mount</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">source</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">target</span><span class="p">,</span>
+          <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filesystemtype</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">mountflags</span><span class="p">,</span>
+          <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">);</span>
+</pre></div>
 
 
 <blockquote>
 <p><code>mount()</code>  attaches  the filesystem specified by source (which is often a pathname referring to a device, but can also be the pathname of a directory or file, or a dummy string) to the location (a directory or file) specified by the pathname in target.</p>
 </blockquote>
 <p>例如，<code>mount /dev/sdb1 /mnt</code>可以将某个磁盘设备(通常是USB)挂载到<code>/mnt</code>。mount也可以把一个文件直接挂载到文件系统中，不过是通过创建一个loopback device实现的，我们可以通过strace观察mount命令的行为：</p>
-<pre class="codehilite"><code>openat(AT_FDCWD, &quot;/dev/loop-control&quot;, O_RDWR|O_CLOEXEC) = 3
-ioctl(3, LOOP_CTL_GET_FREE)                             = 3
-...
-mount(&quot;/dev/loop3&quot;, &quot;/mnt&quot;, &quot;ext4&quot;, MS_MGC_VAL, NULL)   = 0</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">openat(AT_FDCWD, &quot;/dev/loop-control&quot;, O_RDWR|O_CLOEXEC) = 3</span>
+<span class="err">ioctl(3, LOOP_CTL_GET_FREE)                             = 3</span>
+<span class="err">...</span>
+<span class="err">mount(&quot;/dev/loop3&quot;, &quot;/mnt&quot;, &quot;ext4&quot;, MS_MGC_VAL, NULL)   = 0</span>
+</pre></div>
 
 
 <p>在loop(4)的手册中：</p>
@@ -114,14 +117,15 @@ mount(&quot;/dev/loop3&quot;, &quot;/mnt&quot;, &quot;ext4&quot;, MS_MGC_VAL, NU
 <li>父子进程输出到同一文件描述符。例如父子进程都用<code>printf()</code>打印日志。当<code>some-program &gt; some-program.log</code>时，父子进程需要共享偏移量以保证它们的日志不会互相覆盖。</li>
 </ul>
 <p>另一个麻烦之处是<code>dup()</code>复制的文件描述符，它似乎也应该和原先的文件描述符共享偏移量：我们可以用dup实现文件描述符的备份(例如stdout)：</p>
-<pre class="codehilite"><code class="language-c">int stdout_fd_bak = dup(STDOUT_FILENO); // 备份
-fflush(stdout):
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">stdout_fd_bak</span> <span class="o">=</span> <span class="n">dup</span><span class="p">(</span><span class="n">STDOUT_FILENO</span><span class="p">);</span> <span class="c1">// 备份</span>
+<span class="n">fflush</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span><span class="o">:</span>
 
-freopen(..., stdout); // 替换stdout对应的文件描述符
-...
-fclose(stdout);
+<span class="n">freopen</span><span class="p">(...,</span> <span class="n">stdout</span><span class="p">);</span> <span class="c1">// 替换stdout对应的文件描述符</span>
+<span class="p">...</span>
+<span class="n">fclose</span><span class="p">(</span><span class="n">stdout</span><span class="p">);</span>
 
-dup2(stdout_fd_bak, STDOUT_FILENO); // 恢复</code></pre>
+<span class="n">dup2</span><span class="p">(</span><span class="n">stdout_fd_bak</span><span class="p">,</span> <span class="n">STDOUT_FILENO</span><span class="p">);</span> <span class="c1">// 恢复</span>
+</pre></div>
 
 
 <p>关于这些细节，也请大家阅读教科书第39章内容。</p>

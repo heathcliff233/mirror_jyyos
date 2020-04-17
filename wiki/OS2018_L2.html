@@ -74,17 +74,18 @@
 </div>
 <h2 id="_4">虚拟文件系统</h2>
 <p>在这个实验中，实现<code>vfs</code>模块：</p>
-<pre class="codehilite"><code class="language-c">MODULE {
-  void (*init)();
-  int (*access)(const char *path, int mode);
-  int (*mount)(const char *path, filesystem_t *fs);
-  int (*unmount)(const char *path);
-  int (*open)(const char *path, int flags);
-  ssize_t (*read)(int fd, void *buf, size_t nbyte);
-  ssize_t (*write)(int fd, void *buf, size_t nbyte);
-  off_t (*lseek)(int fd, off_t offset, int whence);
-  int (*close)(int fd);
-} MOD_NAME(vfs);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">MODULE</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">access</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mode</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">mount</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="n">filesystem_t</span> <span class="o">*</span><span class="n">fs</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">unmount</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">open</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">read</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbyte</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">write</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbyte</span><span class="p">);</span>
+  <span class="kt">off_t</span> <span class="p">(</span><span class="o">*</span><span class="n">lseek</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">int</span> <span class="n">whence</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">close</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">MOD_NAME</span><span class="p">(</span><span class="n">vfs</span><span class="p">);</span>
+</pre></div>
 
 
 <p>系统启动后，文件系统相关的代码将在操作系统中创建三个虚拟文件系统的实例：</p>
@@ -111,9 +112,10 @@
 <h2 id="_6">实验指南</h2>
 <h3 id="vfs">VFS中的对象</h3>
 <p>VFS中有三类重要的对象，它们都用结构体实现(和Lab1中的<code>thread_t</code>类似)：</p>
-<pre class="codehilite"><code class="language-c">typedef struct filesystem filesystem_t;
-typedef struct inode inode_t;
-typedef struct file file_t;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">filesystem</span> <span class="n">filesystem_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">inode</span> <span class="n">inode_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">file</span> <span class="n">file_t</span><span class="p">;</span>
+</pre></div>
 
 
 <p>其中：</p>
@@ -125,16 +127,18 @@ typedef struct file file_t;</code></pre>
 <div class="fenced fenced-blue">
 <h4 id="fork">fork后的文件描述符</h4>
 <p>考虑如下最简单的代码：</p>
-<pre class="codehilite"><code class="language-c">const char *hello = &quot;Hello World\n&quot;;
-fork();
-write(STDOUT_FILENO, hello, strlen(hello));</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">hello</span> <span class="o">=</span> <span class="s">&quot;Hello World</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="n">fork</span><span class="p">();</span>
+<span class="n">write</span><span class="p">(</span><span class="n">STDOUT_FILENO</span><span class="p">,</span> <span class="n">hello</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">hello</span><span class="p">));</span>
+</pre></div>
 
 
 <p>如果在终端中执行：</p>
-<pre class="codehilite"><code class="language-bash">$ ./a.out &gt; log.txt
+<div class="codehilite"><pre><span></span>$ ./a.out &gt; log.txt
 $ cat log.txt
 Hello World
-Hello World</code></pre>
+Hello World
+</pre></div>
 
 
 <p>你会不会诧异为什么两个write没有写到文件同一个偏移量里？这就是因为每一个文件描述符在操作系统里，都是一个指向<code>file_t</code>的指针，而<code>file_t</code>中维护了文件偏移量——这样父、子进程就实现了偏移量的共享。</p>
@@ -148,52 +152,58 @@ Hello World</code></pre>
 <p>我们给出了一些参考的类定义，但这个定义不是唯一(甚至也许不是正确)的。我们只是提供一些思路，我们希望实验者自己尝试对象API的设计。</p>
 </div>
 <p>首先我们定义<code>fsops_t</code>结构体：</p>
-<pre class="codehilite"><code class="language-c">typedef struct fsops {
-  void (*init)(struct filesystem *fs, const char *name, inode_t *dev);
-  inode_t *(*lookup)(struct filesystem *fs, const char *path, int flags);
-  int (*close)(inode_t *inode);
-} fsops_t;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">fsops</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)(</span><span class="k">struct</span> <span class="n">filesystem</span> <span class="o">*</span><span class="n">fs</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="n">inode_t</span> <span class="o">*</span><span class="n">dev</span><span class="p">);</span>
+  <span class="n">inode_t</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">lookup</span><span class="p">)(</span><span class="k">struct</span> <span class="n">filesystem</span> <span class="o">*</span><span class="n">fs</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">close</span><span class="p">)(</span><span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">fsops_t</span><span class="p">;</span>
+</pre></div>
 
 
 <p>并且定义</p>
-<pre class="codehilite"><code class="language-c">struct filesystem {
-  ...
-  fsops_t ops;
-  ...
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">filesystem</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">fsops_t</span> <span class="n">ops</span><span class="p">;</span>
+  <span class="p">...</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>这样我们就能为一个文件系统实现一份代码，并且创建多个同一种文件系统的实例：</p>
-<pre class="codehilite"><code class="language-c">filesystem_t *create_procfs() {
-  filesystem_t *fs = (filesystem_t *)pmm-&gt;alloc(sizeof(filesystem_t));
-  if (!fs) panic(&quot;fs allocation failed&quot;);
-  fs-&gt;ops = &amp;procfs_ops; // 你为procfs定义的fsops_t，包含函数的实现
-  fs-&gt;ops-&gt;init(fs, &quot;procfs&quot;, NULL);
-  return fs;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">filesystem_t</span> <span class="o">*</span><span class="nf">create_procfs</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">filesystem_t</span> <span class="o">*</span><span class="n">fs</span> <span class="o">=</span> <span class="p">(</span><span class="n">filesystem_t</span> <span class="o">*</span><span class="p">)</span><span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">filesystem_t</span><span class="p">));</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">fs</span><span class="p">)</span> <span class="n">panic</span><span class="p">(</span><span class="s">&quot;fs allocation failed&quot;</span><span class="p">);</span>
+  <span class="n">fs</span><span class="o">-&gt;</span><span class="n">ops</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">procfs_ops</span><span class="p">;</span> <span class="c1">// 你为procfs定义的fsops_t，包含函数的实现</span>
+  <span class="n">fs</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="s">&quot;procfs&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">fs</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>然后用</p>
-<pre class="codehilite"><code class="language-c">vfs-&gt;mount(&quot;/proc&quot;, create_procfs());</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">vfs</span><span class="o">-&gt;</span><span class="n">mount</span><span class="p">(</span><span class="s">&quot;/proc&quot;</span><span class="p">,</span> <span class="n">create_procfs</span><span class="p">());</span>
+</pre></div>
 
 
 <p>实现文件系统的挂载。</p>
 <h3 id="_8">文件系统的挂载</h3>
 <p>文件系统的挂载其实非常简单——就是在系统里“登记”一下把某个<code>filesystem_t</code>挂载到了某个路径。</p>
 <p>注意路径解析只在这两个API中发生：</p>
-<pre class="codehilite"><code class="language-c">int (*access)(const char *path, int mode);
-int (*open)(const char *path, int flags);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">access</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mode</span><span class="p">);</span>
+<span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">open</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+</pre></div>
 
 
 <p>简单来说，只要在解析<code>path</code>参数时，找到它所对应的挂载点，然后把剩下的路径交给文件系统(<code>filesystem_t</code>对象)解析即可。</p>
 <h3 id="_9">文件操作</h3>
 <p>类似地，我们也可以定义</p>
-<pre class="codehilite"><code class="language-c">typedef struct fileops {
-  int (*open)(inode_t *inode, file_t *file, int flags);
-  ssize_t (*read)(inode_t *inode, file_t *file, char *buf, size_t size);
-  ssize_t (*write)(inode_t *inode, file_t *file, const char *buf, size_t size);
-  off_t (*lseek)(inode_t *inode, file_t *file, off_t offset, int whence);
-} fileops_t;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">fileops</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">open</span><span class="p">)(</span><span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">read</span><span class="p">)(</span><span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">write</span><span class="p">)(</span><span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+  <span class="kt">off_t</span> <span class="p">(</span><span class="o">*</span><span class="n">lseek</span><span class="p">)(</span><span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">int</span> <span class="n">whence</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">fileops_t</span><span class="p">;</span>
+</pre></div>
 
 
 <p>实现各种文件代码的复用，例如procfs中的大部分文件其实都是一块临时的数据(分配在内存中)，所以可以用同一套read/write/lseek实现。嗯，操作系统就是个C程序嘛！不过如此，这个实验其实就是一些实现代码的体力活哦……</p>

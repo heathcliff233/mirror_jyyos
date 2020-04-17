@@ -133,13 +133,14 @@
 </ul>
 </blockquote>
 <p>管理进程地址空间的系统调用</p>
-<pre class="codehilite"><code class="language-c">// 映射
-void *mmap(void *addr, size_t length, int prot, int flags,
-           int fd, off_t offset);
-int munmap(void *addr, size_t length);
+<div class="codehilite"><pre><span></span><span class="c1">// 映射</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">mmap</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span> <span class="n">prot</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span>
+           <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">munmap</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">length</span><span class="p">);</span>
 
-// 修改映射权限
-int mprotect(void *addr, size_t length, int prot);</code></pre>
+<span class="c1">// 修改映射权限</span>
+<span class="kt">int</span> <span class="nf">mprotect</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span> <span class="n">prot</span><span class="p">);</span>
+</pre></div>
 
 
 <ul>
@@ -191,7 +192,7 @@ int mprotect(void *addr, size_t length, int prot);</code></pre>
 <ul>
 <li>我们有 strace 的证据！</li>
 </ul>
-<pre class="codehilite"><code class="language-text">$ cat /proc/[pid]/maps
+<div class="codehilite"><pre><span></span>$ cat /proc/[pid]/maps
 00400000-004b6000                 r-xp  /tmp/a.out (代码)
 006b6000-006bc000                 rw-p  /tmp/a.out (数据)
 006bc000-006bd000                 rw-p             (bss)
@@ -199,7 +200,8 @@ int mprotect(void *addr, size_t length, int prot);</code></pre>
 7fff993c9000-7fff993ea000         rw-p  [stack]
 7fff993f4000-7fff993f7000         r--p  [vvar]     &lt;- WTF?
 7fff993f7000-7fff993f9000         r-xp  [vdso]     &lt;- WTF?
-ffffffffff600000-ffffffffff601000 r-xp  [vsyscall] &lt;- WTF? 这地址?</code></pre>
+ffffffffff600000-ffffffffff601000 r-xp  [vsyscall] &lt;- WTF? 这地址?
+</pre></div>
 
 
 <ul>
@@ -267,13 +269,14 @@ ffffffffff600000-ffffffffff601000 r-xp  [vsyscall] &lt;- WTF? 这地址?</code><
 </ul>
 <hr></hr>
 <p>SYSCALL — Fast System Call</p>
-<pre class="codehilite"><code class="language-text">RCX    &lt;- RIP; (* 下条指令执行的地址 *)
+<div class="codehilite"><pre><span></span>RCX    &lt;- RIP; (* 下条指令执行的地址 *)
 RIP    &lt;- IA32_LSTAR;
 R11    &lt;- RFLAGS;
 RFLAGS &lt;- RFLAGS & ~(IA32_FMASK);
 CPL    &lt;- 0; (* 进入 Ring 0 执行 *)
 CS.Selector &lt;- IA32_STAR[47:32] & 0xFFFC
-SS.Selector &lt;- IA32_STAR[47:32] + 8;</code></pre>
+SS.Selector &lt;- IA32_STAR[47:32] + 8;
+</pre></div>
 
 
 <ul>

@@ -54,11 +54,12 @@
 </div>
 <h2 id="_3">操作系统实验：缺陷</h2>
 <p>在我们的OSLab系列中，我们自己在硬件上实现了一个操作系统内核。内核代码(中断处理、设备驱动、文件系统、系统调用……)都能访问操作系统内核的整个地址空间，这使得我们共享操作系统中的数据非常容易，可以定义：</p>
-<pre class="codehilite"><code class="language-c">struct task {
-  uint32_t status;
-  ...
-  struct file *fildes[NOFILE];
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">task</span> <span class="p">{</span>
+  <span class="kt">uint32_t</span> <span class="n">status</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">fildes</span><span class="p">[</span><span class="n">NOFILE</span><span class="p">];</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>然而，没人敢说自己的代码没有bug。不仅是你的代码有bug，Linux Kernel也不例外。内核里的bug的危害可比一般应用程序大多了——轻则导致运行环境崩溃，重则产生安全漏洞，使得系统受到重大的经济损失。</p>

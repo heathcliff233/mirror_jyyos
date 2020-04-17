@@ -51,7 +51,8 @@
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">截止日期</h4>
 <p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
-<pre class="codehilite"><code>git pull origin L0</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin L0</span>
+</pre></div>
 
 
 <p>Soft Deadline: 2020 年 3 月 22 日 23:59:59。</p>
@@ -83,26 +84,28 @@
 
 <h2 id="1">1. 背景</h2>
 <p>《操作系统》课程的第一个实验只是在裸机上写一个小程序——小游戏。为什么要写游戏？以 NES 模拟器 LiteNES 为例，简化的模拟器 (游戏) 的 “主循环” (<code>fce.c</code>) 代码如下：</p>
-<pre class="codehilite"><code class="language-c">while (1) {
-  // 在每一个时间片，例如每 16.7ms (60 fps)
-  wait_for_frame();
+<div class="codehilite"><pre><span></span><span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 在每一个时间片，例如每 16.7ms (60 fps)</span>
+  <span class="n">wait_for_frame</span><span class="p">();</span>
 
-  // 做完这一个时间片内需要完成的工作
-  int scanlines = 262;
-  while (scanlines-- &gt; 0) {
-    ppu_cycle();      // 更新游戏图像
-    psg_detect_key(); // 读取按键，更新游戏逻辑
-  }
-}</code></pre>
+  <span class="c1">// 做完这一个时间片内需要完成的工作</span>
+  <span class="kt">int</span> <span class="n">scanlines</span> <span class="o">=</span> <span class="mi">262</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">scanlines</span><span class="o">--</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">ppu_cycle</span><span class="p">();</span>      <span class="c1">// 更新游戏图像</span>
+    <span class="n">psg_detect_key</span><span class="p">();</span> <span class="c1">// 读取按键，更新游戏逻辑</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>小游戏的逻辑非常类似于早期的批处理操作系统。所谓 “批处理”，就是运行完一个程序后再接着运行另一个。类似于游戏，批处理系统也是一个大循环：</p>
-<pre class="codehilite"><code class="language-c">while (1) {
-  Job *job = get_job(); // 实际的批处理系统可以解析、执行脚本
-  if (job) {
-    load(job);
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">Job</span> <span class="o">*</span><span class="n">job</span> <span class="o">=</span> <span class="n">get_job</span><span class="p">();</span> <span class="c1">// 实际的批处理系统可以解析、执行脚本</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">load</span><span class="p">(</span><span class="n">job</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>不妨假设 “批处理” 系统是这样工作的：</p>
@@ -110,11 +113,12 @@
 <li>批处理系统执行的命令由键盘输入，因此 <code>get_job()</code> 就是从键盘读取按键并解析成命令，和游戏读取按键类似。</li>
 <li>执行的命令 (job) 是保存在磁盘上的 ELF 格式的二进制文件，使用硬件提供的 I/O 指令，从存储设备中将二进制文件加载到内存中。(实验代码中有一份 x86/x86_64 通用的二进制文件加载代码，位于 <code>abstract-machine/am/src/x86/qemu/boot/main.c</code>）；简化的代码如下：</li>
 </ol>
-<pre class="codehilite"><code class="language-c">copy_from_disk(elf32, 4096, 0); // 从磁盘读取 ELF 文件头
-if (elf-&gt;e_machine == EM_386) {  // x86 (32-bit)
-  load_elf32(elf32); // 从磁盘加载二进制文件到 ELF 文件描述的位置
-  ((void(*)())(uint32_t)elf32-&gt;e_entry)(); // 跳转到加载的代码执行
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">copy_from_disk</span><span class="p">(</span><span class="n">elf32</span><span class="p">,</span> <span class="mi">4096</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// 从磁盘读取 ELF 文件头</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">elf</span><span class="o">-&gt;</span><span class="n">e_machine</span> <span class="o">==</span> <span class="n">EM_386</span><span class="p">)</span> <span class="p">{</span>  <span class="c1">// x86 (32-bit)</span>
+  <span class="n">load_elf32</span><span class="p">(</span><span class="n">elf32</span><span class="p">);</span> <span class="c1">// 从磁盘加载二进制文件到 ELF 文件描述的位置</span>
+  <span class="p">((</span><span class="kt">void</span><span class="p">(</span><span class="o">*</span><span class="p">)())(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">elf32</span><span class="o">-&gt;</span><span class="n">e_entry</span><span class="p">)();</span> <span class="c1">// 跳转到加载的代码执行</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>跳转后，控制权就交给了 job；job 结束后函数返回，重新回到批处理系统。</p>
@@ -130,7 +134,7 @@ if (elf-&gt;e_machine == EM_386) {  // x86 (32-bit)
 
 <p>请首先阅读 <a href="AM.html">AbstractMachine 文档</a>，正确配置好 <code>AM_HOME</code> 环境变量为 <code>os-workbench/</code> 中的 <code>abstract-machine</code> 目录。注意如果你在《计算机系统基础》课程中已经配置过，你需要<strong>重新配置</strong>，确保在终端中 <code>echo $AM_HOME</code> 显示的目录是 <code>os-workbench</code> 中 <code>abstract-machine</code> 的绝对路径。</p>
 <p><code>os-workbench/abstract-machine</code> 目录中已经有若干测试程序和应用程序，和实现了部分的 klib，目录树如下 (<code>tree</code> 命令查看)：</p>
-<pre class="codehilite"><code class="language-text">.
+<div class="codehilite"><pre><span></span>.
 ├── Makefile       =&gt; 编译脚本
 │   ...
 ├── am/
@@ -148,11 +152,12 @@ if (elf-&gt;e_machine == EM_386) {  // x86 (32-bit)
 │   └── games
 └── tests
     ├── amtest     =&gt; AM 各 extensions 基本功能测试
-    └── klibtest   =&gt; klib 测试</code></pre>
+    └── klibtest   =&gt; klib 测试
+</pre></div>
 
 
 <p>在应用程序或测试程序的目录中，执行 <code>make ARCH=native && make run ARCH=native</code> (应用程序作为 Linux 本地进程运行)，应当能看到正确的运行结果；但 <code>make ARCH=x86_64-qemu</code> 将会成功编译，但遇到链接错：</p>
-<pre class="codehilite"><code class="language-text">$ make ARCH=x86_64-qemu 
+<div class="codehilite"><pre><span></span>$ make ARCH=x86_64-qemu 
 # Building fceux [x86_64-qemu] with AM_HOME {.../abstract-machine}
 ...
 # Building bootblock [x86_64-qemu]
@@ -161,7 +166,8 @@ if (elf-&gt;e_machine == EM_386) {  // x86 (32-bit)
 .../abstract-machine/apps/fceux/src/boards/n106.cpp:322: undefined reference to `memset'
 .../abstract-machine/apps/fceux/src/boards/n106.cpp:323: undefined reference to `memset'
 .../abstract-machine/apps/fceux/build/x86_64-qemu//./src/boards/n106.o: In function `DoNamcoSound(int*, int) [clone .isra.0]':
-.../abstract-machine/apps/fceux/src/boards/n106.cpp:302: undefined reference to `printf'</code></pre>
+.../abstract-machine/apps/fceux/src/boards/n106.cpp:302: undefined reference to `printf'
+</pre></div>
 
 
 <p>阅读出错信息，“undefined reference to <code>memset</code> and <code>printf</code>”。通过 RTFM/STFW/经验，我们知道 “undefined reference” 是因为链接符号解析失败导致的——我们的整个代码中没有 <code>memset</code> 和 <code>printf</code> 这两个符号——这两个函数并没有被实现！这就是你在本实验中的任务。</p>
@@ -218,11 +224,12 @@ if (elf-&gt;e_machine == EM_386) {  // x86 (32-bit)
 <p><a href="AM.html">AbstractMachine 文档</a> 和 AbstractMachine 项目中附带的代码 (包括 amgame) 是本次实验的主要阅读材料。</p>
 <h3 id="41">4.1. 实现库函数</h3>
 <p>实现库函数是普通的 C 语言练习题；互联网上也有很多代码可以参考，但不要照抄哦！值得注意的是，编写可移植代码时，尽量使用 C 标准提供的机制，而不是做一些对硬件的假设，例如在 i386 平台上的 printf 有以下 “高明” (其实并不高明) 的实现方法 (请你花时间理解一下)：</p>
-<pre class="codehilite"><code class="language-c">int printf(const char *fmt, ...) {
-  int *args = (int *)&fmt + 1;
-  //          (int *)(&fmt + 1) also works; why?
-  // args[0], args[1], ... 分别是第 1, 2, ... 个可变参数
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">printf</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fmt</span><span class="p">,</span> <span class="p">...)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="o">*</span><span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="p">)</span><span class="o">&</span><span class="n">fmt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="c1">//          (int *)(&fmt + 1) also works; why?</span>
+  <span class="c1">// args[0], args[1], ... 分别是第 1, 2, ... 个可变参数</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>上述代码其实做了一些 i386 特定的假设：</p>
@@ -234,18 +241,20 @@ if (elf-&gt;e_machine == EM_386) {  // x86 (32-bit)
 <p>注意你可以在本地通过修改 Makefile 绕过某些 warnings，使你的程序看起来正确地在多个平台上运行；但 Online Judge 会使用我们的 Makefile 和 AbstractMachine 实现，并且可能经过一定的修改 (例如设置为不同的屏幕分辨率)。</p>
 <h3 id="42-io">4.2. 访问 I/O 设备</h3>
 <p>没有库函数的 C 语言程序类似于状态机，只能完成纯粹的 “计算”。TRM 中唯一能够和外界交互的手段是 <code>_putc()</code> 在调试终端上打印字符和 <code>_halt()</code> 终止程序。我们的硬件提供了若干 I/O 设备，AbstractMachine 可以通过 IOE 访问它们。在调用 I/O 设备之前，需要调用 <code>_ioe_init()</code> 初始化，然后就可以用</p>
-<pre class="codehilite"><code class="language-c">size_t _io_read (uint32_t dev, uintptr_t reg, void *buf, size_t size);
-size_t _io_write(uint32_t dev, uintptr_t reg, void *buf, size_t size);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">size_t</span> <span class="nf">_io_read</span> <span class="p">(</span><span class="kt">uint32_t</span> <span class="n">dev</span><span class="p">,</span> <span class="kt">uintptr_t</span> <span class="n">reg</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+<span class="kt">size_t</span> <span class="nf">_io_write</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">dev</span><span class="p">,</span> <span class="kt">uintptr_t</span> <span class="n">reg</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+</pre></div>
 
 
 <p>两个函数访问 AbstractMachine 中的 I/O “寄存器” 了。详情请参考 AbstractaMachine 文档、amgame 框架代码和 klib 中已实现的库。建议大家调用 klib 简单封装后的库，而不是直接访问 I/O 设备，能使代码更易读：</p>
-<pre class="codehilite"><code class="language-c">uint32_t uptime();
-void get_timeofday(void *rtc);
-int read_key();
-void draw_rect(uint32_t *pixels, int x, int y, int w, int h);
-void draw_sync();
-int screen_width();
-int screen_height();</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">uint32_t</span> <span class="nf">uptime</span><span class="p">();</span>
+<span class="kt">void</span> <span class="nf">get_timeofday</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">rtc</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">read_key</span><span class="p">();</span>
+<span class="kt">void</span> <span class="nf">draw_rect</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="o">*</span><span class="n">pixels</span><span class="p">,</span> <span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">draw_sync</span><span class="p">();</span>
+<span class="kt">int</span> <span class="nf">screen_width</span><span class="p">();</span>
+<span class="kt">int</span> <span class="nf">screen_height</span><span class="p">();</span>
+</pre></div>
 
 
 <p>这些函数的实现在 <code>klib/src/io.c</code>，都是用纯 C (调用 IOE API) 实现的。</p>
@@ -261,16 +270,17 @@ int screen_height();</code></pre>
 
 <h3 id="43">4.3. 实现游戏</h3>
 <p>在这里，我们提供一个与 amgame 不同的框架代码，主循环使用轮询 (polling) 中不断等待下一帧时刻的到来，一旦到来，就读取键盘按键并处理，然后模拟这一帧中游戏发生的事情。</p>
-<pre class="codehilite"><code class="language-c">next_frame = 0;
-while (1) {
-  while (uptime() &lt; next_frame) ; // 等待一帧的到来
-  while ((key = readkey()) != _KEY_NONE) {
-    kbd_event(key);         // 处理键盘事件
-  }
-  game_progress();          // 处理一帧游戏逻辑，更新物体的位置等
-  screen_update();          // 重新绘制屏幕
-  next_frame += 1000 / FPS; // 计算下一帧的时间
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">next_frame</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">uptime</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">next_frame</span><span class="p">)</span> <span class="p">;</span> <span class="c1">// 等待一帧的到来</span>
+  <span class="k">while</span> <span class="p">((</span><span class="n">key</span> <span class="o">=</span> <span class="n">readkey</span><span class="p">())</span> <span class="o">!=</span> <span class="n">_KEY_NONE</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">kbd_event</span><span class="p">(</span><span class="n">key</span><span class="p">);</span>         <span class="c1">// 处理键盘事件</span>
+  <span class="p">}</span>
+  <span class="n">game_progress</span><span class="p">();</span>          <span class="c1">// 处理一帧游戏逻辑，更新物体的位置等</span>
+  <span class="n">screen_update</span><span class="p">();</span>          <span class="c1">// 重新绘制屏幕</span>
+  <span class="n">next_frame</span> <span class="o">+=</span> <span class="mi">1000</span> <span class="o">/</span> <span class="n">FPS</span><span class="p">;</span> <span class="c1">// 计算下一帧的时间</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>大家见过的 LiteNES 和仙剑奇侠传，都是这样的循环。我们以弹球游戏为例，你只需要维护弹球的坐标 <math class="inline-math">(x,y)</math> 和弹球两个方向的速度 <math class="inline-math">(v_x, v_y)</math> (以 pixel/秒为单位)，然后每一帧时更新坐标</p>

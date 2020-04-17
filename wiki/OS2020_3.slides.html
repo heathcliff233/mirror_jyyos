@@ -119,13 +119,14 @@
 <p>大部分状态 <math class="inline-math">s</math> 有唯一的后续状态 (deterministic)</p>
 <ul>
 <li><p>执行一条指令，得到确定的结果</p>
-<pre class="codehilite"><code class="language-text">IF StackAddrSize = 64 THEN
+<div class="codehilite"><pre><span></span>IF StackAddrSize = 64 THEN
   IF OperandSize = 64 THEN
     RSP ← RSP – 8;
     Memory[SS:RSP] ← SRC;
     (* push quadword *)
   ELSE IF OperandSize = 32 THEN
-    ...</code></pre>
+    ...
+</pre></div>
 
 </li>
 <li><p>can be tricky: <code>pushq %rsp</code></p>
@@ -355,11 +356,12 @@
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="3">应用 (3): 全自动测试</h2>
-<pre class="codehilite"><code class="language-c">int nread = read(fd, buf, size);
-...
-BUG_ON(nread == size); // 常见的错误，buffer overrun
-BUG_ON(nread == -1);   // 另一种常见错误
-                       // 通常很难测试到这些情况</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">nread</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+<span class="p">...</span>
+<span class="n">BUG_ON</span><span class="p">(</span><span class="n">nread</span> <span class="o">==</span> <span class="n">size</span><span class="p">);</span> <span class="c1">// 常见的错误，buffer overrun</span>
+<span class="n">BUG_ON</span><span class="p">(</span><span class="n">nread</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>   <span class="c1">// 另一种常见错误</span>
+                       <span class="c1">// 通常很难测试到这些情况</span>
+</pre></div>
 
 <p>(动态) 符号执行：把状态里的数值用符号 (变量) 代替，简化状态表示</p>
 <ul>
@@ -439,19 +441,20 @@ BUG_ON(nread == -1);   // 另一种常见错误
 <ul>
 <li><math class="inline-math">n</math> 个线程、每个线程执行 <math class="inline-math">m</math> 个 <code>printf</code> (假设一次 <code>printf</code> 是原子的)、理论上有多少种不同的输出？</li>
 </ul>
-<pre class="codehilite"><code class="language-c">#include &lt;threads.h&gt;
-#include &lt;stdio.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;threads.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
 
-void thread_entry(int tid) {
-  for (int i = 1; i &lt;= m; i++) {
-    printf("T%d's %d-th operation\n", tid, i);
-  }
-}
+<span class="kt">void</span> <span class="nf">thread_entry</span><span class="p">(</span><span class="kt">int</span> <span class="n">tid</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">m</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"T%d's %d-th operation</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">tid</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-int main() {
-  for (int i = 0; i &lt; n; i++)
-    create(thread_entry);
-}</code></pre></div></div>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="n">create</span><span class="p">(</span><span class="n">thread_entry</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">这就是为什么并发程序很难写！</h2>
@@ -514,14 +517,15 @@ int main() {
 <li>(原子) lock 返回后 unlock 之前，其他线程 lock 不得返回</li>
 <li>(可见) unlock 之前执行的写操作，在 unlock 之后对其他线程可见</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void do_sum() {
-  for (int i = 0; i &lt; n; i++) {
-    lock(); // 保证顺序、原子性、可见性
-    // critical section; 临界区
-    sum++;
-    unlock();
-  }
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">do_sum</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">lock</span><span class="p">();</span> <span class="c1">// 保证顺序、原子性、可见性</span>
+    <span class="c1">// critical section; 临界区</span>
+    <span class="n">sum</span><span class="o">++</span><span class="p">;</span>
+    <span class="n">unlock</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="peterson-2">Peterson 算法：实现 2 人的互斥</h2>
@@ -543,21 +547,22 @@ int main() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="peterson">Peterson 算法：代码</h2>
-<pre class="codehilite"><code class="language-c">int turn = T1, x = 0, y = 0;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">turn</span> <span class="o">=</span> <span class="n">T1</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-void thread1() {
-  [1] x = 1; turn = T2;
-  [2] while (y && turn == T2) ;
-  [3] // critical section
-  [4] x = 0;
-}
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">turn</span> <span class="o">=</span> <span class="n">T2</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">while</span> <span class="p">(</span><span class="n">y</span> <span class="o">&&</span> <span class="n">turn</span> <span class="o">==</span> <span class="n">T2</span><span class="p">)</span> <span class="p">;</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="c1">// critical section</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
 
-void thread2() {
-  [1] y = 1; turn = T1;
-  [2] while (x && turn == T1) ;
-  [3] // critical section
-  [4] y = 0;
-}</code></pre>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">turn</span> <span class="o">=</span> <span class="n">T1</span><span class="p">;</span>
+  <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">while</span> <span class="p">(</span><span class="n">x</span> <span class="o">&&</span> <span class="n">turn</span> <span class="o">==</span> <span class="n">T1</span><span class="p">)</span> <span class="p">;</span>
+  <span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="c1">// critical section</span>
+  <span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>假设：机器每次原子地 (atomically) 执行一行代码，内存访问立即可见</p></div></div>

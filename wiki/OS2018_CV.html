@@ -49,51 +49,55 @@
     <div class="article">
       <h1 id="_1">同步：条件变量</h1>
 <p>如果只有互斥锁，实现很多需要“等待线程完成某件事”的操作是不太方便的，比如计算<math>1\ldots n</math>之间的素数个数：</p>
-<pre class="codehilite"><code class="language-c">void worker_thread(int tid) {
-  for (int i = ST(tid); i &lt; ED(tid); i++) {
-    if (is_prime(i)) {
-      lock(&amp;mutex);
-      sum++; // 保证原子性
-      unlock(&amp;mutex);
-    }
-  }
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">worker_thread</span><span class="p">(</span><span class="kt">int</span> <span class="n">tid</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">ST</span><span class="p">(</span><span class="n">tid</span><span class="p">);</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">ED</span><span class="p">(</span><span class="n">tid</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">is_prime</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+      <span class="n">sum</span><span class="o">++</span><span class="p">;</span> <span class="c1">// 保证原子性</span>
+      <span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void main_thread() {
-  // ???
-  printf(&quot;sum = %d\n&quot;, sum);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">main_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// ???</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;sum = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">sum</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这个程序在所有worker threads都执行完毕后，<code>sum</code>最终保存了正确的数值。然而，我们应该在什么时候把它打印出来？</p>
 <h2 id="_2">同步：直观的想法</h2>
 <p>大家应该都能想到这么个解决办法：</p>
-<pre class="codehilite"><code class="language-c">void worker_thread(int tid) {
-  // 计算素数
-  done[tid] = 1;
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">worker_thread</span><span class="p">(</span><span class="kt">int</span> <span class="n">tid</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 计算素数</span>
+  <span class="n">done</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
 
-void main_thread() {
-  for (int i = 0; i &lt; num_of_threads; i++) {
-    while (done[tid] == 0) ;
-  }
-  printf(&quot;sum = %d\n&quot;, sum);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">main_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">num_of_threads</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">done</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;sum = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">sum</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这个trick和我们之前实现互斥锁的非常像：用一个flag变量，<code>main_thread</code>不断地spin这个变量，直到读出它是<code>1</code>为止就知道这个程序执行正确了。</p>
 <div class="fenced fenced-green">
 <h4 id="_3">还记得编译优化的故事吗？</h4>
 <p>我们又回来了：</p>
-<pre class="codehilite"><code class="language-c">for(int i = 0; i &lt; N; i++)
-  sum++;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+  <span class="n">sum</span><span class="o">++</span><span class="p">;</span>
+</pre></div>
 
 
 <p>这么个简单的循环，在<code>-O0</code>, <code>-O1</code>, <code>-O2</code>的时候有截然不同的行为，那上面那个spin loop……呢？</p>
 </div>
 <p>如果你定义<code>int done[];</code>，gcc会毫(非)不(常)客(开)气(心)地把这个循环优化成：</p>
-<pre class="codehilite"><code class="language-c">%eax = done[tid];
-while (%eax == 0) ;</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">%</span><span class="n">eax</span> <span class="o">=</span> <span class="n">done</span><span class="p">[</span><span class="n">tid</span><span class="p">];</span>
+<span class="k">while</span> <span class="p">(</span><span class="o">%</span><span class="n">eax</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">;</span>
+</pre></div>
 
 
 <p>也就是说，如果在循环开始前<code>done[tid]</code>还没有准备好，这个循环就陷入了死循环。这是因为编译器在进行优化时，是默认只有线程本地的数据流(data flow)的——如果假设有线程间的任意数据流，那么几乎任何优化都不正确了。</p>
@@ -105,12 +109,13 @@ while (%eax == 0) ;</code></pre>
 </div>
 <h2 id="_5">避免忙等待：条件变量</h2>
 <p>虽然费劲把这个问题做对了，但仍然没有完美地解决好：为了等待worker threads的结束，主线程在一个spin loop里，白浪费了很多CPU资源。因此自然会想，如果库函数/操作系统能帮助我们实现这样的同步机制就好了——条件变量(condition variables, CV)：</p>
-<pre class="codehilite"><code class="language-c">int pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *mutex);
-  // Unlock the specified mutex, wait for a condition, and relock the mutex.
-int pthread_cond_broadcast(pthread_cond_t *cond);
-  // Unblock all threads currently blocked on the specified condition variable.
-int pthread_cond_signal(pthread_cond_t *cond);
-  // Unblock at least one of the threads blocked on the specified condition variable.</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">pthread_cond_wait</span><span class="p">(</span><span class="n">pthread_cond_t</span> <span class="o">*</span><span class="p">,</span> <span class="n">pthread_mutex_t</span> <span class="o">*</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="c1">// Unlock the specified mutex, wait for a condition, and relock the mutex.</span>
+<span class="kt">int</span> <span class="nf">pthread_cond_broadcast</span><span class="p">(</span><span class="n">pthread_cond_t</span> <span class="o">*</span><span class="n">cond</span><span class="p">);</span>
+  <span class="c1">// Unblock all threads currently blocked on the specified condition variable.</span>
+<span class="kt">int</span> <span class="nf">pthread_cond_signal</span><span class="p">(</span><span class="n">pthread_cond_t</span> <span class="o">*</span><span class="n">cond</span><span class="p">);</span>
+  <span class="c1">// Unblock at least one of the threads blocked on the specified condition variable.</span>
+</pre></div>
 
 
 <p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/threads-cv.pdf">参考书</a>提供了非常详尽的条件变量解释，包括课堂上已经讲过的一些不work的例子。花一点时间理解这些例子，这是宝贵的并发编程经验，建议大家仔细阅读参考书的这一部分。</p>

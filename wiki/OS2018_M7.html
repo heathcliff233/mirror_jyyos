@@ -87,7 +87,8 @@
 <p>使用<code>make submit</code>提交。提交脚本会<code>cd ..</code>进入上级目录，然后把名为<code>httpd</code>的目录打包成<code>submission.tar.bz2</code>。这就是你提交的文件。请检查其中内容，以免因为种种原因(如没有权限写入)导致提交失败。</p>
 <h3 id="_10">运行你的代码</h3>
 <p>仓库里有一个示范目录(site)，实现完毕后可以直接运行</p>
-<pre class="codehilite"><code class="language-bash">./httpd --port 8000 ./site</code></pre>
+<div class="codehilite"><pre><span></span>./httpd --port <span class="m">8000</span> ./site
+</pre></div>
 
 
 <p>如果你的实现正确，在浏览器地址栏中输入相应的地址(上述命令对应<code>http://localhost:8000/</code>)，就能浏览网页啦。能在浏览器成功浏览将得到正确性部分的分数。我们会用Chromium浏览器进行测试。</p>

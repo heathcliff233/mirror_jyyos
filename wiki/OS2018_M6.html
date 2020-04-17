@@ -65,15 +65,16 @@
 <p>关于崩溃一致性，“<a href="https://www.usenix.org/system/files/conference/osdi14/osdi14-paper-pillai.pdf">All File Systems Are Not Created Equal: On the Complexity of Crafting Crash-Consistent Applications</a>”是一篇很棒的论文。</p>
 <h2 id="_5">实验描述</h2>
 <p>本次实验与以往实验不同，不再是实现一个命令行工具，而是实现一个<strong>库</strong>，并编译成共享库(<code>libkvdb.so</code>)。<code>libkvdb.h</code>声明了库中包含的函数：</p>
-<pre class="codehilite"><code class="language-c">struct kvdb {
-  // 定义kvdb中保存的数据，例如一个文件描述符或一个FILE *。
-  // 你可以自由修改这个结构体中的内容。
-};
-typedef struct kvdb kvdb_t;
-int kvdb_open(kvdb_t *db, const char *filename);
-int kvdb_close(kvdb_t *db);
-int kvdb_put(kvdb_t *db, const char *key, const char *value);
-char *kvdb_get(kvdb_t *db, const char *key);</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">kvdb</span> <span class="p">{</span>
+  <span class="c1">// 定义kvdb中保存的数据，例如一个文件描述符或一个FILE *。</span>
+  <span class="c1">// 你可以自由修改这个结构体中的内容。</span>
+<span class="p">};</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">kvdb</span> <span class="n">kvdb_t</span><span class="p">;</span>
+<span class="kt">int</span> <span class="nf">kvdb_open</span><span class="p">(</span><span class="n">kvdb_t</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">kvdb_close</span><span class="p">(</span><span class="n">kvdb_t</span> <span class="o">*</span><span class="n">db</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">kvdb_put</span><span class="p">(</span><span class="n">kvdb_t</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">value</span><span class="p">);</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">kvdb_get</span><span class="p">(</span><span class="n">kvdb_t</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span><span class="p">);</span>
+</pre></div>
 
 
 <p>为了让实验简单一些，假设<strong><code>key</code>和<code>value</code>都只包含可打印非空白的ASCII字符(例如字母、数字、下划线、标点符号)</strong>。所有函数都应当具有<strong>容错</strong>功能：在正确时返回0，在出错时返回非0，其中：</p>
@@ -124,30 +125,33 @@ char *kvdb_get(kvdb_t *db, const char *key);</code></pre>
 </div>
 <h3 id="libkvdbso">只有一个<code>libkvdb.so</code>？</h3>
 <p>在<code>make</code>以后，你会得到一个<code>libkvdb.so</code>，用<code>file</code>命令查看：</p>
-<pre class="codehilite"><code class="language-bash">$ file libkvdb.so
-libkvdb.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=..., not stripped</code></pre>
+<div class="codehilite"><pre><span></span>$ file libkvdb.so
+libkvdb.so: ELF <span class="m">64</span>-bit LSB shared object, x86-64, version <span class="m">1</span> <span class="o">(</span>SYSV<span class="o">)</span>, dynamically linked, BuildID<span class="o">[</span>sha1<span class="o">]=</span>..., not stripped
+</pre></div>
 
 
 <p>直接运行的话(它居然可以运行)，你应该会得到一个Segmentation Fault。这个文件并不是给你运行的。你需要编写另一个测试程序，链接libkvdb.so，例如<code>test.c</code>：</p>
-<pre class="codehilite"><code class="language-c">#include &quot;kvdb.h&quot;
-#include &lt;stdlib.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;kvdb.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdlib.h&gt;</span><span class="cp"></span>
 
-int main() {
-  kvdb_t db;
-  const char *key = &quot;operating-systems&quot;;
-  char *value;
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">kvdb_t</span> <span class="n">db</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span> <span class="o">=</span> <span class="s">&quot;operating-systems&quot;</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">value</span><span class="p">;</span>
 
-  kvdb_open(&amp;db, &quot;a.db&quot;);
-  kvdb_put(&amp;db, key, &quot;three-easy-pieces&quot;);
-  value = kvdb_get(&amp;db, key);
-  printf(&quot;[%s]: [%s]\n&quot;, key, value);
-  free(value);
-  return 0;
-}</code></pre>
+  <span class="n">kvdb_open</span><span class="p">(</span><span class="o">&amp;</span><span class="n">db</span><span class="p">,</span> <span class="s">&quot;a.db&quot;</span><span class="p">);</span>
+  <span class="n">kvdb_put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">db</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="s">&quot;three-easy-pieces&quot;</span><span class="p">);</span>
+  <span class="n">value</span> <span class="o">=</span> <span class="n">kvdb_get</span><span class="p">(</span><span class="o">&amp;</span><span class="n">db</span><span class="p">,</span> <span class="n">key</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[%s]: [%s]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+  <span class="n">free</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>如果你直接用<code>gcc test.c</code>，你发现链接会失败——你需要把当前目录下的<code>libkvdb.so</code>告诉链接器(通过命令行选项告知)gcc；以及你直接在命令行里执行<code>.a.out</code>：</p>
-<pre class="codehilite"><code class="language-text">./a.out: error while loading shared libraries: libkvdb.so: cannot open shared object file: No such file or directory</code></pre>
+<div class="codehilite"><pre><span></span>./a.out: error while loading shared libraries: libkvdb.so: cannot open shared object file: No such file or directory
+</pre></div>
 
 
 <p>去互联网上寻找答案吧！另外，记得把你的编译和测试写到Makefile里，这样以后的编译和测试都可以事半功倍了。</p>

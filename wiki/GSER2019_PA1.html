@@ -56,10 +56,11 @@
 <h2 id="_2">实验描述</h2>
 <p>假设我们要对一些 Online Judge 上的编程作业进行相似度检测，尽可能地找出抄袭代码的嫌疑人。在本次实验中，我们假设 Online Judge 上的程序都是单个文件的 C++ 代码，能够通过 gcc 或 clang 在 <code>-std=c++11</code> 选项下编译。</p>
 <p>你可以用任何你熟悉的主流编程语言 (C/C++/Java/Python/JavaScript/Scala/Rust/Go/...) 实现一个 Linux 下运行的命令行工具 <code>codesim</code>，用于比较两个 C++ 语言程序的相似性。在命令行中运行 <code>codesim</code>，传入两个程序的文件名作为参数，输出一行一个浮点数百分比，代表代码的相似性。百分比不需要有确切的含义，只需尽可能使实际为抄袭的代码获得更高的相似度即可。</p>
-<pre class="codehilite"><code class="language-text">$ codesim --help
+<div class="codehilite"><pre><span></span>$ codesim --help
 usage: codesim [-v|--verbose] [-h|--help] code1 code2
 $ codesim DZ1933026-prob1.cc MG1933021-prob1.cpp
-99.3</code></pre>
+99.3
+</pre></div>
 
 
 <div class="fenced fenced-red">

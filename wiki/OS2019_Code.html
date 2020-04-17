@@ -61,7 +61,8 @@
 </ul>
 </div>
 <p>获取实验框架，在终端中执行</p>
-<pre class="codehilite"><code>git clone https://github.com/NJU-ProjectN/os-workbench.git</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">git clone https://github.com/NJU-ProjectN/os-workbench.git</span>
+</pre></div>
 
 
 <p>将会克隆os-workbench到当前目录，之后的编程任务均在此完成。请<strong>妥善保管这个目录</strong>。如遇问题请联系老师或助教。</p>
@@ -77,40 +78,43 @@
 </ol>
 </div>
 <p>在minilab对应的目录中<code>make</code>，将会得到xxxx-32和xxxx-64两个文件，分别是32位和64位平台上的二进制代码(或运行库)。以下是pstree框架代码的例子：</p>
-<pre class="codehilite"><code>jyy@pstree/$ ls
-Makefile  pstree.c
-jyy@pstree/$ make
-gcc -m64 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-64 
-gcc -m32 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-32 
-jyy@pstree/$ ls
-Makefile  pstree-32*  pstree-64*  pstree.c
-jyy@pstree/$ ./pstree-32 hello
-argv[0] = ./pstree-32
-argv[1] = hello
-jyy@pstree/$ ./pstree-64 world
-argv[0] = ./pstree-64
-argv[1] = world
-jyy@pstree/$ </code></pre>
+<div class="codehilite"><pre><span></span><span class="err">jyy@pstree/$ ls</span>
+<span class="err">Makefile  pstree.c</span>
+<span class="err">jyy@pstree/$ make</span>
+<span class="err">gcc -m64 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-64 </span>
+<span class="err">gcc -m32 -O1 -std=gnu11 -ggdb -Wall -Werror -Wno-unused-result ./pstree.c -o pstree-32 </span>
+<span class="err">jyy@pstree/$ ls</span>
+<span class="err">Makefile  pstree-32*  pstree-64*  pstree.c</span>
+<span class="err">jyy@pstree/$ ./pstree-32 hello</span>
+<span class="err">argv[0] = ./pstree-32</span>
+<span class="err">argv[1] = hello</span>
+<span class="err">jyy@pstree/$ ./pstree-64 world</span>
+<span class="err">argv[0] = ./pstree-64</span>
+<span class="err">argv[1] = world</span>
+<span class="err">jyy@pstree/$ </span>
+</pre></div>
 
 
 <p>当然一般你不会太顺利。你在docker下可能会遇到<code>hostnamectl</code>没法执行的问题……你可以试着解决这个问题，但我们不推荐使用docker——在未来你会遇到更多的问题。Docker并不是设计给开发用的，而是给大规模部署用的。</p>
 <p>再比如在64位环境下，如果没有安装编译器和相应的运行库，则第一次编译就会失败；如果安装了，<code>-m32</code>也会编译错误，例如：</p>
-<pre class="codehilite"><code>In file included from /usr/include/features.h:399:0,
-                 from /usr/include/stdio.h:27,
-                 from ./pstree.c:1:
-/usr/include/gnu/stubs.h:7:27: fatal error: gnu/stubs-32.h: No such file or directory
- # include &lt;gnu/stubs-32.h&gt;
-                           ^
-compilation terminated.
-make: *** [pstree-32] Error 1</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">In file included from /usr/include/features.h:399:0,</span>
+<span class="err">                 from /usr/include/stdio.h:27,</span>
+<span class="err">                 from ./pstree.c:1:</span>
+<span class="err">/usr/include/gnu/stubs.h:7:27: fatal error: gnu/stubs-32.h: No such file or directory</span>
+<span class="err"> # include &lt;gnu/stubs-32.h&gt;</span>
+<span class="err">                           ^</span>
+<span class="err">compilation terminated.</span>
+<span class="c">make: *** [pstree-32] Error 1</span>
+</pre></div>
 
 
 <p>这时候你需要<a href="https://www.urbandictionary.com/define.php?term=stfw">STFW</a>。不过要看清楚网上的解决方案是否适合你的系统环境，以及是否说明了出问题的原因。<code>make</code>编译成功后，将会得到<code>pstree-32</code>和<code>pstree-64</code>两个文件，在命令行中执行可以打印所有命令行参数。</p>
 <div class="fenced fenced-green">
 <h4 id="-32-64">-32, -64?</h4>
 <p>同一份代码，makefile会使用两个选项来编译：</p>
-<pre class="codehilite"><code>gcc -m64 -O1 -std=gnu11 ...
-gcc -m32 -O1 -std=gnu11 ... </code></pre>
+<div class="codehilite"><pre><span></span><span class="err">gcc -m64 -O1 -std=gnu11 ...</span>
+<span class="err">gcc -m32 -O1 -std=gnu11 ... </span>
+</pre></div>
 
 
 <p>这<del>帮</del>(强)<del>助</del>(制)大家写出可移植的代码。<a href="https://wiki.sei.cmu.edu/confluence/display/c/SEI+CERT+C+Coding+Standard">CERT C编码规范</a>是非常棒的阅读材料，也作为书籍出版，大家可以收藏一本电子版。</p>
@@ -123,8 +127,9 @@ gcc -m32 -O1 -std=gnu11 ... </code></pre>
 <p>将会导致编译错误。请正确配置环境变量。</p>
 </div>
 <p><code>os-workbench</code>已经包含了Lab0 (amgame)的框架代码。<code>make</code>将默认在x86-qemu下编译。你也可以编译到其他体系结构并运行：</p>
-<pre class="codehilite"><code class="language-bash">make ARCH=x86-qemu run
-make ARCH=native run</code></pre>
+<div class="codehilite"><pre><span></span>make <span class="nv">ARCH</span><span class="o">=</span>x86-qemu run
+make <span class="nv">ARCH</span><span class="o">=</span>native run
+</pre></div>
 
 
 <h2 id="_4">提交</h2>

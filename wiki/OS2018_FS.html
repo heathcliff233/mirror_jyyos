@@ -58,7 +58,7 @@
 <h2 id="_3">文件和目录</h2>
 <p>文件和目录就是最符合现实生活中管理数据的方式之一。每个文件就是一组可以读写的数据，像是一个“虚拟存储器”，操作系统不管文件的内容，文件内容、格式等由应用程序解读。</p>
 <p>为了操作系统的用户和应用程序能方便地管理和找到这些文件，自然需要给这些文件赋予名字，然后组织起来——局部性原理再次派上了用场。我们建立一个计算机中的“树”结构，树的每个节点都是一个目录，有自己的名字，且目录里可以包含子目录，或是文件。这些都是我们使用操作系统时就会了解的概念，例如Linux的文件系统，以<code>/</code>为根目录：</p>
-<pre class="codehilite"><code class="language-text">/bin     - 所有人共享的二进制程序
+<div class="codehilite"><pre><span></span>/bin     - 所有人共享的二进制程序
 /boot    - 系统启动相关的文件(包含Linux内核)
 /dev     - devfs设备文件
 /etc     - 系统配置文件
@@ -73,7 +73,8 @@
 /sbin    - 系统二进制程序
 /tmp     - 临时文件
 /usr     - 用户相关的程序
-/var     - 用户创建的一些动态文件(日志等)</code></pre>
+/var     - 用户创建的一些动态文件(日志等)
+</pre></div>
 
 
 <p>关于更多文件和目录的信息，可以阅读<a href="http://pages.cs.wisc.edu/~remzi/OSTEP/file-intro.pdf">参考书</a>，其中详细讲述了文件和目录相关的操作。</p>
@@ -104,8 +105,9 @@
 <h2 id="_8">系统中的多个文件系统</h2>
 <p>既然每个文件系统都是文件名(路径)到文件的映射，那我们很自然可以在系统里管理多个文件系统：对于每个文件系统来说，有它自己的“根”(例如<code>/</code>)，但文件系统可以挂载到另一个文件系统的某个目录里，例如：<code>/mnt/cdrom0</code>挂载了一个光盘；<code>/dev</code>挂载了devfs虚拟文件系统……只要系统在执行目录解析的时候特别处理这些目录即可。</p>
 <p>此外，我们还允许对文件进行链接。硬链接(hard link)允许为同一个文件提供两个别名，例如：</p>
-<pre class="codehilite"><code class="language-bash">echo 'hello' &gt; /tmp/a
-ln /tmp/a /tmp/b</code></pre>
+<div class="codehilite"><pre><span></span><span class="nb">echo</span> <span class="s1">&#39;hello&#39;</span> &gt; /tmp/a
+ln /tmp/a /tmp/b
+</pre></div>
 
 
 <p>修改其中的一个文件，另一个也会随之更改——它们虽然有不同的名字，但却是同一个文件(你真的不能区分它们谁到底是“真身”，因为它们真的只是同一个东西的两个别名)。</p>

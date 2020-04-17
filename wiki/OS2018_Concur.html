@@ -51,9 +51,10 @@
 <h2 id="_2">多进程并发</h2>
 <p>通过<code>fork</code> API就能在操作系统中创建多个同时(并发)运行的进程。这些进程随时都有可能调用系统调用，因此即便进程拥有独立的地址空间，它们请求操作系统调用的时间顺序也可能会导致意料之外的后果。</p>
 <p>例如，如果我们希望实现一个函数<code>log</code>能把调试日志输出，这还不简单吗：</p>
-<pre class="codehilite"><code class="language-c">void log(const char *str) {
-  printf(&quot;[LOG] %s\n&quot;, str);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">log</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[LOG] %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>且慢！我们考虑以下场景：</p>
@@ -119,16 +120,17 @@
 <p>首先，对于C语言程序来说，堆栈上的地址是能够引用的，也就是说可以用<code>&amp;x</code>取出局部变量<code>x</code>的地址，传递给另一个线程使用。对于不允许这么做的语言来说，让每个线程的堆栈独立位于自己的地址空间内是可以的。这带来了一些好处，也带来了一些坏处。</p>
 </div>
 <p>当多个线程拥有共享内存的时候，程序的行为就变得相当难以捉摸了，例如：</p>
-<pre class="codehilite"><code class="language-c">#define N 1000000000
-int sum = 0;
-void thread1() {
-  for(inti=0;i&lt;N;i++)
-    sum++;
-}
-void thread2() {
-  for(inti=0;i&lt;N;i++)
-    sum++;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="cp">#define N 1000000000</span>
+<span class="kt">int</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span><span class="p">(</span><span class="n">inti</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">i</span><span class="o">&lt;</span><span class="n">N</span><span class="p">;</span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="n">sum</span><span class="o">++</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span><span class="p">(</span><span class="n">inti</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">i</span><span class="o">&lt;</span><span class="n">N</span><span class="p">;</span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="n">sum</span><span class="o">++</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>假设<code>thread1()</code>和<code>thread2()</code>在两个线程中执行，执行结果：</p>
@@ -138,37 +140,40 @@ void thread2() {
 <li><code>gcc -O2</code> (0.002s) sum = 2000000000</li>
 </ul>
 <p><code>gcc -O0</code>告诉我们：看似<code>sum++</code>是一条语句，但实际执行的时候，它可能被打断，更像是：</p>
-<pre class="codehilite"><code class="language-c">tmp = sum;
-tmp += 1;
-sum = tmp;</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">tmp</span> <span class="o">=</span> <span class="n">sum</span><span class="p">;</span>
+<span class="n">tmp</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="n">sum</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">;</span>
+</pre></div>
 
 
 <p>这三条语句的执行。因此有可能出现：</p>
-<pre class="codehilite"><code class="language-c">// sum = 10
-(thread1)    (thread2)
-tmp = sum // 10
-             tmp = sum // 10
-tmp += 1 // 11
-sum = tmp // 11
-tmp = sum // 11
-tmp += 1 // 12
-             tmp += 1 // 11
-sum = tmp // 12
-             sum = tmp // sum = 11</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// sum = 10</span>
+<span class="p">(</span><span class="n">thread1</span><span class="p">)</span>    <span class="p">(</span><span class="n">thread2</span><span class="p">)</span>
+<span class="n">tmp</span> <span class="o">=</span> <span class="n">sum</span> <span class="c1">// 10</span>
+             <span class="n">tmp</span> <span class="o">=</span> <span class="n">sum</span> <span class="c1">// 10</span>
+<span class="n">tmp</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c1">// 11</span>
+<span class="n">sum</span> <span class="o">=</span> <span class="n">tmp</span> <span class="c1">// 11</span>
+<span class="n">tmp</span> <span class="o">=</span> <span class="n">sum</span> <span class="c1">// 11</span>
+<span class="n">tmp</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c1">// 12</span>
+             <span class="n">tmp</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c1">// 11</span>
+<span class="n">sum</span> <span class="o">=</span> <span class="n">tmp</span> <span class="c1">// 12</span>
+             <span class="n">sum</span> <span class="o">=</span> <span class="n">tmp</span> <span class="c1">// sum = 11</span>
+</pre></div>
 
 
 <p>也就是说，出现了程序“前进几步”，又被“后退”的情况：<strong>在共享内存中，语句的执行并不是原子(atomic)的</strong>。</p>
 <p>而<code>-O1</code>和<code>-O2</code>的情况又告诉我们：你也许并不知道编译器实际会把你的程序编译成什么。在<code>-O1</code>时，<code>gcc</code>用<code>rax</code>寄存器表示了<code>sum</code>并在循环结束后才一次性写入，因此最终写入了<code>N</code>；而<code>-O2</code>干脆把整个循环优化成了<code>sum += N</code>。</p>
 <p>当然一个更让人费解的例子是：</p>
-<pre class="codehilite"><code class="language-c">int volatile x = 0, y = 0;
-void thread1() {
-  (1) x = 1;
-  (2) read(y);
-}
-void thread2() {
-  (3) y = 1;
-  (4) read(x);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="k">volatile</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="n">read</span><span class="p">(</span><span class="n">y</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="n">read</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div class="fenced fenced-green">

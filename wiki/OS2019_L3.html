@@ -55,8 +55,9 @@
 <div class="fenced fenced-blue">
 <h4 id="_1">虚拟文件系统</h4>
 <p>在上一个实验中，我们有了一个操作系统的雏形——为每个线程实现了CPU的虚拟化。在上一个实验中，每个线程都可以自由访问I/O，直接向设备驱动程序发起调用即可：</p>
-<pre class="codehilite"><code class="language-c">device_t *tty = dev_lookup(&quot;ramdisk&quot;);
-tty-&gt;ops-&gt;read(tty, offset, buf, length);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">device_t</span> <span class="o">*</span><span class="n">tty</span> <span class="o">=</span> <span class="n">dev_lookup</span><span class="p">(</span><span class="s">&quot;ramdisk&quot;</span><span class="p">);</span>
+<span class="n">tty</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">read</span><span class="p">(</span><span class="n">tty</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">length</span><span class="p">);</span>
+</pre></div>
 
 
 <p>在这个实验中，我们实现设备的虚拟化，使线程能够通过文件系统API和文件描述符访问这套统一的接口访问设备和操作系统中的对象。</p>
@@ -84,39 +85,42 @@ tty-&gt;ops-&gt;read(tty, offset, buf, length);</code></pre>
 </div>
 <h3 id="vfs">vfs模块</h3>
 <p>所有对文件系统的操作都是通过调用vfs模块中的API完成的：</p>
-<pre class="codehilite"><code class="language-c">MODULE {
-  void (*init)();
-  int (*access)(const char *path, int mode);
-  int (*mount)(const char *path, filesystem_t *fs);
-  int (*unmount)(const char *path);
-  int (*mkdir)(const char *path);
-  int (*rmdir)(const char *path);
-  int (*link)(const char *oldpath, const char *newpath);
-  int (*unlink)(const char *path);
-  int (*open)(const char *path, int flags);
-  ssize_t (*read)(int fd, void *buf, size_t nbyte);
-  ssize_t (*write)(int fd, void *buf, size_t nbyte);
-  off_t (*lseek)(int fd, off_t offset, int whence);
-  int (*close)(int fd);
-} MOD_NAME(vfs);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">MODULE</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">access</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mode</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">mount</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="n">filesystem_t</span> <span class="o">*</span><span class="n">fs</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">unmount</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">mkdir</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">rmdir</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">link</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">oldpath</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">newpath</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">unlink</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">open</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">read</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbyte</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">write</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbyte</span><span class="p">);</span>
+  <span class="kt">off_t</span> <span class="p">(</span><span class="o">*</span><span class="n">lseek</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">int</span> <span class="n">whence</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">close</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">MOD_NAME</span><span class="p">(</span><span class="n">vfs</span><span class="p">);</span>
+</pre></div>
 
 
 <p>除了mount之外，其他命令的行为建议实现成与Linux一致，但你可以做出简化，例如不允许blocking操作的interrupt、只返回一种类型的错误等。注意<code>open</code>返回的文件描述符是针对线程有效的，每个线程有自己独立的文件描述符表。关于文件描述符的行为，请参考教科书第39章。</p>
 <h3 id="_6">文件系统</h3>
 <p>一个文件系统(用一个<code>filesystem_t</code>结构体表示)维护了树状的目录和文件结构，其中结构体里比较重要的成员有：</p>
-<pre class="codehilite"><code class="language-c">struct filesystem {
-  ...
-  fsops_t *ops;
-  dev_t *dev;
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">filesystem</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">fsops_t</span> <span class="o">*</span><span class="n">ops</span><span class="p">;</span>
+  <span class="kt">dev_t</span> <span class="o">*</span><span class="n">dev</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>每个文件系统都是基于一个I/O设备的(procfs和devfs没有对应的设备，因此dev为<code>NULL</code>)，<code>fsops_t</code>是具体的一些文件系统API的实现，一个合理的fsops定义：</p>
-<pre class="codehilite"><code class="language-c">typedef struct fsops {
-  void (*init)(struct filesystem *fs, const char *name, dev_t *dev);
-  inode_t *(*lookup)(struct filesystem *fs, const char *path, int flags);
-  int (*close)(inode_t *inode);
-} fsops_t;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">fsops</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)(</span><span class="k">struct</span> <span class="n">filesystem</span> <span class="o">*</span><span class="n">fs</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">dev_t</span> <span class="o">*</span><span class="n">dev</span><span class="p">);</span>
+  <span class="n">inode_t</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">lookup</span><span class="p">)(</span><span class="k">struct</span> <span class="n">filesystem</span> <span class="o">*</span><span class="n">fs</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">close</span><span class="p">)(</span><span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">fsops_t</span><span class="p">;</span>
+</pre></div>
 
 
 <p>之前提到，文件系统是一个树状的数据结构。下图中，圆形节点表示存储数据的文件、方形节点表示目录(用目录文件存储)。</p>
@@ -134,46 +138,49 @@ tty-&gt;ops-&gt;read(tty, offset, buf, length);</code></pre>
 <li>调用<code>fs-&gt;ops-&gt;lookup(fs, "/a/test.txt", flags)</code>获取inode。</li>
 </ul>
 <p>对于一个具体的文件，无论它是普通文件还是目录文件，对文件的操作都是通过对它所对应inode的操作完成的：</p>
-<pre class="codehilite"><code class="language-c">typedef struct inodeops {
-  int (*open)(file_t *file, int flags);
-  int (*close)(file_t *file);
-  ssize_t (*read)(file_t *file, char *buf, size_t size);
-  ssize_t (*write)(file_t *file, const char *buf, size_t size);
-  off_t (*lseek)(file_t *file, off_t offset, int whence);
-  int (*mkdir)(const char *name);
-  int (*rmdir)(const char *name);
-  int (*link)(const char *name, inode_t *inode);
-  int (*unlink)(const char *name);
-  // 你可以自己设计readdir的功能
-} inodeops_t;
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">inodeops</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">open</span><span class="p">)(</span><span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">close</span><span class="p">)(</span><span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">read</span><span class="p">)(</span><span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">write</span><span class="p">)(</span><span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+  <span class="kt">off_t</span> <span class="p">(</span><span class="o">*</span><span class="n">lseek</span><span class="p">)(</span><span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">int</span> <span class="n">whence</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">mkdir</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">rmdir</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">link</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">unlink</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">);</span>
+  <span class="c1">// 你可以自己设计readdir的功能</span>
+<span class="p">}</span> <span class="n">inodeops_t</span><span class="p">;</span>
 
-struct inode {
-  ...
-  int refcnt;
-  void *ptr;       // private data
-  filesystem_t *fs;
-  inodeops_t *ops; // 在inode被创建时，由文件系统的实现赋值
-                   // inode ops也是文件系统的一部分
-  ...
-};</code></pre>
+<span class="k">struct</span> <span class="n">inode</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="kt">int</span> <span class="n">refcnt</span><span class="p">;</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">;</span>       <span class="c1">// private data</span>
+  <span class="n">filesystem_t</span> <span class="o">*</span><span class="n">fs</span><span class="p">;</span>
+  <span class="n">inodeops_t</span> <span class="o">*</span><span class="n">ops</span><span class="p">;</span> <span class="c1">// 在inode被创建时，由文件系统的实现赋值</span>
+                   <span class="c1">// inode ops也是文件系统的一部分</span>
+  <span class="p">...</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <h3 id="_7">系统中打开的文件</h3>
 <p>最后，线程/进程的文件操作是通过文件描述符完成的，每个文件描述符背后都有一个“打开文件”的数据结构<code>file_t</code>：</p>
-<pre class="codehilite"><code class="language-c">typedef struct file {
-  int refcnt; // 引用计数
-  inode_t *inode;
-  uint64_t offset;
-  ...
-} file_t;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">file</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">refcnt</span><span class="p">;</span> <span class="c1">// 引用计数</span>
+  <span class="n">inode_t</span> <span class="o">*</span><span class="n">inode</span><span class="p">;</span>
+  <span class="kt">uint64_t</span> <span class="n">offset</span><span class="p">;</span>
+  <span class="p">...</span>
+<span class="p">}</span> <span class="n">file_t</span><span class="p">;</span>
+</pre></div>
 
 
 <p>这样，我们可以在进程/线程的数据结构中维护一系列“打开文件”的指针，这就是文件描述符！</p>
-<pre class="codehilite"><code class="language-c">struct task {
-  ...
-  file_t *fildes[NOFILE];
-  ...
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">task</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">file_t</span> <span class="o">*</span><span class="n">fildes</span><span class="p">[</span><span class="n">NOFILE</span><span class="p">];</span>
+  <span class="p">...</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>其中<code>fildes[i] == NULL</code>表示编号为<code>i</code>的文件描述符可用，你应该在教科书上看到过一样的代码！在这里，让我们整理一下<code>open("/mnt/a/test.txt", flags)</code>发生的事情：</p>
@@ -195,13 +202,14 @@ struct inode {
 <li>blkfs，挂载在<code>/</code>，维护一个树状的文件系统结构(可以参考教科书Filesystem Implementation)。</li>
 </ul>
 <p>有了vfs，兼容多个文件系统就变得非常简单了。以devfs为例，devfs里的文件是静态创建的，只需要实现<code>lookup</code>，就能实现<code>/dev/ramdisk0</code>等的解析。在每一个devfs inode中，inode的私有数据(<code>ptr</code>域)都保存了指向设备(<code>dev_t</code>)的指针。因此，inode的读/写就非常容易了：</p>
-<pre class="codehilite"><code class="language-c">void devfs_read(file_t *file, char *buf, size_t size) {
-  dev_t dev = file-&gt;inode-&gt;ptr;
-  ...
-  ssize_t nread = dev-&gt;ops-&gt;read(dev, file-&gt;offset, buf, size);
-  file-&gt;offset += size;
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">devfs_read</span><span class="p">(</span><span class="n">file_t</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">dev_t</span> <span class="n">dev</span> <span class="o">=</span> <span class="n">file</span><span class="o">-&gt;</span><span class="n">inode</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="kt">ssize_t</span> <span class="n">nread</span> <span class="o">=</span> <span class="n">dev</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">read</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span> <span class="n">file</span><span class="o">-&gt;</span><span class="n">offset</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+  <span class="n">file</span><span class="o">-&gt;</span><span class="n">offset</span> <span class="o">+=</span> <span class="n">size</span><span class="p">;</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>聪明的你一定知道procfs应该如何实现了。实际上，这个实验中的VFS与Linux内核中的机制非常相似，以后你阅读Linux内核代码的时候，一定会感到几分亲切。用一张图回顾一下，是如何从文件描述符“路由”到对应的文件系统实现的。</p>
@@ -212,41 +220,43 @@ struct inode {
 </div>
 <h3 id="shell">实现单线程shell</h3>
 <p>最后，还记得Lab2中的演示程序么？一小段代码可以实现命令行的“echo”功能：</p>
-<pre class="codehilite"><code class="language-c">void echo_task(void *name) {
-  device_t *tty = dev_lookup(name);
-  while (1) {
-    char line[128], text[128];
-    sprintf(text, &quot;(%s) $ &quot;, name); tty_write(tty, text);
-    int nread = tty-&gt;ops-&gt;read(tty, 0, line, sizeof(line));
-    line[nread - 1] = '\0';
-    sprintf(text, &quot;Echo: %s.\n&quot;, line); tty_write(tty, text);
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">echo_task</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">name</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">device_t</span> <span class="o">*</span><span class="n">tty</span> <span class="o">=</span> <span class="n">dev_lookup</span><span class="p">(</span><span class="n">name</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">line</span><span class="p">[</span><span class="mi">128</span><span class="p">],</span> <span class="n">text</span><span class="p">[</span><span class="mi">128</span><span class="p">];</span>
+    <span class="n">sprintf</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s">&quot;(%s) $ &quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span> <span class="n">tty_write</span><span class="p">(</span><span class="n">tty</span><span class="p">,</span> <span class="n">text</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">nread</span> <span class="o">=</span> <span class="n">tty</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">read</span><span class="p">(</span><span class="n">tty</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">line</span><span class="p">));</span>
+    <span class="n">line</span><span class="p">[</span><span class="n">nread</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+    <span class="n">sprintf</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s">&quot;Echo: %s.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">);</span> <span class="n">tty_write</span><span class="p">(</span><span class="n">tty</span><span class="p">,</span> <span class="n">text</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这其实是一个最简单shell的雏形，你可以把它丰富成如下的一个非常简陋的shell，但瞬间就让你的操作系统有了“能用”的感觉！</p>
-<pre class="codehilite"><code class="language-c">void shell_thread(int tty_id) {
-  char buf[128];
-  ...
-  sprintf(buf, &quot;/dev/tty%d&quot;, tty_id);
-  int stdin = vfs-&gt;open(buf, O_RDONLY);
-  int stdout = vfs-&gt;open(buf, O_WRONLY);
-  while (1) {
-    if (got_a_line()) {
-       ...
-    } else {
-      ssize_t nread = fs-&gt;read(stdin, buf, sizeof(buf));
-      ...
-    }
-    // supported commands:
-    //   ls
-    //   cd /proc
-    //   cat filename
-    //   mkdir /bin
-    //   rm /bin/abc
-    //   ...
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">shell_thread</span><span class="p">(</span><span class="kt">int</span> <span class="n">tty_id</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="mi">128</span><span class="p">];</span>
+  <span class="p">...</span>
+  <span class="n">sprintf</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;/dev/tty%d&quot;</span><span class="p">,</span> <span class="n">tty_id</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="n">stdin</span> <span class="o">=</span> <span class="n">vfs</span><span class="o">-&gt;</span><span class="n">open</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="n">stdout</span> <span class="o">=</span> <span class="n">vfs</span><span class="o">-&gt;</span><span class="n">open</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">got_a_line</span><span class="p">())</span> <span class="p">{</span>
+       <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="kt">ssize_t</span> <span class="n">nread</span> <span class="o">=</span> <span class="n">fs</span><span class="o">-&gt;</span><span class="n">read</span><span class="p">(</span><span class="n">stdin</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+      <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="c1">// supported commands:</span>
+    <span class="c1">//   ls</span>
+    <span class="c1">//   cd /proc</span>
+    <span class="c1">//   cat filename</span>
+    <span class="c1">//   mkdir /bin</span>
+    <span class="c1">//   rm /bin/abc</span>
+    <span class="c1">//   ...</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>基本上，你只需要解析输入的命令，然后翻译成文件系统的API即可。</p>

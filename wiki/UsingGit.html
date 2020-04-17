@@ -285,15 +285,16 @@ When performing git experiments involving the working directory, a
 copy instead of a clone may be more appropriate.</p>
 <p>However, if you want a "pure git" solution, something like, which clones
 everything in a directory of repos, this may be what you need:</p>
-<pre class="codehilite"><code class="language-shell">cd /src/backupgit
-ls -F . | grep / &gt; /tmp/.gitmissing1
-ssh -n git.example.com ls -F /src/git/. | grep / &gt; /tmp/.gitmissing2
-diff /tmp/.gitmissing1 /tmp/.gitmissing2 | egrep '^&gt;' |
-  while read x f; do
-    git clone --bare --mirror ssh://git.example.com/src/git/$$f $$f
-  done
+<div class="codehilite"><pre><span></span><span class="nb">cd</span> /src/backupgit
+ls -F . <span class="p">|</span> grep / &gt; /tmp/.gitmissing1
+ssh -n git.example.com ls -F /src/git/. <span class="p">|</span> grep / &gt; /tmp/.gitmissing2
+diff /tmp/.gitmissing1 /tmp/.gitmissing2 <span class="p">|</span> egrep <span class="s1">&#39;^&gt;&#39;</span> <span class="p">|</span>
+  <span class="k">while</span> <span class="nb">read</span> x f<span class="p">;</span> <span class="k">do</span>
+    git clone --bare --mirror ssh://git.example.com/src/git/<span class="nv">$$</span>f <span class="nv">$$</span>f
+  <span class="k">done</span>
 rm -f /tmp/.gitmissing1 /tmp/.gitmissing2
-for f in */.; do (cd $$f; echo $$f; git fetch); done</code></pre>
+<span class="k">for</span> f in */.<span class="p">;</span> <span class="k">do</span> <span class="o">(</span><span class="nb">cd</span> <span class="nv">$$</span>f<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$$</span>f<span class="p">;</span> git fetch<span class="o">)</span><span class="p">;</span> <span class="k">done</span>
+</pre></div>
 
 
 <h2 id="dont-change-published-history">Don't change published history</h2>

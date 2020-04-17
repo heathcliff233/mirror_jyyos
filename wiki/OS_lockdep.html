@@ -57,11 +57,12 @@
 <p>Over time, the kernel developers have made increasing use of automated code analysis tools as those tools become available. The latest such is <a href="http://lwn.net/Articles/185605/">the first version of the lock validator patch</a>, posted by Ingo Molnar (这位也是 Complete-Fair-Scheduler 的作者). This patch (a 61-part set, actually) adds a complex infrastructure to the kernel which can then be used to prove that none of the locking patterns observed in a running system could ever deadlock the kernel.</p>
 <p>To that end, the lock validator must track real locking patterns in the kernel. There is no point, however, in tracking every individual lock - there are thousands of them, but many of them are treated in exactly the same way by the kernel. For example, every inode structure contains a spinlock, as does every file structure. Once the kernel has seen how locking is handled for one inode structure, it knows how it will be handled for every inode structure. So, somehow, the lock validator needs to be able to recognize that all spinlocks contained within (for example) the inode structure are essentially the same.</p>
 <p>To this end, every lock in the system (including rwlocks and mutexes, now) is assigned a specific key. For locks which are declared statically (for example, files_lock, which protects the list of open files), the address of the lock is used as the key. Locks which are allocated dynamically (as most locks embedded within structures are) cannot be tracked that way, however; there may be vast numbers of addresses involved, and, in any case, all locks associated with a specific structure field should be mapped to a single key. This is done by recognizing that these locks are initialized at run time, so, for example, spin_lock_init() is redefined as:</p>
-<pre class="codehilite"><code class="language-c"># define spin_lock_init(lock) \
-do { \
-  static struct lockdep_type_key __key; \
-  __spin_lock_init((lock), #lock, &__key); \
-} while (0)</code></pre>
+<div class="codehilite"><pre><span></span><span class="cp"># define spin_lock_init(lock) \</span>
+<span class="cp">do { \</span>
+<span class="cp">  static struct lockdep_type_key __key; \</span>
+<span class="cp">  __spin_lock_init((lock), #lock, &__key); \</span>
+<span class="cp">} while (0)</span>
+</pre></div>
 
 
 <p>Thus, for each lock initialization, this code creates a static variable (<code>__key</code>) and uses its address as the key identifying the type of the lock. Since any particular type of lock tends to be initialized in a single place, this trick associates the same key with every lock of the same type.</p>

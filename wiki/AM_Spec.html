@@ -119,33 +119,38 @@
 </ul>
 <h4 id="21-_area">2.1 <code>_Area</code> 结构体</h4>
 <p>在 AbstractMachine 代码中，会用到结构体 <code>_Area</code> 表示一段内存：</p>
-<pre class="codehilite"><code class="language-c">typedef struct _Area {
-  void *start, *end;
-} _Area;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">_Area</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">start</span><span class="p">,</span> <span class="o">*</span><span class="n">end</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">_Area</span><span class="p">;</span>
+</pre></div>
 
 
 <p>它表示左闭右开区间 <code>[start, end)</code> 的一段内存。我们假设地址空间的最后一个字节 (例如 32-bit 平台下地址 <code>0xffffffff</code>) 永远不会被包含在某个 <code>_Area</code> 中，因此 <code>end</code> 不会溢出。内存区间</p>
-<pre class="codehilite"><code class="language-c">(_Area) {
-  .start = (void *)0;
-  .end   = (void *)0xffffffff;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">(</span><span class="n">_Area</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">.</span><span class="n">start</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mi">0</span><span class="p">;</span>
+  <span class="p">.</span><span class="n">end</span>   <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mh">0xffffffff</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>的最后一个字节的地址是 <code>0xfffffffe</code>。</p>
 <h4 id="22-_heap">2.2 <code>_heap</code>: 物理内存堆区</h4>
-<pre class="codehilite"><code class="language-c">extern _Area _heap;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">extern</span> <span class="n">_Area</span> <span class="n">_heap</span><span class="p">;</span>
+</pre></div>
 
 
 <p>标记一段连续可用的物理内存 <code>[_heap.start, _heap.end)</code>，这段内存 kernel 可以任意读写。</p>
 <p><span class="green">多处理器：安全</span>；<code>_heap</code> 是只读的。修改 <code>_heap</code> 导致 undefined behavior；Kernel 没有任何理由需要修改它。</p>
 <h4 id="23-_putc">2.3 <code>_putc</code>: 打印字符</h4>
-<pre class="codehilite"><code class="language-c">void _putc(char ch);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">_putc</span><span class="p">(</span><span class="kt">char</span> <span class="n">ch</span><span class="p">);</span>
+</pre></div>
 
 
 <p>向默认的调试终端打印 ASCII 码为 <code>ch</code> 的字符，例如在 x86 (x86-64) 上，向 COM1 输出</p>
 <p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
 <h4 id="24-_halt-abstractmachine">2.4 <code>_halt</code>: 终止 AbstractMachine</h4>
-<pre class="codehilite"><code class="language-c">void _halt(int code) __attribute__((__noreturn__));</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">_halt</span><span class="p">(</span><span class="kt">int</span> <span class="n">code</span><span class="p">)</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">__noreturn__</span><span class="p">));</span>
+</pre></div>
 
 
 <p>立即终止整个 AbstractMachine 的运行，并返回数字编号 <code>code</code> (0-255)</p>
@@ -153,25 +158,29 @@
 <h3 id="3-mpe-multi-processing-extension">3. MPE (Multi-Processing Extension) 共享内存多处理器</h3>
 <p>(TBD: 状态机)</p>
 <h4 id="31-_mpe_init">3.1 <code>_mpe_init</code>: 启动多处理器</h4>
-<pre class="codehilite"><code class="language-c">int _mpe_init(void (*entry)());</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">_mpe_init</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)());</span>
+</pre></div>
 
 
 <p>启动系统中多个并行的执行流，每个执行流都从 <code>entry</code> 开始，执行流共享代码、数据；每个执行流有独立的堆栈和寄存器。</p>
 <p><span class="red">限制</span>：在一次 kernel 运行中，只能调用一次。</p>
 <h4 id="32-_ncpu">3.2 <code>_ncpu</code>: 处理器个数</h4>
-<pre class="codehilite"><code class="language-c">int _ncpu();</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">_ncpu</span><span class="p">();</span>
+</pre></div>
 
 
 <p>返回系统中处理器的个数，在整个 AbstractMachine 执行期间数值不会变化。</p>
 <p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
 <h4 id="33-_cpu">3.3 <code>_cpu</code>: 当前处理器编号</h4>
-<pre class="codehilite"><code class="language-c">int _cpu();</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">_cpu</span><span class="p">();</span>
+</pre></div>
 
 
 <p>返回当前执行流的 CPU 编号，从 <code>0</code> 开始，例如 <code>_ncpu()</code> 返回 <code>4</code>，则四个 CPU 调用 <code>_cpu()</code> 分别返回 <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>。</p>
 <p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
 <h4 id="34-_atomic_xchg">3.4 <code>_atomic_xchg</code>: 内存交换</h4>
-<pre class="codehilite"><code class="language-c">intptr_t _atomic_xchg(volatile intptr_t *addr, intptr_t newval);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">intptr_t</span> <span class="nf">_atomic_xchg</span><span class="p">(</span><span class="k">volatile</span> <span class="kt">intptr_t</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">intptr_t</span> <span class="n">newval</span><span class="p">);</span>
+</pre></div>
 
 
 <p><span class="green">多处理器：安全</span>；任何处理器在任何时候皆可调用。</p>
@@ -179,7 +188,7 @@
 
 
 
-<pre class="codehilite"><code class="language-text">(C, PC, I) determines
+<div class="codehilite"><pre><span></span>(C, PC, I) determines
   =&gt; load (D/S) I' PC'
   =&gt; store (D/S) I' PC'
   =&gt; callam D/S I' PC'
@@ -212,7 +221,8 @@ callam 等效于 store(dev)
 
 CTE:
 
-allow non-deterministic</code></pre>
+allow non-deterministic
+</pre></div>
 
 
 
@@ -256,9 +266,10 @@ allow non-deterministic</code></pre>
 ### #. IOE: 访问 I/O 设备
 
 
-<pre class="codehilite"><code class="language-c">int    _ioe_init();
-size_t _io_read (uint32_t dev, uintptr_t reg, void *buf, size_t size);
-size_t _io_write(uint32_t dev, uintptr_t reg, void *buf, size_t size);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span>    <span class="nf">_ioe_init</span><span class="p">();</span>
+<span class="kt">size_t</span> <span class="nf">_io_read</span> <span class="p">(</span><span class="kt">uint32_t</span> <span class="n">dev</span><span class="p">,</span> <span class="kt">uintptr_t</span> <span class="n">reg</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+<span class="kt">size_t</span> <span class="nf">_io_write</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">dev</span><span class="p">,</span> <span class="kt">uintptr_t</span> <span class="n">reg</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+</pre></div>
 
 
 
@@ -266,68 +277,75 @@ size_t _io_write(uint32_t dev, uintptr_t reg, void *buf, size_t size);</code></p
 
 
 
-<pre class="codehilite"><code class="language-c">enum {
-  _EVENT_NULL = 0,
-  _EVENT_ERROR,
-  _EVENT_IRQ_TIMER,
-  _EVENT_IRQ_IODEV,
-  _EVENT_PAGEFAULT,
-  _EVENT_SYSCALL,
-  _EVENT_YIELD,
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">enum</span> <span class="p">{</span>
+  <span class="n">_EVENT_NULL</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="n">_EVENT_ERROR</span><span class="p">,</span>
+  <span class="n">_EVENT_IRQ_TIMER</span><span class="p">,</span>
+  <span class="n">_EVENT_IRQ_IODEV</span><span class="p">,</span>
+  <span class="n">_EVENT_PAGEFAULT</span><span class="p">,</span>
+  <span class="n">_EVENT_SYSCALL</span><span class="p">,</span>
+  <span class="n">_EVENT_YIELD</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
 
 
 
 
-<pre class="codehilite"><code class="language-c">typedef struct _Event {
-  int event;
-  uintptr_t cause, ref;
-  const char *msg;
-} _Event;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">_Event</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">event</span><span class="p">;</span>
+  <span class="kt">uintptr_t</span> <span class="n">cause</span><span class="p">,</span> <span class="n">ref</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">_Event</span><span class="p">;</span>
+</pre></div>
 
 
 
 
-<pre class="codehilite"><code class="language-c">typedef struct _Context _Context;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">_Context</span> <span class="n">_Context</span><span class="p">;</span>
+</pre></div>
 
 
 
 
 
-<pre class="codehilite"><code class="language-c">int  _cte_init(_Context *(*handler)(_Event ev, _Context *ctx));
-void _yield();
-int  _intr_read();
-void _intr_write(int enable);
-_Context* _kcontext(_Area kstack, void (*entry)(void *), void *arg);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span>  <span class="nf">_cte_init</span><span class="p">(</span><span class="n">_Context</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">handler</span><span class="p">)(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">));</span>
+<span class="kt">void</span> <span class="nf">_yield</span><span class="p">();</span>
+<span class="kt">int</span>  <span class="nf">_intr_read</span><span class="p">();</span>
+<span class="kt">void</span> <span class="nf">_intr_write</span><span class="p">(</span><span class="kt">int</span> <span class="n">enable</span><span class="p">);</span>
+<span class="n">_Context</span><span class="o">*</span> <span class="nf">_kcontext</span><span class="p">(</span><span class="n">_Area</span> <span class="n">kstack</span><span class="p">,</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="p">),</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+</pre></div>
 
 
 
 ### #. VME: 虚拟地址空间
 
-<pre class="codehilite"><code class="language-c">enum {
-  _PROT_NONE  = 0x1, // no access
-  _PROT_READ  = 0x2, // can read
-  _PROT_WRITE = 0x4, // can write
-  _PROT_EXEC  = 0x8, // can execute
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">enum</span> <span class="p">{</span>
+  <span class="n">_PROT_NONE</span>  <span class="o">=</span> <span class="mh">0x1</span><span class="p">,</span> <span class="c1">// no access</span>
+  <span class="n">_PROT_READ</span>  <span class="o">=</span> <span class="mh">0x2</span><span class="p">,</span> <span class="c1">// can read</span>
+  <span class="n">_PROT_WRITE</span> <span class="o">=</span> <span class="mh">0x4</span><span class="p">,</span> <span class="c1">// can write</span>
+  <span class="n">_PROT_EXEC</span>  <span class="o">=</span> <span class="mh">0x8</span><span class="p">,</span> <span class="c1">// can execute</span>
+<span class="p">};</span>
+</pre></div>
 
 
 
 
-<pre class="codehilite"><code class="language-c">typedef struct _AddressSpace {
-  size_t pgsize;
-  _Area area;
-  void *ptr;
-} _AddressSpace;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">_AddressSpace</span> <span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">pgsize</span><span class="p">;</span>
+  <span class="n">_Area</span> <span class="n">area</span><span class="p">;</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">_AddressSpace</span><span class="p">;</span>
+</pre></div>
 
 
 
 
-<pre class="codehilite"><code class="language-c">int  _vme_init(void *(*pgalloc)(size_t size), void (*pgfree)(void *));
-void _protect(_AddressSpace *as);
-void _unprotect(_AddressSpace *as);
-void _map(_AddressSpace *as, void *va, void *pa, int prot);
-_Context *_ucontext(_AddressSpace *as, _Area kstack, void *entry);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span>  <span class="nf">_vme_init</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">pgalloc</span><span class="p">)(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">),</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">pgfree</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="p">));</span>
+<span class="kt">void</span> <span class="nf">_protect</span><span class="p">(</span><span class="n">_AddressSpace</span> <span class="o">*</span><span class="n">as</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">_unprotect</span><span class="p">(</span><span class="n">_AddressSpace</span> <span class="o">*</span><span class="n">as</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">_map</span><span class="p">(</span><span class="n">_AddressSpace</span> <span class="o">*</span><span class="n">as</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">va</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">pa</span><span class="p">,</span> <span class="kt">int</span> <span class="n">prot</span><span class="p">);</span>
+<span class="n">_Context</span> <span class="o">*</span><span class="nf">_ucontext</span><span class="p">(</span><span class="n">_AddressSpace</span> <span class="o">*</span><span class="n">as</span><span class="p">,</span> <span class="n">_Area</span> <span class="n">kstack</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">entry</span><span class="p">);</span>
+</pre></div>
 
 
 
@@ -341,10 +359,11 @@ AM提供将C程序$P$ (一组源代码)编译成机器代码并加载的能力�
 编写AM上的程序使用Makefile：
 
 
-<pre class="codehilite"><code>NAME := project-name     # 编译后二进制文件的名字
-SRCS := main.c hello.c   # 源代码列表，支持.c, .cpp, .S
-LIBS := klib             # 静态链接的库函数
-include $(AM_HOME)/Makefile.app</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">NAME := project-name     # 编译后二进制文件的名字</span>
+<span class="err">SRCS := main.c hello.c   # 源代码列表，支持.c, .cpp, .S</span>
+<span class="err">LIBS := klib             # 静态链接的库函数</span>
+<span class="err">include $(AM_HOME)/Makefile.app</span>
+</pre></div>
 
 
 
@@ -356,19 +375,20 @@ include $(AM_HOME)/Makefile.app</code></pre>
 如图所示：
 
 
-<pre class="codehilite"><code>  .c   .c   .c
-   |    |    |  编译
-  .o   .o   .o
-    \   |  /   链接(static)       make
-      a.bin   loader
-        |      /  创建镜像
-      a.img---/
-        |
-        |  make run   Processor  (R) ---Devices
-        v                 |       运行环境
-+---------------------------------------+
-|          memory  (M)                  |
-+---------------------------------------+</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">  .c   .c   .c</span>
+<span class="err">   |    |    |  编译</span>
+<span class="err">  .o   .o   .o</span>
+<span class="err">    \   |  /   链接(static)       make</span>
+<span class="err">      a.bin   loader</span>
+<span class="err">        |      /  创建镜像</span>
+<span class="err">      a.img---/</span>
+<span class="err">        |</span>
+<span class="err">        |  make run   Processor  (R) ---Devices</span>
+<span class="err">        v                 |       运行环境</span>
+<span class="err">+---------------------------------------+</span>
+<span class="err">|          memory  (M)                  |</span>
+<span class="err">+---------------------------------------+</span>
+</pre></div>
 
 
 
@@ -384,11 +404,12 @@ include $(AM_HOME)/Makefile.app</code></pre>
 抽象计算机的运行模型可以扩展到多处理器系统，仿佛有多个单处理器系统共享同一份内存，但每个处理器都有独立的寄存器$R$和堆栈(堆栈在同一地址空间中不重叠的位置)：
 
 
-<pre class="codehilite"><code>Proc1 (R1)   Proc2 (R2)
-    |          |         ....
-+-----------------------------------+
-|   memory (M)                      |
-+-----------------------------------+</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">Proc</span><span class="mi">1</span> <span class="p">(</span><span class="nv">R1</span><span class="p">)</span>   <span class="nv">Proc2</span> <span class="p">(</span><span class="nv">R2</span><span class="p">)</span>
+    <span class="err">|</span>          <span class="err">|</span>         <span class="nf">....</span>
+<span class="err">+-----------------------------------+</span>
+<span class="err">|</span>   <span class="nf">memory</span> <span class="p">(</span><span class="nv">M</span><span class="p">)</span>                      <span class="o">|</span>
+<span class="err">+-----------------------------------+</span>
+</pre></div>
 
 
 
@@ -415,9 +436,10 @@ MPE的接口非常简单：
 简单地理解，系统运行的每一步都“选一个处理器$i$”执行一步$(R_i,M)\to f(R_i,M)=(R_i',M')$，然后更新整个系统的状态为$(R_1,...R_i',...,R_n, M')$，而实际运行中系统“选择”哪个处理器执行是不确定的。因此假设系统中有2个处理器：
 
 
-<pre class="codehilite"><code class="language-c">void mp_main() {
-  while (1) putc("ab"[_cpu()]);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">mp_main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">putc</span><span class="p">(</span><span class="s">"ab"</span><span class="p">[</span><span class="n">_cpu</span><span class="p">()]);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 
@@ -431,16 +453,17 @@ MPE的接口非常简单：
 * 两个处理器同时执行putc和halt，不会产生UB，由AM的实现保证正确。
 
 
-<pre class="codehilite"><code>intptr_t x, flag = 0;
-T1:
+<div class="codehilite"><pre><span></span><span class="n">intptr_t</span> <span class="n">x</span><span class="p">,</span> <span class="n">flag</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">T1</span><span class="p">:</span>
 
-(1) x = 1;
-atomic_xchg(&flag, 1);
+<span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">flag</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 
-T2:
+<span class="n">T2</span><span class="p">:</span>
 
-while (atomic_xchg(&flag, 0) == 0) ;
-(2) x = 2;</code></pre>
+<span class="n">while</span> <span class="p">(</span><span class="n">atomic_xchg</span><span class="p">(</span><span class="o">&</span><span class="n">flag</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">;</span>
+<span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+</pre></div>
 
 
 
@@ -454,11 +477,12 @@ while (atomic_xchg(&flag, 0) == 0) ;
 * 对同一个设备的两次不ordered的访问是UB。
 
 
-<pre class="codehilite"><code>Proc1   Proc2
-  |       |
-+---------------+
-| I/O Registers |---devices
-+---------------+</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">Proc</span><span class="mi">1</span>   <span class="nv">Proc2</span>
+  <span class="err">|</span>       <span class="err">|</span>
+<span class="err">+---------------+</span>
+<span class="err">|</span> <span class="nf">I</span><span class="o">/</span><span class="nv">O</span> <span class="nv">Registers</span> <span class="o">|---</span><span class="nv">devices</span>
+<span class="err">+---------------+</span>
+</pre></div>
 
 
 
@@ -475,12 +499,13 @@ while (atomic_xchg(&flag, 0) == 0) ;
 异常流程：
 
 
-<pre class="codehilite"><code>(R, M) -&gt; Interrupt
-       -&gt;  +-----------------------------------+
-           |    (R)  &lt;--------+  M             |
-           +------------------|----------------+
-                 |            |
-                handler(ev, context)</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">(R, M) -&gt; Interrupt</span>
+<span class="err">       -&gt;  +-----------------------------------+</span>
+<span class="err">           |    (R)  &lt;--------+  M             |</span>
+<span class="err">           +------------------|----------------+</span>
+<span class="err">                 |            |</span>
+<span class="err">                handler(ev, context)</span>
+</pre></div>
 
 
 
@@ -498,13 +523,14 @@ handler可以返回任何一个保存在内存中的context，此时处理器会
 pgalloc和pgfree可能会race，需要保证正确性。
 
 
-<pre class="codehilite"><code>     Proc (R)
-        |
-  (address translation) - active when ucontext is returned to processor
-        |                         +-- pa := maped(va)
- +-------------------------+          when trapped from ucontext, no address translation.
- |        M                |
- +-------------------------+</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">     Proc (R)</span>
+<span class="err">        |</span>
+<span class="err">  (address translation) - active when ucontext is returned to processor</span>
+<span class="err">        |                         +-- pa := maped(va)</span>
+<span class="err"> +-------------------------+          when trapped from ucontext, no address translation.</span>
+<span class="err"> |        M                |</span>
+<span class="err"> +-------------------------+</span>
+</pre></div>
 
 
 

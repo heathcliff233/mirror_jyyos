@@ -76,22 +76,23 @@
 <p>关于FAT的一些其他细节，大家会在<a href="OS2019_M5.html">Mini Lab 5</a>中得到进一步的了解。</p>
 <h2 id="ext2">ext2</h2>
 <p>ext2的设计和教科书中的文件系统几乎一致，例如它的inode定义：</p>
-<pre class="codehilite"><code class="language-c">struct ext2_inode {
-  __u16   i_mode;         /* File type and access rights */
-  __u16   i_uid;          /* Low 16 bits of Owner Uid */
-  __u32   i_size;         /* Size in bytes */
-  __u32   i_atime;        /* Access time */
-  __u32   i_ctime;        /* Creation time */
-  __u32   i_mtime;        /* Modification time */
-  __u32   i_dtime;        /* Deletion Time */
-  __u16   i_gid;          /* Low 16 bits of Group Id */
-  __u16   i_links_count;  /* Links count */
-  __u32   i_blocks;       /* Blocks count */
-  __u32   i_flags;        /* File flags */
-  ...
-  __u32   i_block[EXT2_N_BLOCKS];  /* Pointers to blocks */
-  ...
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">ext2_inode</span> <span class="p">{</span>
+  <span class="n">__u16</span>   <span class="n">i_mode</span><span class="p">;</span>         <span class="cm">/* File type and access rights */</span>
+  <span class="n">__u16</span>   <span class="n">i_uid</span><span class="p">;</span>          <span class="cm">/* Low 16 bits of Owner Uid */</span>
+  <span class="n">__u32</span>   <span class="n">i_size</span><span class="p">;</span>         <span class="cm">/* Size in bytes */</span>
+  <span class="n">__u32</span>   <span class="n">i_atime</span><span class="p">;</span>        <span class="cm">/* Access time */</span>
+  <span class="n">__u32</span>   <span class="n">i_ctime</span><span class="p">;</span>        <span class="cm">/* Creation time */</span>
+  <span class="n">__u32</span>   <span class="n">i_mtime</span><span class="p">;</span>        <span class="cm">/* Modification time */</span>
+  <span class="n">__u32</span>   <span class="n">i_dtime</span><span class="p">;</span>        <span class="cm">/* Deletion Time */</span>
+  <span class="n">__u16</span>   <span class="n">i_gid</span><span class="p">;</span>          <span class="cm">/* Low 16 bits of Group Id */</span>
+  <span class="n">__u16</span>   <span class="n">i_links_count</span><span class="p">;</span>  <span class="cm">/* Links count */</span>
+  <span class="n">__u32</span>   <span class="n">i_blocks</span><span class="p">;</span>       <span class="cm">/* Blocks count */</span>
+  <span class="n">__u32</span>   <span class="n">i_flags</span><span class="p">;</span>        <span class="cm">/* File flags */</span>
+  <span class="p">...</span>
+  <span class="n">__u32</span>   <span class="n">i_block</span><span class="p">[</span><span class="n">EXT2_N_BLOCKS</span><span class="p">];</span>  <span class="cm">/* Pointers to blocks */</span>
+  <span class="p">...</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>这个设计的精妙之处是使用了多个级别的索引：</p>
@@ -110,8 +111,9 @@
 <div class="fenced fenced-green">
 <h4 id="inode">访问inode？</h4>
 <p>如果你仔细观察以下两个命令输出的结果：</p>
-<pre class="codehilite"><code class="language-text">$ strace ls
-$ strace ls -l</code></pre>
+<div class="codehilite"><pre><span></span>$ strace ls
+$ strace ls -l
+</pre></div>
 
 
 <p>你会发现<code>ls -l</code>执行的系统调用要比<code>ls</code>多上不少——为了打印文件的详细信息，必须读取它的inode。因此，把inodes连续存储(并且把邻近的inodes存储在邻近的区域)能有效地减少磁盘的读取次数。</p>

@@ -53,8 +53,9 @@
 <p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a>第37, 40章。</p>
 </div>
 <p>文件系统是实现在一个存储设备上的(HDD, SSD, USB Flash等等)。为了简化讨论，我们不妨假设存储设备为我们提供的接口是按某个大小的“块”(例如512B或4KB)来访问的：</p>
-<pre class="codehilite"><code class="language-c">void block_read(void *buf, uint64_t blkid);
-void block_write(void *buf, uint64_t blkid);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">block_read</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">blkid</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">block_write</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">blkid</span><span class="p">);</span>
+</pre></div>
 
 
 <p>实际的存储设备通常支持多个块的连续读写，并且通过中断和DMA进行管理。但总体来说，我们可以向设备提交请求，设备会逐个完成提交的读写请求。关于磁盘设备，请大家阅读教科书37章。</p>
@@ -83,10 +84,11 @@ void block_write(void *buf, uint64_t blkid);</code></pre>
 <h2 id="_3">文件：虚拟磁盘</h2>
 <p>我们需要用固定大小的blocks实现虚拟磁盘——一个<code>std::vector&lt;char&gt;</code>。因此我们首先需要一个block分配的函数(<code>balloc()</code>, <code>bfree()</code>)，每次可以分配一个数据块。</p>
 <p>一个最简单的实现是把数据块用链表链接起来，在每一块的末尾保存指向下一块的“指针”：</p>
-<pre class="codehilite"><code class="language-c">struct block {
-  uint8_t payload[BLOCK_SIZE - sizeof(uint32_t)];
-  uint32_t next_block_id;
-} __attribute__((packed));</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">block</span> <span class="p">{</span>
+  <span class="kt">uint8_t</span> <span class="n">payload</span><span class="p">[</span><span class="n">BLOCK_SIZE</span> <span class="o">-</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">)];</span>
+  <span class="kt">uint32_t</span> <span class="n">next_block_id</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">));</span>
+</pre></div>
 
 
 <p>另一种方式是类似于我们的页表，使用类似页目录-页表-物理页的多级索引结构实现。这两种实现各有优劣：</p>
@@ -96,7 +98,8 @@ void block_write(void *buf, uint64_t blkid);</code></pre>
 </ul>
 <h2 id="_4">目录：用文件实现</h2>
 <p>假设系统中的每个文件/目录都有一个唯一的编号(稍后我们将讨论如何为每个文件维护这个编号)，那么目录就可以看成是文件名(目录名)到编号的映射：</p>
-<pre class="codehilite"><code class="language-c++">using dir_t = std::map&lt;std::string,uint64_t&gt;;</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">using</span> <span class="n">dir_t</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span><span class="kt">uint64_t</span><span class="o">&gt;</span><span class="p">;</span>
+</pre></div>
 
 
 <p>既然目录也是数据，我们不妨用普通的文件(<code>std::vector&lt;char&gt;</code>)来存储目录中的key-value pair (每一个key-value pair称为一个目录项，directory entry)，相当于“用目录实现文件”，让每个目录对应一个“目录文件”，存储key-value mapping。</p>
@@ -104,10 +107,11 @@ void block_write(void *buf, uint64_t blkid);</code></pre>
 <div class="fenced fenced-green">
 <h4 id="_5">实现链接</h4>
 <p>仅仅允许目录中存在到相同编号的映射还不够实现链接。试想以下的操作序列：</p>
-<pre class="codehilite"><code>touch a.txt # 假设之前不存在
-link a.txt b.txt
-rm b.txt
-rm a.txt # a.txt占用的存储空间应当被释放</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">touch a.txt # 假设之前不存在</span>
+<span class="err">link a.txt b.txt</span>
+<span class="err">rm b.txt</span>
+<span class="err">rm a.txt # a.txt占用的存储空间应当被释放</span>
+</pre></div>
 
 
 <p>为了确保在unlink时，能正确地知道是否可以回收文件占用的存储空间，我们还需要每个文件的链接计数。</p>
@@ -131,22 +135,23 @@ rm a.txt # a.txt占用的存储空间应当被释放</code></pre>
 <li>一些其他信息，例如文件的第一个数据块的编号等。</li>
 </ul>
 <p>这些信息是所有文件都有的，我们沿用UNIX系统一直以来的惯例，用一个结构体来表示它，这就是大家熟知的inode (index node)。使用<code>ls -i</code>可以查看文件的inode编号，哪怕是Windows系统里的文件(好吧，还是有一些不是文件的文件)：</p>
-<pre class="codehilite"><code>  844424930132006 '$Recycle.Bin'
-  844424930135623 'Documents and Settings'
- 2251799814000425  Intel
-  281474976928166  MSOCache
-10977524091732747  OneDriveTemp
- 1407374883934010  PerfLogs
- 1125899907223355 'Program Files'
-  562949953803473 'Program Files (x86)'
-  562949953803574  ProgramData
-  281474976713152  Recovery
-  562949953459436 'System Volume Information'
-  562949953803728  Users
-  844424930514441  Windows
-                ?  hiberfil.sys
-                ?  pagefile.sys
-                ?  swapfile.sys</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">  844424930132006 &#39;$Recycle.Bin&#39;</span>
+<span class="err">  844424930135623 &#39;Documents and Settings&#39;</span>
+<span class="err"> 2251799814000425  Intel</span>
+<span class="err">  281474976928166  MSOCache</span>
+<span class="err">10977524091732747  OneDriveTemp</span>
+<span class="err"> 1407374883934010  PerfLogs</span>
+<span class="err"> 1125899907223355 &#39;Program Files&#39;</span>
+<span class="err">  562949953803473 &#39;Program Files (x86)&#39;</span>
+<span class="err">  562949953803574  ProgramData</span>
+<span class="err">  281474976713152  Recovery</span>
+<span class="err">  562949953459436 &#39;System Volume Information&#39;</span>
+<span class="err">  562949953803728  Users</span>
+<span class="err">  844424930514441  Windows</span>
+<span class="err">                ?  hiberfil.sys</span>
+<span class="err">                ?  pagefile.sys</span>
+<span class="err">                ?  swapfile.sys</span>
+</pre></div>
 
 
 <p>inode也有若干种存储方式：</p>

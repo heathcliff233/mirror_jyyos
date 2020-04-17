@@ -51,7 +51,8 @@
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">截止日期</h4>
 <p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
-<pre class="codehilite"><code>git pull origin M1</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin M1</span>
+</pre></div>
 
 
 <p>Soft Deadline: 2020 年 3 月 15 日 23:59:59。</p>
@@ -82,20 +83,22 @@
 </ul>
 <p>这些操作系统 API 对我们来说都是自然而然的——但操作系统上并不是所有程序都那么 “简单”，操作系统 API 可以用来实现<strong>任何应用软件</strong>，包括所谓的 “系统软件”。</p>
 <p>因此，“获取操作系统中运行的程序” 似乎是操作系统应该为应用程序提供的 API，不然就没法实现任务管理器了。很自然会想操作系统可以提供一个类似迭代器的 API：</p>
-<pre class="codehilite"><code class="language-c">Snapshot *CreateProcessSnapshot();
-Process *FirstProcess(Snapshot *snapshot);
-Process *NextProcess(Process *process);
-int ReleaseProcessSnapshot(Snapshot *snapshot);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">Snapshot</span> <span class="o">*</span><span class="nf">CreateProcessSnapshot</span><span class="p">();</span>
+<span class="n">Process</span> <span class="o">*</span><span class="nf">FirstProcess</span><span class="p">(</span><span class="n">Snapshot</span> <span class="o">*</span><span class="n">snapshot</span><span class="p">);</span>
+<span class="n">Process</span> <span class="o">*</span><span class="nf">NextProcess</span><span class="p">(</span><span class="n">Process</span> <span class="o">*</span><span class="n">process</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">ReleaseProcessSnapshot</span><span class="p">(</span><span class="n">Snapshot</span> <span class="o">*</span><span class="n">snapshot</span><span class="p">);</span>
+</pre></div>
 
 
 <p>Windows API 就是这么设计的。不过这么做也会使操作系统 API 的数量<strong>暴涨</strong>，因为所有事情都要通过特定的 API 完成——如果考虑 Windows API 动态链接库导出的符号，那么仅 Kernel 和 GDI 的 Windows API 就在 1,000 个以上。</p>
 <p>另一种办法：我们可以在操作系统中创建一个对象 (虚拟的文本文件)，这个文件的内容恰好是操作系统中的进程，例如 <code>/system/process_list</code>:</p>
-<pre class="codehilite"><code class="language-text">- pid: 1
+<div class="codehilite"><pre><span></span>- pid: 1
   parent: -1
   command: /bin/init
 - pid: 2
   parent: 1
-  command: /bin/bash</code></pre>
+  command: /bin/bash
+</pre></div>
 
 
 <p>这样我们就可以用 C 的文件操作 API 来获取进程信息了——<strong>我们把操作系统的状态变成了文件系统的一部分</strong>。在这个实验中，我们学习 UNIX/Linux 是如何把操作系统的状态放在文件系统中的。</p>
@@ -112,24 +115,25 @@ int ReleaseProcessSnapshot(Snapshot *snapshot);</code></pre>
 </div></div></div>
 
 <p>Linux 系统自带了 <code>pstree</code> 命令，进程树会以非常漂亮的格式排版 (每个进程的第一个孩子都与它处在同一行，之后的孩子保持相同的缩进)：</p>
-<pre class="codehilite"><code>systemd─┬─accounts-daemon─┬─{gdbus}
-        │                 └─{gmain}
-        ├─acpid
-        ├─agetty
-        ├─atd
-        ├─cron
-        ├─dbus-daemon
-        ├─dhclient
-        ├─2*[iscsid]
-        ├─lvmetad
-        ├─lxcfs───10*[{lxcfs}]
-        ├─mdadm
-        ├─polkitd─┬─{gdbus}
-        │         └─{gmain}
-        ├─rsyslogd─┬─{in:imklog}
-        │          ├─{in:imuxsock}
-        │          └─{rs:main Q:Reg}
-        ...</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">systemd</span><span class="err">─┬─</span><span class="n">accounts</span><span class="o">-</span><span class="n">daemon</span><span class="err">─┬─{</span><span class="n">gdbus</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">                 </span><span class="err">└─{</span><span class="n">gmain</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">acpid</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">agetty</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">atd</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">cron</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">dbus</span><span class="o">-</span><span class="n">daemon</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">dhclient</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="mi">2</span><span class="o">*[</span><span class="n">iscsid</span><span class="o">]</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">lvmetad</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">lxcfs</span><span class="err">───</span><span class="mi">10</span><span class="o">*[</span><span class="n">{lxcfs}</span><span class="o">]</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">mdadm</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">polkitd</span><span class="err">─┬─{</span><span class="n">gdbus</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">         </span><span class="err">└─{</span><span class="n">gmain</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">├─</span><span class="n">rsyslogd</span><span class="err">─┬─{</span><span class="ow">in</span><span class="err">:</span><span class="n">imklog</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">          </span><span class="err">├─{</span><span class="ow">in</span><span class="err">:</span><span class="n">imuxsock</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="err">│</span><span class="w">          </span><span class="err">└─{</span><span class="nl">rs</span><span class="p">:</span><span class="n">main</span><span class="w"> </span><span class="nl">Q</span><span class="p">:</span><span class="n">Reg</span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">...</span><span class="w"></span>
+</pre></div>
 
 
 <p>Linux 的 psmisc 中 <code>pstree</code> 的实现大约有 1,300 行，支持多种命令行参数。这个实验里实现最简单的就行。大家可以先玩一下 Linux 的 <code>pstree</code>，使用 <code>man</code> 命令查看 <code>pstree</code> 支持的功能，并试一试。在这个实验中，我们需要实现它的简化版：</p>
@@ -160,7 +164,7 @@ int ReleaseProcessSnapshot(Snapshot *snapshot);</code></pre>
 <p>当然，在渐渐熟悉游戏规则以后就会发现，这套设计简洁好用 (但也有很多人批评它不够优雅)。如果你的目标是用最短的时间把事情搞定，用 Shell 和各种命令行工具的组合一定是你的第一选择，记住：<em>Keep it simple, stupid</em> 和 <em>Everything is a file</em>.</p>
 <h2 id="3">3. 正确性标准</h2>
 <p>你可以任意选择树的形态，以下输出都是合法的：</p>
-<pre class="codehilite"><code class="language-text">systemd─┬─accounts-daemon─┬─
+<div class="codehilite"><pre><span></span>systemd─┬─accounts-daemon─┬─
         │
         ...
 
@@ -174,7 +178,8 @@ systemd
 
 systemd
   accounts-daemon
-    ...</code></pre>
+    ...
+</pre></div>
 
 
 <p>只要输出系统中的进程即可；此外，允许进程列表有轻微出入。细心的同学可能发现你第一个版本的 <code>pstree</code> 可能和系统输出不太一样。在线评测会容忍你输出的一些缺陷；此外，作为第一个实验，我们会手下留情，没有非常强劲的测试数据。但你仍然需要确保：</p>
@@ -209,17 +214,18 @@ systemd
 <p>因为人的脑容量有限，通常解决问题的办法就是把比较复杂的问题分解成小问题，再把小问题继续分解下去。而在学校里所做的训练就是<strong>建立问题分解的思路和培养解决问题的能力</strong>。</p>
 <h3 id="41">4.1. 命令行参数</h3>
 <p>获取命令行参数的一小段代码：</p>
-<pre class="codehilite"><code class="language-c">#include &lt;stdio.h&gt;
-#include &lt;assert.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;assert.h&gt;</span><span class="cp"></span>
 
-int main(int argc, char *argv[]) {
-  for (int i = 0; i &lt; argc; i++) {
-    assert(argv[i]); // C 标准保证
-    printf("argv[%d] = %s\n", i, argv[i]);
-  }
-  assert(!argv[argc]); // C 标准保证
-  return 0;
-}</code></pre>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span> <span class="c1">// C 标准保证</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"argv[%d] = %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+  <span class="p">}</span>
+  <span class="n">assert</span><span class="p">(</span><span class="o">!</span><span class="n">argv</span><span class="p">[</span><span class="n">argc</span><span class="p">]);</span> <span class="c1">// C 标准保证</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>可以在终端里试试给这个程序传入不同的参数会输出什么，获取命令行参数的。这个问题就算是很好地解决啦：<code>argv[0], ..., argv[argc-1]</code> 就是所有命令行的参数，这是操作系统与 C 程序之间的约定。在 ICS PA 中我们已经知道 getopt (<code>man 3 getopt</code>) 可以处理命令行参数，不过如果你想实际体验一下编程，你也可以自己动手实现 getopt 的功能。</p>
@@ -248,22 +254,24 @@ int main(int argc, char *argv[]) {
 <h3 id="43">4.3. 得到进程之间的关系</h3>
 <p>procfs 里还有很多有趣的东西，每个进程的父进程也隐藏在 <code>/proc/[pid]/</code> 中的某个文件里。试试 <code>man 5 proc</code>，里面有详细的文档。还有，很多 Online Judge 都使用 procfs 读取进程的运行时间/内存数据。</p>
 <p>就像一个普通的文件一样，你可以用你熟悉的方式打开 procfs 里的文件：</p>
-<pre class="codehilite"><code class="language-c">FILE *fp = fopen(filename, "r");
-if (fp) {
-  // 用fscanf, fgets等函数读取
-  fclose(fp);
-} else {
-  // 错误处理
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">FILE</span> <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">"r"</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">fp</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 用fscanf, fgets等函数读取</span>
+  <span class="n">fclose</span><span class="p">(</span><span class="n">fp</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="c1">// 错误处理</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>procfs 里的信息足够让你写一个非常不错的任务管理器。有兴趣的同学可以试试查看 <code>ps</code> 命令执行的系统调用 (操作系统 API) 执行序列：</p>
-<pre class="codehilite"><code class="language-text">$ strace ps
+<div class="codehilite"><pre><span></span>$ strace ps
 ...
 openat(AT_FDCWD, "/proc/1/stat", O_RDONLY)           = 6
 read(6, "1 (systemd) S 0 1 1 0 -1 4194560"..., 1024) = 190
 close(6)                                             = 0
-...</code></pre>
+...
+</pre></div>
 
 
 <h3 id="44">4.4. 建树和打印</h3>
@@ -273,12 +281,13 @@ close(6)                                             = 0
 <li>如果不是叶子节点，对它所有子树 <math class="inline-math">T_1, T_2, \ldots T_k</math> 分别求 <math class="inline-math">f_i(T_i)</math>，得到 <math class="inline-math">k</math> 个多行的文本；</li>
 <li>把这些字符串拼到适当的位置，加上一些连接线：</li>
 </ol>
-<pre class="codehilite"><code class="language-text">(root)─+─T1(line 1)
+<div class="codehilite"><pre><span></span>(root)─+─T1(line 1)
        | T1(line 2)
        | T1(line 3)
        +─T2(1)
        |
-...</code></pre>
+...
+</pre></div>
 
 
 <p>然后你会发现你并不需要真的实现 <math class="inline-math">f(T)</math>，而是一遍递归一边打印就行。</p>

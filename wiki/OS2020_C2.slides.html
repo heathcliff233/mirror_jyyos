@@ -348,8 +348,9 @@
 <hr></hr>
 <p><a href="https://www.seabios.org/SeaBIOS">SeaBIOS</a>: QEMU (x86) 的默认 firmware</p>
 <ul>
-<li>SeaBIOS 会被编译成一个 ELF 二进制文件<pre class="codehilite"><code class="language-text">bios.bin.elf-1.9.0: ELF 32-bit LSB executable, Intel 80386,
-version 1 (SYSV), statically linked, stripped</code></pre>
+<li>SeaBIOS 会被编译成一个 ELF 二进制文件<div class="codehilite"><pre><span></span>bios.bin.elf-1.9.0: ELF 32-bit LSB executable, Intel 80386,
+version 1 (SYSV), statically linked, stripped
+</pre></div>
 
 </li>
 </ul>
@@ -427,11 +428,12 @@ version 1 (SYSV), statically linked, stripped</code></pre>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">系统启动之前：镜像生成的全过程</h2>
 <p>让我们观察 AbstractMachine 程序的编译过程：</p>
-<pre class="codehilite"><code class="language-bash">make -nB \
-  | grep -ve '^\(\#\|echo\|mkdir\|make\)' \
-  | sed "s#$AM_HOME#\$AM_HOME#g" \
-  | sed "s#$PWD#.#g" \
-  | vim -</code></pre>
+<div class="codehilite"><pre><span></span>make -nB <span class="se">\</span>
+  <span class="p">|</span> grep -ve <span class="s1">'^\(\#\|echo\|mkdir\|make\)'</span> <span class="se">\</span>
+  <span class="p">|</span> sed <span class="s2">"s#</span><span class="nv">$AM_HOME</span><span class="s2">#\$AM_HOME#g"</span> <span class="se">\</span>
+  <span class="p">|</span> sed <span class="s2">"s#</span><span class="nv">$PWD</span><span class="s2">#.#g"</span> <span class="se">\</span>
+  <span class="p">|</span> vim -
+</pre></div>
 
 <ul>
 <li>Command line tricks<ul>
@@ -512,24 +514,25 @@ version 1 (SYSV), statically linked, stripped</code></pre>
 <li>让我们调试它吧！</li>
 </ul>
 </blockquote>
-<pre class="codehilite"><code class="language-c">#include &lt;am.h&gt;
-#include &lt;klib.h&gt;
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;am.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;klib.h&gt;</span><span class="cp"></span>
 
-...
+<span class="p">...</span>
 
-int main() {
-  _ioe_init();
-  _cte_init(on_interrupt);
+<span class="kt">int</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">_ioe_init</span><span class="p">();</span>
+  <span class="n">_cte_init</span><span class="p">(</span><span class="n">on_interrupt</span><span class="p">);</span>
 
-  for (int i = 0; i &lt; LENGTH(tasks); i++) {
-    Task *task    = &tasks[i];
-    _Area stack   = (_Area) { &task-&gt;context + 1, task + 1 };
-    task-&gt;context = _kcontext(stack, func, (void *)task-&gt;name);
-    task-&gt;next    = &tasks[(i + 1) % LENGTH(tasks)];
-  }
-  _intr_write(1);
-  _yield();
-}</code></pre></div></div>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">LENGTH</span><span class="p">(</span><span class="n">tasks</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Task</span> <span class="o">*</span><span class="n">task</span>    <span class="o">=</span> <span class="o">&</span><span class="n">tasks</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+    <span class="n">_Area</span> <span class="n">stack</span>   <span class="o">=</span> <span class="p">(</span><span class="n">_Area</span><span class="p">)</span> <span class="p">{</span> <span class="o">&</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">context</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">task</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">};</span>
+    <span class="n">task</span><span class="o">-&gt;</span><span class="n">context</span> <span class="o">=</span> <span class="n">_kcontext</span><span class="p">(</span><span class="n">stack</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
+    <span class="n">task</span><span class="o">-&gt;</span><span class="n">next</span>    <span class="o">=</span> <span class="o">&</span><span class="n">tasks</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">LENGTH</span><span class="p">(</span><span class="n">tasks</span><span class="p">)];</span>
+  <span class="p">}</span>
+  <span class="n">_intr_write</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="n">_yield</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="1-boot-loader">(1) 启动加载器 (Boot Loader)</h2>
@@ -553,11 +556,12 @@ int main() {
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">if (elf32-&gt;e_machine == EM_X86_64) {
-  ((void(*)())(uint32_t)elf64-&gt;e_entry)();
-} else {
-  ((void(*)())(uint32_t)elf32-&gt;e_entry)();
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="k">if</span> <span class="p">(</span><span class="n">elf32</span><span class="o">-&gt;</span><span class="n">e_machine</span> <span class="o">==</span> <span class="n">EM_X86_64</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">((</span><span class="kt">void</span><span class="p">(</span><span class="o">*</span><span class="p">)())(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">elf64</span><span class="o">-&gt;</span><span class="n">e_entry</span><span class="p">)();</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="p">((</span><span class="kt">void</span><span class="p">(</span><span class="o">*</span><span class="p">)())(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">elf32</span><span class="o">-&gt;</span><span class="n">e_entry</span><span class="p">)();</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="2-elf-start64s">(2) ELF 文件开始执行: <code>start64.S</code></h2>
@@ -578,23 +582,25 @@ int main() {
 <li>完成硬件的初始化</li>
 <li>没关系……不用知道它们是什么，只要知道它们是 RTFM/STFW 来得就行</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void _start_c(char *args) {
-  if (boot_record()-&gt;is_ap) {
-    __am_othercpu_entry();
-  } else {
-    __am_bootcpu_init();
-    stack_switch_call(stack_top(&CPU-&gt;stack), call_main, (uintptr_t)args);
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">_start_c</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">boot_record</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">is_ap</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">__am_othercpu_entry</span><span class="p">();</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">__am_bootcpu_init</span><span class="p">();</span>
+    <span class="n">stack_switch_call</span><span class="p">(</span><span class="n">stack_top</span><span class="p">(</span><span class="o">&</span><span class="n">CPU</span><span class="o">-&gt;</span><span class="n">stack</span><span class="p">),</span> <span class="n">call_main</span><span class="p">,</span> <span class="p">(</span><span class="kt">uintptr_t</span><span class="p">)</span><span class="n">args</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>完成初始化后，执行一次堆栈切换调用，跳转到 <code>call_main</code> (wrapper) 执行</p>
 <ul>
 <li><span class="red">这个技巧大家在 M2 中会用到！</span></li>
 </ul>
-<pre class="codehilite"><code class="language-c">static void call_main(const char *args) {
-  _halt(main(args));
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">call_main</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">_halt</span><span class="p">(</span><span class="n">main</span><span class="p">(</span><span class="n">args</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="4">(4) 操作系统：开始执行</h2>
@@ -609,17 +615,18 @@ int main() {
 <section>
 <div class="slide-container"><div class=""><h2 id="5-abstractmachine-apis">(5) 更多的 AbstractMachine APIs</h2>
 <p>例子：多处理器扩展 (MPE)</p>
-<pre class="codehilite"><code class="language-c">// 启动多个处理器，所有处理器都从 `entry` 开始执行
-int _mpe_init(void (*entry)());
+<div class="codehilite"><pre><span></span><span class="c1">// 启动多个处理器，所有处理器都从 `entry` 开始执行</span>
+<span class="kt">int</span> <span class="nf">_mpe_init</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)());</span>
 
-// 系统中处理器的数量
-int _ncpu();
+<span class="c1">// 系统中处理器的数量</span>
+<span class="kt">int</span> <span class="nf">_ncpu</span><span class="p">();</span>
 
-// 当前处理器的编号 (0, 1, 2, ...)
-int _cpu();
+<span class="c1">// 当前处理器的编号 (0, 1, 2, ...)</span>
+<span class="kt">int</span> <span class="nf">_cpu</span><span class="p">();</span>
 
-// 唯一的原子指令
-intptr_t _atomic_xchg(volatile intptr_t *addr, intptr_t newval);</code></pre></div></div>
+<span class="c1">// 唯一的原子指令</span>
+<span class="kt">intptr_t</span> <span class="nf">_atomic_xchg</span><span class="p">(</span><span class="k">volatile</span> <span class="kt">intptr_t</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">intptr_t</span> <span class="n">newval</span><span class="p">);</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="mpe-api">MPE API: 实现</h2>
@@ -629,16 +636,17 @@ intptr_t _atomic_xchg(volatile intptr_t *addr, intptr_t newval);</code></pre></d
 <li>LAPIC 是 per-core 的，主要用于管理当前处理器的中断</li>
 <li>扫描 <code>0xf0000-0xffffff</code> 内存，获取多处理器/LAPIC 信息</li>
 </ul>
-<pre class="codehilite"><code class="language-c">int _mpe_init(void (*entry)());
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">_mpe_init</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)());</span>
 
-int _ncpu() { return __am_ncpu; }
-int _cpu()  { return __am_lapic[8] &gt;&gt; 24; }
-intptr_t _atomic_xchg(volatile intptr_t *addr, intptr_t newval) {
-  intptr_t result;
-  asm volatile ("lock xchg %0, %1"
-    : "+m"(*addr), "=a"(result) : "1"(newval) : "cc");
-  return result;
-}</code></pre></div></div>
+<span class="kt">int</span> <span class="nf">_ncpu</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">__am_ncpu</span><span class="p">;</span> <span class="p">}</span>
+<span class="kt">int</span> <span class="nf">_cpu</span><span class="p">()</span>  <span class="p">{</span> <span class="k">return</span> <span class="n">__am_lapic</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">24</span><span class="p">;</span> <span class="p">}</span>
+<span class="kt">intptr_t</span> <span class="nf">_atomic_xchg</span><span class="p">(</span><span class="k">volatile</span> <span class="kt">intptr_t</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">intptr_t</span> <span class="n">newval</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">intptr_t</span> <span class="n">result</span><span class="p">;</span>
+  <span class="k">asm</span> <span class="k">volatile</span> <span class="p">(</span><span class="s">"lock xchg %0, %1"</span>
+    <span class="o">:</span> <span class="s">"+m"</span><span class="p">(</span><span class="o">*</span><span class="n">addr</span><span class="p">),</span> <span class="s">"=a"</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">:</span> <span class="s">"1"</span><span class="p">(</span><span class="n">newval</span><span class="p">)</span> <span class="o">:</span> <span class="s">"cc"</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">多处理器启动</h2>

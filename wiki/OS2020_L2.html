@@ -51,12 +51,14 @@
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">官方测试用例已发布。</h4>
 <h4 id="online-judge">Online Judge 暂未发布。</h4>
+<p>如果你框架的 <code>main</code> 中发现了 <code>vme_init</code> 并引起问题，请将这一行删除，这是 jyy 的锅 😂 此外，今年的 native 虽然功能完整，但仍然处于试验阶段。考虑到稳定性，你可以以 qemu (x86-64 和 i386) 为准。</p>
 </div></div></div>
 
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">截止日期</h4>
 <p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
-<pre class="codehilite"><code>git pull origin L2</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin L2</span>
+</pre></div>
 
 
 <ul>
@@ -110,34 +112,35 @@
 <p>你可以把你们的定义放在 <code>include/</code> 目录下的某个头文件里。</p>
 </div></div></div>
 
-<pre class="codehilite"><code class="language-c">typedef _Context *(*handler_t)(_Event, _Context *);
-MODULE(os) {
-  void (*init)();
-  void (*run)();
-  _Context *(*trap)(_Event ev, _Context *context);
-  void (*on_irq)(int seq, int event, handler_t handler);
-};
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="n">_Context</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">handler_t</span><span class="p">)(</span><span class="n">_Event</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="p">);</span>
+<span class="n">MODULE</span><span class="p">(</span><span class="n">os</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">run</span><span class="p">)();</span>
+  <span class="n">_Context</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">trap</span><span class="p">)(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">context</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">on_irq</span><span class="p">)(</span><span class="kt">int</span> <span class="n">seq</span><span class="p">,</span> <span class="kt">int</span> <span class="n">event</span><span class="p">,</span> <span class="n">handler_t</span> <span class="n">handler</span><span class="p">);</span>
+<span class="p">};</span>
 
-MODULE(pmm) {
-  void  (*init)();
-  void *(*alloc)(size_t size);
-  void  (*free)(void *ptr);
-};
+<span class="n">MODULE</span><span class="p">(</span><span class="n">pmm</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span>  <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">alloc</span><span class="p">)(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+  <span class="kt">void</span>  <span class="p">(</span><span class="o">*</span><span class="n">free</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
+<span class="p">};</span>
 
-typedef struct task task_t;
-typedef struct spinlock spinlock_t;
-typedef struct semaphore sem_t;
-MODULE(kmt) {
-  void (*init)();
-  int  (*create)(task_t *task, const char *name, void (*entry)(void *arg), void *arg);
-  void (*teardown)(task_t *task);
-  void (*spin_init)(spinlock_t *lk, const char *name);
-  void (*spin_lock)(spinlock_t *lk);
-  void (*spin_unlock)(spinlock_t *lk);
-  void (*sem_init)(sem_t *sem, const char *name, int value);
-  void (*sem_wait)(sem_t *sem);
-  void (*sem_signal)(sem_t *sem);
-};</code></pre>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">task</span> <span class="n">task_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">spinlock</span> <span class="n">spinlock_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">semaphore</span> <span class="n">sem_t</span><span class="p">;</span>
+<span class="n">MODULE</span><span class="p">(</span><span class="n">kmt</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">int</span>  <span class="p">(</span><span class="o">*</span><span class="n">create</span><span class="p">)(</span><span class="n">task_t</span> <span class="o">*</span><span class="n">task</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">),</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">teardown</span><span class="p">)(</span><span class="n">task_t</span> <span class="o">*</span><span class="n">task</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_init</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_lock</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_unlock</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_init</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">int</span> <span class="n">value</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_wait</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_signal</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <h3 id="22-os-operating-systems">2.2 OS (Operating Systems) 模块</h3>
@@ -148,16 +151,18 @@ MODULE(kmt) {
 <li><code>os-&gt;run()</code> 是操作系统启动后每个处理器必须执行的一些代码。我们假设 <code>os-&gt;run()</code> 时已经完成了所有初始化工作，每个处理器都会调用同一份 <code>os-&gt;run</code>。</li>
 </ul>
 <p>你可能会修改你已有的实现，例如你现在的 <code>os-&gt;init()</code> 看起来可能长这样：</p>
-<pre class="codehilite"><code class="language-c">static void os_init() {
-  pmm-&gt;init();
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">os_init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">pmm</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>但你可能会在其中增加 kmt 模块的初始化：</p>
-<pre class="codehilite"><code class="language-c">static void os_init() {
-  pmm-&gt;init();
-  kmt-&gt;init();
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">os_init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">pmm</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-red"><div>
@@ -170,20 +175,22 @@ MODULE(kmt) {
 </div></div></div>
 
 <p>理解 os 模块，要从程序执行的入口开始，以下是框架代码执行的流程：</p>
-<pre class="codehilite"><code class="language-c">int main() {
-  _ioe_init();
-  _cte_init(os-&gt;trap);
-   os-&gt;init();
-  _mpe_init(os-&gt;run);
-  return 1;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">_ioe_init</span><span class="p">();</span>
+  <span class="n">_cte_init</span><span class="p">(</span><span class="n">os</span><span class="o">-&gt;</span><span class="n">trap</span><span class="p">);</span>
+   <span class="n">os</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+  <span class="n">_mpe_init</span><span class="p">(</span><span class="n">os</span><span class="o">-&gt;</span><span class="n">run</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>在每个处理器调用 <code>os-&gt;run</code> 执行 (并最终被中断) 后，操作系统就化身成为了中断处理程序。调用 <code>_mpe_init()</code> 之后，所有的处理器都开始执行 <code>os-&gt;run()</code>，操作系统正式启动，而启动代码就成为了当前处理器上的第一个线程——这个线程是这个处理器上的 “idle” 线程：当系统中没有线程可以被调度的时候，我们的处理器也必须执行点什么，直到下一次中断到来，因此它可以是一个死循环：</p>
-<pre class="codehilite"><code class="language-c">static void os_run() {
-  _intr_write(1);
-  while (1);
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">os_run</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">_intr_write</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>主循环的另一部分是本次实验新增的中断处理程序的入口</p>
@@ -208,31 +215,33 @@ MODULE(kmt) {
 <li>我们允许一个且仅一个 handler 返回一个 <code>_Context</code>，在中断返回时恢复到这个 conetxt。当多个 handler 都返回 context 时，是 undefined behavior。</li>
 </ul>
 <p>如果我们看 xv6 的代码 (<code>trap.c</code>)，我们会看到中断到来时的 if-else 结构：</p>
-<pre class="codehilite"><code class="language-c">  if(tf-&gt;trapno == T_SYSCALL){
-    ...
-  }
-  switch(tf-&gt;trapno){
-  case T_IRQ0 + IRQ_TIMER:
-    ...
-  case T_IRQ0 + IRQ_IDE:
-    ...
-  }</code></pre>
+<div class="codehilite"><pre><span></span>  <span class="k">if</span><span class="p">(</span><span class="n">tf</span><span class="o">-&gt;</span><span class="n">trapno</span> <span class="o">==</span> <span class="n">T_SYSCALL</span><span class="p">){</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+  <span class="k">switch</span><span class="p">(</span><span class="n">tf</span><span class="o">-&gt;</span><span class="n">trapno</span><span class="p">){</span>
+  <span class="k">case</span> <span class="n">T_IRQ0</span> <span class="o">+</span> <span class="nl">IRQ_TIMER</span><span class="p">:</span>
+    <span class="p">...</span>
+  <span class="k">case</span> <span class="n">T_IRQ0</span> <span class="o">+</span> <span class="nl">IRQ_IDE</span><span class="p">:</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+</pre></div>
 
 
 <p>我们用 <code>on_irq</code> 机制实现了上述代码的灵活控制: os 模块现在变得非常简单，它甚至完全不需要知道其他任何模块的存在。在参考代码中，<code>os-&gt;trap()</code> 的实现类似于：</p>
-<pre class="codehilite"><code class="language-c++">static _Context *os_trap(_Event ev, _Context *ctx) {
-  _Context *next = NULL;
-  for (auto &h: handlers_sorted_by_seq) {
-    if (h.event == _EVENT_NULL || h.event == ev.event) {
-      _Context *r = h.handler(ev, ctx);
-      panic_on(r && next, "returning multiple contexts");
-      if (r) next = r;
-    }
-  }
-  panic_on(!next, "returning NULL context");
-  panic_on(sane_context(next), "returning to invalid context");
-  return next;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="n">_Context</span> <span class="o">*</span><span class="nf">os_trap</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">_Context</span> <span class="o">*</span><span class="n">next</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="o">&</span><span class="nl">h</span><span class="p">:</span> <span class="n">handlers_sorted_by_seq</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">h</span><span class="p">.</span><span class="n">event</span> <span class="o">==</span> <span class="n">_EVENT_NULL</span> <span class="o">||</span> <span class="n">h</span><span class="p">.</span><span class="n">event</span> <span class="o">==</span> <span class="n">ev</span><span class="p">.</span><span class="n">event</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">_Context</span> <span class="o">*</span><span class="n">r</span> <span class="o">=</span> <span class="n">h</span><span class="p">.</span><span class="n">handler</span><span class="p">(</span><span class="n">ev</span><span class="p">,</span> <span class="n">ctx</span><span class="p">);</span>
+      <span class="n">panic_on</span><span class="p">(</span><span class="n">r</span> <span class="o">&&</span> <span class="n">next</span><span class="p">,</span> <span class="s">"returning multiple contexts"</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="n">next</span> <span class="o">=</span> <span class="n">r</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="n">panic_on</span><span class="p">(</span><span class="o">!</span><span class="n">next</span><span class="p">,</span> <span class="s">"returning NULL context"</span><span class="p">);</span>
+  <span class="n">panic_on</span><span class="p">(</span><span class="n">sane_context</span><span class="p">(</span><span class="n">next</span><span class="p">),</span> <span class="s">"returning to invalid context"</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">next</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <div markdown="1"><div class="fenced fenced-blue"><div>
@@ -245,26 +254,28 @@ MODULE(kmt) {
 </div></div></div>
 
 <p>借助 <code>os-&gt;on_irq</code>，我们可以 “注册” 若干中断处理程序，在适当的时机做适当的事情——这类似于 “面向切面编程” (<a href="https://en.wikipedia.org/wiki/Aspect-oriented_programming">Aspected-Oriented Programming, AOP</a>) 的设计。此时，我们的 os 模块并不需要知道系统中有多少中断、多少设备驱动程序可能会处理中断，例如，如果我们希望在 I/O 设备发生中断时，向键盘驱动的信号量执行一个 V 操作，我们只需要：</p>
-<pre class="codehilite"><code class="language-c">static _Context *input_notify(_Event ev, _Context *context) {
-  kmt-&gt;sem_signal(&sem_kbdirq); // 在IO设备中断到来时，执行V操作唤醒一个线程
-  return NULL;
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="n">_Context</span> <span class="o">*</span><span class="nf">input_notify</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">context</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_signal</span><span class="p">(</span><span class="o">&</span><span class="n">sem_kbdirq</span><span class="p">);</span> <span class="c1">// 在IO设备中断到来时，执行V操作唤醒一个线程</span>
+  <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
 
-void input_init() {
-  // seq == 100 是随意设置地，我们并不在意何时调用
-  os-&gt;on_irq(100, _EVENT_IRQ_IODEV, input_notify); 
-  ...
-}</code></pre>
+<span class="kt">void</span> <span class="nf">input_init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// seq == 100 是随意设置地，我们并不在意何时调用</span>
+  <span class="n">os</span><span class="o">-&gt;</span><span class="n">on_irq</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">_EVENT_IRQ_IODEV</span><span class="p">,</span> <span class="n">input_notify</span><span class="p">);</span> 
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>甚至在 jyy 的参考实现中，寄存器现场保存、执行调度程序的代码，也都是用 <code>on_irq</code> 注册的 (尽管你并不必要这么做，可以把这部分代码直接写在 <code>os-&gt;trap</code> 中)：</p>
-<pre class="codehilite"><code class="language-c">// thread.c，线程管理
-static void kmt_init() {
-  ...
-  os-&gt;on_irq(INT_MIN, _EVENT_NULL, kmt_context_save);   // 总是最先调用
-  os-&gt;on_irq(INT_MAX, _EVENT_NULL, kmt_schedule);       // 总是最后调用
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1">// thread.c，线程管理</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">kmt_init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">os</span><span class="o">-&gt;</span><span class="n">on_irq</span><span class="p">(</span><span class="n">INT_MIN</span><span class="p">,</span> <span class="n">_EVENT_NULL</span><span class="p">,</span> <span class="n">kmt_context_save</span><span class="p">);</span>   <span class="c1">// 总是最先调用</span>
+  <span class="n">os</span><span class="o">-&gt;</span><span class="n">on_irq</span><span class="p">(</span><span class="n">INT_MAX</span><span class="p">,</span> <span class="n">_EVENT_NULL</span><span class="p">,</span> <span class="n">kmt_schedule</span><span class="p">);</span>       <span class="c1">// 总是最后调用</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>如果上述代码被执行，那么按照注册时的 sequence number 进行调用：</p>
@@ -286,20 +297,21 @@ static void kmt_init() {
 <li>内存分配/回收时，简单起见，不允许被中断。</li>
 </ol>
 <p>可以用以下方法简单做到：</p>
-<pre class="codehilite"><code class="language-c">static void *kalloc_safe(size_t size) {
-  int i = _intr_read();
-  _intr_write(0);
-  void *ret = kalloc(size);
-  if (i) _intr_write(1);
-  return ret;
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">kalloc_safe</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">_intr_read</span><span class="p">();</span>
+  <span class="n">_intr_write</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="n">kalloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="n">_intr_write</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
+<span class="p">}</span>
 
-static void kfree_safe(void *ptr) {
-  int i = _intr_read();
-  _intr_write(0);
-  kfree(ptr);
-  if (i) _intr_write(1);
-}</code></pre>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">kfree_safe</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">_intr_read</span><span class="p">();</span>
+  <span class="n">_intr_write</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+  <span class="n">kfree</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="n">_intr_write</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>我们不推荐你在 pmm 中使用 <code>kmt-&gt;spinlock</code>，而是保持现有的实现不变，因为你可能在 <code>kmt-&gt;init()</code> 的时候调用 <code>pmm-&gt;alloc()</code>，此时自旋锁可能还没有完成必要的初始化。</p>
@@ -307,17 +319,19 @@ static void kfree_safe(void *ptr) {
 <h4 id="241">2.4.1 模块初始化</h4>
 <p><code>kmt-&gt;init()</code> 负责初始化必要的数据，例如分配一些重要的数据结构。我们预期你会在 <code>os-&gt;init()</code> 时调用 <code>kmt-&gt;init()</code>。整个系统启动只调用一次 <code>kmt-&gt;init()</code>。</p>
 <h4 id="242">2.4.2 线程管理</h4>
-<pre class="codehilite"><code class="language-c">int  (*create)(task_t *task, const char *name, void (*entry)(void *arg), void *arg);
-void (*teardown)(task_t *task);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span>  <span class="p">(</span><span class="o">*</span><span class="n">create</span><span class="p">)(</span><span class="n">task_t</span> <span class="o">*</span><span class="n">task</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">),</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+<span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">teardown</span><span class="p">)(</span><span class="n">task_t</span> <span class="o">*</span><span class="n">task</span><span class="p">);</span>
+</pre></div>
 
 
 <p>其中 <code>create</code> 在系统中创建一个线程 (<code>task_t</code> 应当事先被分配好)，这个线程立即就可以被调度执行 (但调用 create 时中断可能处于关闭状态，在打开中断后它才获得被调度执行的权利)。我们假设 <code>create</code> 创建的线程永不返回——但它有可能在永远不会被调度执行的情况下被调用 <code>kmt-&gt;teardown</code> 回收。</p>
 <p><code>teardown</code> 相应回收为线程分配的资源——例如你可能会为 <code>task_t</code> 动态分配内存：</p>
-<pre class="codehilite"><code class="language-c">int kmt_create(task_t *task, const char *name, void (*entry)(void *arg), void *arg) {
-  ...
-  task-&gt;stack = pmm-&gt;alloc(STACK_SIZE); // 动态分配内核栈
-  ...
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">kmt_create</span><span class="p">(</span><span class="n">task_t</span> <span class="o">*</span><span class="n">task</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">entry</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">),</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">task</span><span class="o">-&gt;</span><span class="n">stack</span> <span class="o">=</span> <span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="n">STACK_SIZE</span><span class="p">);</span> <span class="c1">// 动态分配内核栈</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>这部分的内存需要在 <code>teardown()</code> 时被回收。线程只有在永远不会被调度到处理器上执行的前提下才能被回收。你可以假设回收的时候线程不再持有任何自旋锁或在信号量上等待。</p>
@@ -325,9 +339,10 @@ void (*teardown)(task_t *task);</code></pre>
 <p><span class="red"><strong>需要实现成线程安全的</strong></span>：允许任意线程调用 <code>create</code>/<code>teardown</code>。不会在中断处理程序中调用 <code>create</code>/<code>teardown</code>。</p>
 </blockquote>
 <h4 id="243">2.4.3 自旋锁</h4>
-<pre class="codehilite"><code class="language-c">void (*spin_init)(spinlock_t *lk, const char *name);
-void (*spin_lock)(spinlock_t *lk);
-void (*spin_unlock)(spinlock_t *lk);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_init</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">);</span>
+<span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_lock</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+<span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">spin_unlock</span><span class="p">)(</span><span class="n">spinlock_t</span> <span class="o">*</span><span class="n">lk</span><span class="p">);</span>
+</pre></div>
 
 
 <p>lock-unlock 实现保护一段强原子性 (任何其他线程、中断处理程序、其他处理器都不能同时得到同一把锁)：</p>
@@ -341,9 +356,10 @@ void (*spin_unlock)(spinlock_t *lk);</code></pre>
 <p><span class="red"><strong>需要实现成线程/中断安全的</strong></span>：允许任意线程调用 <code>spin_init</code>, <code>spin_lock</code> 和 <code>spin_unlock</code>。中断处理程序允许调用 <code>spin_lock</code> 和 <code>spin_unlock</code>。</p>
 </blockquote>
 <h4 id="244">2.4.4 信号量</h4>
-<pre class="codehilite"><code class="language-c">void (*sem_init)(sem_t *sem, const char *name, int value);
-void (*sem_wait)(sem_t *sem);
-void (*sem_signal)(sem_t *sem);</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_init</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">int</span> <span class="n">value</span><span class="p">);</span>
+<span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_wait</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">);</span>
+<span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">sem_signal</span><span class="p">)(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">);</span>
+</pre></div>
 
 
 <p>在信号量初始化时，<code>value</code> 指定了它初始的数值。初始时 <code>value == 1</code> 可以把信号量当互斥锁；初始时 <code>value == 0</code> 可以把信号量作为生产者-消费者缓冲区管理实现。<code>sem_wait</code> 和 <code>sem_signal</code> 分别对应了 P/V 操作。</p>
@@ -352,20 +368,21 @@ void (*sem_signal)(sem_t *sem);</code></pre>
 <li>允许在任意状态下任意执行 <code>sem_signal</code>，包括任何处理器中的任何线程和任何处理器的任何中断。</li>
 </ul>
 <p>在信号量实现时，大约需要做以下几件事 (任何一本操作系统教材上都会提到类似的实现)：</p>
-<pre class="codehilite"><code class="language-c">void sem_wait(sem_t *sem) {
-  spin_lock(&sem-&gt;lock); // 获得自旋锁
-  sem-&gt;count--; // 自旋锁保证原子性
-  if (...) {
-    // 没有资源，需要等待
-    ...
-    mark_as_not_runnable(current); // 当前线程不能再执行
-  }
-  spin_unlock(&sem-&gt;unlock);
-  if (...) {  // 如果 P 失败，不能继续执行
-              // (注意此时可能有线程执行 V 操作)
-    _yield(); // 引发一次上下文切换
-  }
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">sem_wait</span><span class="p">(</span><span class="n">sem_t</span> <span class="o">*</span><span class="n">sem</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span> <span class="c1">// 获得自旋锁</span>
+  <span class="n">sem</span><span class="o">-&gt;</span><span class="n">count</span><span class="o">--</span><span class="p">;</span> <span class="c1">// 自旋锁保证原子性</span>
+  <span class="k">if</span> <span class="p">(...)</span> <span class="p">{</span>
+    <span class="c1">// 没有资源，需要等待</span>
+    <span class="p">...</span>
+    <span class="n">mark_as_not_runnable</span><span class="p">(</span><span class="n">current</span><span class="p">);</span> <span class="c1">// 当前线程不能再执行</span>
+  <span class="p">}</span>
+  <span class="n">spin_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">sem</span><span class="o">-&gt;</span><span class="n">unlock</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(...)</span> <span class="p">{</span>  <span class="c1">// 如果 P 失败，不能继续执行</span>
+              <span class="c1">// (注意此时可能有线程执行 V 操作)</span>
+    <span class="n">_yield</span><span class="p">();</span> <span class="c1">// 引发一次上下文切换</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <blockquote>
@@ -388,11 +405,12 @@ void (*sem_signal)(sem_t *sem);</code></pre>
 <p>经过 Lab1 的洗礼，你们应该意识到，写出正确的程序要从简单、有效的策略开始，盲目使用复杂的策略只会让你陷入 Wrong Answer 的泥潭。</p>
 <h3 id="32">3.2 官方测试用例</h3>
 <p>官方测试用例使你的 “操作系统” 看起来更像是个操作系统。但它并不能作为 “压力测试” 来帮助你检查 kmt 实现的正确性。我们为大家提供了 dev 模块及其实现：</p>
-<pre class="codehilite"><code class="language-c">typedef struct device device_t;
-MODULE(dev) {
-  void (*init)();
-  device_t *(*lookup)(const char *name);
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">device</span> <span class="n">device_t</span><span class="p">;</span>
+<span class="n">MODULE</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="n">device_t</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">lookup</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>我们的官方测试用例还包含了以下设备的驱动 (我们将会在课程进展到一半左右的时候讲解设备在操作系统上的抽象，此时会讲解什么是设备驱动程序)：</p>
@@ -405,24 +423,25 @@ MODULE(dev) {
 <p>在这个实验中，你并不需要调试正确所有的设备驱动程序 (但调试不通过一般意味着 Online Judge 会测试失败)。但在下一个实验中，我们会用到这些设备驱动程序。</p>
 <p>代码合并后，你需要在 <code>os-&gt;init()</code> 中手工添加设备模块的初始化 <code>dev-&gt;init()</code>。如果实现正确，就能完成中断处理程序 (和若干设备相关线程) 的初始化。你不需要添加额外的代码，就能看到闪烁的光标，并且能看到输入字符的回显。</p>
 <p>此后，你就可以创建若干访问设备的线程，例如你可以为每个 tty 设备创建一个线程：</p>
-<pre class="codehilite"><code class="language-c">static void tty_reader(void *arg) {
-  device_t *tty = dev-&gt;lookup(arg);
-  char cmd[128], resp[128], ps[16];
-  snprintf(ps, 16, "(%s) $ ", arg);
-  while (1) {
-    tty-&gt;ops-&gt;write(tty, 0, ps, strlen(ps));
-    int nread = tty-&gt;ops-&gt;read(tty, 0, cmd, sizeof(cmd) - 1);
-    cmd[nread] = '\0';
-    sprintf(resp, "tty reader task: got %d character(s).\n", strlen(cmd));
-    tty-&gt;ops-&gt;write(tty, 0, resp, strlen(resp));
-  }
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">tty_reader</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">device_t</span> <span class="o">*</span><span class="n">tty</span> <span class="o">=</span> <span class="n">dev</span><span class="o">-&gt;</span><span class="n">lookup</span><span class="p">(</span><span class="n">arg</span><span class="p">);</span>
+  <span class="kt">char</span> <span class="n">cmd</span><span class="p">[</span><span class="mi">128</span><span class="p">],</span> <span class="n">resp</span><span class="p">[</span><span class="mi">128</span><span class="p">],</span> <span class="n">ps</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+  <span class="n">snprintf</span><span class="p">(</span><span class="n">ps</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="s">"(%s) $ "</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">tty</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">write</span><span class="p">(</span><span class="n">tty</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ps</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">ps</span><span class="p">));</span>
+    <span class="kt">int</span> <span class="n">nread</span> <span class="o">=</span> <span class="n">tty</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">read</span><span class="p">(</span><span class="n">tty</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">cmd</span><span class="p">[</span><span class="n">nread</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span>
+    <span class="n">sprintf</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s">"tty reader task: got %d character(s).</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">cmd</span><span class="p">));</span>
+    <span class="n">tty</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">write</span><span class="p">(</span><span class="n">tty</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">resp</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">resp</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-static void os_init() {
-  ...
-  kmt-&gt;create(task_alloc(), "tty_reader", tty_reader, "tty1");
-  kmt-&gt;create(task_alloc(), "tty_reader", tty_reader, "tty2");
-}</code></pre>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">os_init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">task_alloc</span><span class="p">(),</span> <span class="s">"tty_reader"</span><span class="p">,</span> <span class="n">tty_reader</span><span class="p">,</span> <span class="s">"tty1"</span><span class="p">);</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">task_alloc</span><span class="p">(),</span> <span class="s">"tty_reader"</span><span class="p">,</span> <span class="n">tty_reader</span><span class="p">,</span> <span class="s">"tty2"</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p><img alt="" class="center" src="../static/wiki/os/2020/labs/img/lab2-drv.png" width="500px"></img></p>
@@ -434,7 +453,8 @@ static void os_init() {
 <li>进程是拥有独立地址空间的线程，</li>
 </ol>
 <p>你其实就在 high-level 上对现代操作系统有了一个准确的认识 (当然还有无数细节)，这门课的目标也就达到了。获取驱动程序，请在命令行中使用</p>
-<pre class="codehilite"><code>git pull origin L2-dev</code></pre>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin L2-dev</span>
+</pre></div>
 
 
 <p>获取官方测试用例。代码合并后，因为我们对你的 <code>include/</code> 目录中的代码不做任何限制，你可能会出现一些诸如结构体未定义等问题，照常解决即可。如果发现测试用例中的 bugs，请向我们报告 (我们不完全保证测试用例的正确性😂)。</p>
@@ -442,24 +462,25 @@ static void os_init() {
 
 <h3 id="33-online-judge">3.3 Online Judge 上的测试用例</h3>
 <p>与 L1 类似，我们的测试代码会使用自己的 <code>framework</code> 代码，但我们会调用你的 <code>os-&gt;init()</code> 和 <code>os-&gt;run()</code>，就像下面的代码那样：</p>
-<pre class="codehilite"><code class="language-c">static void producer(void *arg) { ... }
-static void consumer(void *arg) { ... }
-static void create_threads() {
-  ...
-  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)),
-              "test-thread-1", producer, xxx);
-  kmt-&gt;create(pmm-&gt;alloc(sizeof(task_t)),
-              "test-thread-2", consumer, yyy);
-  ...
-}
-int main() {
-  _ioe_init();
-  _cte_init(os-&gt;trap);
-  os-&gt;init();
-  create_threads();
-  _mpe_init(os-&gt;run); // all cores call os-&gt;run()
-  return 1;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">producer</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">consumer</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">create_threads</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">task_t</span><span class="p">)),</span>
+              <span class="s">"test-thread-1"</span><span class="p">,</span> <span class="n">producer</span><span class="p">,</span> <span class="n">xxx</span><span class="p">);</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">task_t</span><span class="p">)),</span>
+              <span class="s">"test-thread-2"</span><span class="p">,</span> <span class="n">consumer</span><span class="p">,</span> <span class="n">yyy</span><span class="p">);</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">_ioe_init</span><span class="p">();</span>
+  <span class="n">_cte_init</span><span class="p">(</span><span class="n">os</span><span class="o">-&gt;</span><span class="n">trap</span><span class="p">);</span>
+  <span class="n">os</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+  <span class="n">create_threads</span><span class="p">();</span>
+  <span class="n">_mpe_init</span><span class="p">(</span><span class="n">os</span><span class="o">-&gt;</span><span class="n">run</span><span class="p">);</span> <span class="c1">// all cores call os-&gt;run()</span>
+  <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>我们的 producer/consumer 可能就像上课的例子那样，管理 empty 和 fill 两个信号量，分别打印左括号和右括号，然后我们会检查输出是否满足 (1) 是合法括号序列的一个前缀; (2) 括号嵌套的深度是否超过要求。与 Lab1 一样，我们在测试时会链接一个我们实现正确的 klib，所以大家即便 klib 有 bug，也不必太过担心。</p>
@@ -478,19 +499,21 @@ int main() {
 </ul>
 <p>你可以仿照 amgame 或 kernel，为它们编写 Makefile，然后把它们编译运行甚至调试。在视频回看中你能找到这些代码的详细讲解。如果你试着调试一下 AbstractMachine 的代码，例如 <code>thread-os</code> 在一次时钟中断后的代码，结合 AbstractMachine 的文档，你就能对中断到底发生了什么、AbstractMachine 到底做了什么有更加深入的认识——更重要的是，<code>thread-os.c</code> 和 <code>thread-os-mp.c</code> 是大家实现 Lab2 的一个 “基础性” 的框架。不要忘记了，我们的 Lab2 就是要实现丰富版的 <code>thread-os-mp.c</code>!</p>
 <p>而 <code>thread-os.c</code> 中比较重要的是，首先它注册了系统全局的中断处理函数：</p>
-<pre class="codehilite"><code class="language-c">_cte_init(on_interrupt);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">_cte_init</span><span class="p">(</span><span class="n">on_interrupt</span><span class="p">);</span>
+</pre></div>
 
 
 <p>而这个函数在我们的实验中的对应就是 <code>os-&gt;trap()</code>。于是你会知道 <code>os-&gt;trap</code> 的代码会和 <code>on_interrupt</code> 比较像：</p>
-<pre class="codehilite"><code class="language-c">_Context *on_interrupt(_Event ev, _Context *ctx) {
-  if (!current) {
-    current = &tasks[0];     // first interrupt
-  } else {
-    current-&gt;context = ctx;  // interrupt context saved on stack
-    current = current-&gt;next; // schedule the next context
-  }
-  return current-&gt;context;
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">_Context</span> <span class="o">*</span><span class="nf">on_interrupt</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">current</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="o">&</span><span class="n">tasks</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>     <span class="c1">// first interrupt</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">current</span><span class="o">-&gt;</span><span class="n">context</span> <span class="o">=</span> <span class="n">ctx</span><span class="p">;</span>  <span class="c1">// interrupt context saved on stack</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span> <span class="c1">// schedule the next context</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">context</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>而你再去看 <code>os-&gt;trap</code> 和 <code>os-&gt;on_irq</code> 的实验要求，你就能发现我们实验的需求合情合理。</p>
@@ -498,34 +521,37 @@ int main() {
 <p>现在，我们的操作系统还不支持进程、文件系统等，但的确有了完善的物理内存管理和线程管理 API。换句话说，我们实现的是一个支持线程的 “嵌入式操作系统”，它能运行在没有 MMU 的硬件上。</p>
 <p>为这样的一个操作系统编写代码，就是直接在操作系统代码中静态链接一些函数，这些函数可以作为线程的入口，并且函数可以任意访问内核数据、直接以函数调用的形式调用操作系统内的 API。为了更好地理解实验要求，我们不妨给出一个课堂上 “生产者-消费者” 在我们操作系统上运行的例子。</p>
 <p>首先，我们定义信号量 (kmt 实验需求部分)，并且用宏包装一下 P/V 操作 (这一步完全不必要，只是为了让我们的代码看起来和课堂上讲解得一样)：</p>
-<pre class="codehilite"><code class="language-c">sem_t empty, fill;
-#define P kmt-&gt;sem_wait
-#define V kmt-&gt;sem_signal</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">sem_t</span> <span class="n">empty</span><span class="p">,</span> <span class="n">fill</span><span class="p">;</span>
+<span class="cp">#define P kmt-&gt;sem_wait</span>
+<span class="cp">#define V kmt-&gt;sem_signal</span>
+</pre></div>
 
 
 <p>接下来，我们写出个生产者/消费者线程的代码，就跟我们课堂上展示的 <code>threads.h</code> 完全一样：</p>
-<pre class="codehilite"><code class="language-c">void producer(void *arg) { while (1) { P(&empty); _putc('('); V(&fill);  } }
-void consumer(void *arg) { while (1) { P(&fill);  _putc(')'); V(&empty); } }</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">producer</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">);</span> <span class="n">_putc</span><span class="p">(</span><span class="sc">'('</span><span class="p">);</span> <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>  <span class="p">}</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">consumer</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>  <span class="n">_putc</span><span class="p">(</span><span class="sc">')'</span><span class="p">);</span> <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
+</pre></div>
 
 
 <p>然后，我们在操作系统初始化 (<code>os-&gt;init</code>) 中创建若干个生产者/消费者线程，其中利用了物理内存的分配：</p>
-<pre class="codehilite"><code class="language-c">static inline task_t *task_alloc() {
-  return pmm-&gt;alloc(sizeof(task_t));
-}
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kr">inline</span> <span class="n">task_t</span> <span class="o">*</span><span class="nf">task_alloc</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="n">pmm</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">task_t</span><span class="p">));</span>
+<span class="p">}</span>
 
-static void os_init() {
-  pmm-&gt;init();
-  kmt-&gt;init(); // 模块先初始化
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">os_init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">pmm</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">init</span><span class="p">();</span> <span class="c1">// 模块先初始化</span>
 
-#ifdef DEBUG_LOCAL
-  kmt-&gt;sem_init(&empty, "empty", 5);  // 缓冲区大小为 5
-  kmt-&gt;sem_init(&fill,  "fill",  0);
-  for (int i = 0; i &lt; 4; i++) // 4 个生产者
-    kmt-&gt;create(task_alloc(), "producer", producer, NULL);
-  for (int i = 0; i &lt; 5; i++) // 5 个消费者
-    kmt-&gt;create(task_alloc(), "consumer", consumer, NULL);
-#endif
-}</code></pre>
+<span class="cp">#ifdef DEBUG_LOCAL</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_init</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">,</span> <span class="s">"empty"</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>  <span class="c1">// 缓冲区大小为 5</span>
+  <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">sem_init</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">,</span>  <span class="s">"fill"</span><span class="p">,</span>  <span class="mi">0</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="c1">// 4 个生产者</span>
+    <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">task_alloc</span><span class="p">(),</span> <span class="s">"producer"</span><span class="p">,</span> <span class="n">producer</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="c1">// 5 个消费者</span>
+    <span class="n">kmt</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">task_alloc</span><span class="p">(),</span> <span class="s">"consumer"</span><span class="p">,</span> <span class="n">consumer</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="cp">#endif</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>注意到上面的 <code>DEBUG_LOCAL</code> 宏。你们可以把这个宏的定义加载你们的 <code>CFLAGS</code> 里，这样你们在本地调试的时候就会创建用于测试的线程，但在 Online Judge 上则不会。这个行为对大家来说很重要：你们打印任何多余的输出，都可能导致 Wrong Answer。</p>
@@ -565,19 +591,20 @@ static void os_init() {
 <h4 id="432-log">4.3.2 更好的 log 方式</h4>
 <p>相信大家都有过不停地加 <code>printf</code>, 删掉 <code>printf</code> 的调试体验吧。这感觉可不太好，找了一大圈，最后发现一开始删掉的 <code>printf</code> 打印的信息才是最有用的，不过一整天就已经过去了。</p>
 <p>你可以考虑使用一些预编译选项控制 log 的开关：</p>
-<pre class="codehilite"><code class="language-c">#ifdef TRACE_F
-  #define TRACE_ENTRY printf("[trace] %s:entry\n", __func__)
-  #define TRACE_EXIT printf("[trace] %s:exit\n", __func__)
-#else
-  #define TRACE_ENTRY ((void)0)
-  #define TRACE_EXIT ((void)0)
-#endif
+<div class="codehilite"><pre><span></span><span class="cp">#ifdef TRACE_F</span>
+  <span class="cp">#define TRACE_ENTRY printf("[trace] %s:entry\n", __func__)</span>
+  <span class="cp">#define TRACE_EXIT printf("[trace] %s:exit\n", __func__)</span>
+<span class="cp">#else</span>
+  <span class="cp">#define TRACE_ENTRY ((void)0)</span>
+  <span class="cp">#define TRACE_EXIT ((void)0)</span>
+<span class="cp">#endif</span>
 
-void f() {
-  TRACE_ENTRY;
-  printf("This is f.\n");
-  TRACE_EXIT;
-}</code></pre>
+<span class="kt">void</span> <span class="nf">f</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">TRACE_ENTRY</span><span class="p">;</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"This is f.</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+  <span class="n">TRACE_EXIT</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <p>当然你也可以使用一些变量控制 log 的开关，例如设置 <code>print_registers_on_irq</code>。</p>
@@ -598,20 +625,22 @@ void f() {
 
 <h3 id="434">4.3.4 保护自己不受伤害</h3>
 <p>有些 bug 可能会非常难调试，这里举一个例子：栈溢出。也许已经有同学吃过苦头了：栈空间不是无限大的，而如果我们带着很大的局部变量或者递归很多层，栈就悄悄溢出了……在操作系统内核中，内核线程栈的溢出就显得更危险了，因为你可能会定义：</p>
-<pre class="codehilite"><code class="language-c">struct task_t {
-  int32_t id;
-  ...
-  uint8_t stack[STK_SZ];
-};</code></pre>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">task_t</span> <span class="p">{</span>
+  <span class="kt">int32_t</span> <span class="n">id</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="kt">uint8_t</span> <span class="n">stack</span><span class="p">[</span><span class="n">STK_SZ</span><span class="p">];</span>
+<span class="p">};</span>
+</pre></div>
 
 
 <p>而栈溢出 (x86 的栈从高地址向低地址生长) 的后果就是线程的信息可能被覆盖，出现各种诡异 (难以理解) 的情况，而且有可能 bug 若隐若现，加一条 <code>printf</code> 也许就不触发了。如果想避免这种情况的发生，可以给栈的前后加一些栅栏缓冲 (fences)，或者金丝雀 (canaries)，我们上课时也讲解过。</p>
 <p>同理，我们可以在 kalloc/free 的时候做一些 hacking，这样可以帮助你检查出很多类型的 bugs，例如你可以在 free 以后将内存全部填为某一个 magic number，然后在关键的 pointer deference 的地方插入</p>
-<pre class="codehilite"><code class="language-c">#define uaf_check(ptr) \
-  panic_on(MAGIC == *(uint32_t *)(ptr), "use-after-free");
+<div class="codehilite"><pre><span></span><span class="cp">#define uaf_check(ptr) \</span>
+<span class="cp">  panic_on(MAGIC == *(uint32_t *)(ptr), "use-after-free");</span>
 
-*ptr ... // important pointer, e.g., current
-uaf_check(ptr)</code></pre>
+<span class="o">*</span><span class="n">ptr</span> <span class="p">...</span> <span class="c1">// important pointer, e.g., current</span>
+<span class="n">uaf_check</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span>
+</pre></div>
 
 
 <p>这些 defensive 的编程方式，帮助你把代码中应该满足的 specification 明确地在代码中写出来——我们优先假设我们的代码是有 bug 的，而不是没有 bug 的。在此假设下，做的检查越多，越能减少 bug 对我们调试带来的痛苦。</p>

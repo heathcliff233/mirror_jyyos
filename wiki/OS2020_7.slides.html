@@ -119,22 +119,23 @@
 </li>
 <li>先执行到的人需要等待</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void npy_thread() {
-  play_game(); // 打完这一把
-  sync();
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">npy_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">play_game</span><span class="p">();</span> <span class="c1">// 打完这一把</span>
+  <span class="n">sync</span><span class="p">();</span>
+<span class="p">}</span>
 
-void me_thread() {
-  make_up(); // 洗个头先
-  if (!npy_is_ready()) annoyed = 1;
-  sync();
-  if (annoyed) {
-    complain(); // ~!@*#!%@#%
-  }
-}
+<span class="kt">void</span> <span class="nf">me_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">make_up</span><span class="p">();</span> <span class="c1">// 洗个头先</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">npy_is_ready</span><span class="p">())</span> <span class="n">annoyed</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">sync</span><span class="p">();</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">annoyed</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">complain</span><span class="p">();</span> <span class="c1">// ~!@*#!%@#%</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-// after sync():
-//    both make_up() and play_game() are done</code></pre></div></div>
+<span class="c1">// after sync():</span>
+<span class="c1">//    both make_up() and play_game() are done</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="join">同步的例子: join</h2>
@@ -142,20 +143,21 @@ void me_thread() {
 <ul>
 <li>让我们运行 (调试) 一下吧！</li>
 </ul>
-<pre class="codehilite"><code class="language-c">int done;
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">done</span><span class="p">;</span>
 
-void workload() {
-  // workload
-  asm volatile("lock addq $1, %0" :
-               "=m"(done)); // sync(): 顺序、原子、可见
-}
+<span class="kt">void</span> <span class="nf">workload</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// workload</span>
+  <span class="k">asm</span> <span class="k">volatile</span><span class="p">(</span><span class="s">"lock addq $1, %0"</span> <span class="o">:</span>
+               <span class="s">"=m"</span><span class="p">(</span><span class="n">done</span><span class="p">));</span> <span class="c1">// sync(): 顺序、原子、可见</span>
+<span class="p">}</span>
 
-int main() {
-  for (int i = 0; i &lt; nworkers; i++) 
-    create(workload);
-  while (done != nworkers); // sync(): 等到所有 workers 都完成
-  printf("All done\n");
-}</code></pre></div></div>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">nworkers</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> 
+    <span class="n">create</span><span class="p">(</span><span class="n">workload</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">done</span> <span class="o">!=</span> <span class="n">nworkers</span><span class="p">);</span> <span class="c1">// sync(): 等到所有 workers 都完成</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"All done</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 </section>
 
@@ -178,28 +180,30 @@ int main() {
 <li>如何协调它们的生产/消费？</li>
 </ul>
 <hr></hr>
-<pre class="codehilite"><code class="language-c">void consumer_thread() {
-  while (1) {
-    object_t *obj = dequeue(); // spin：队列可能没有元素
-    if (obj) consume(obj);
-  }
-}
-void producer_thread() {
-  while (1) {
-    object_t *obj = produce();
-    while (enqueue(obj) != SUCC); // spin: 队列可能空间不足
-  }
-}</code></pre></div></div>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">consumer_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">object_t</span> <span class="o">*</span><span class="n">obj</span> <span class="o">=</span> <span class="n">dequeue</span><span class="p">();</span> <span class="c1">// spin：队列可能没有元素</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="n">consume</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">producer_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">object_t</span> <span class="o">*</span><span class="n">obj</span> <span class="o">=</span> <span class="n">produce</span><span class="p">();</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">enqueue</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="o">!=</span> <span class="n">SUCC</span><span class="p">);</span> <span class="c1">// spin: 队列可能空间不足</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="-">生产者-消费者：另一种表达</h2>
 <p>(更精简的表达) 有两种线程</p>
-<pre class="codehilite"><code class="language-c">void type1_thread() {
-  while (1) printf("("); // enqueue
-}
-void type2_thread() {
-  while (1) printf(")"); // dequeue
-}</code></pre>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">type1_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">printf</span><span class="p">(</span><span class="s">"("</span><span class="p">);</span> <span class="c1">// enqueue</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">type2_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">printf</span><span class="p">(</span><span class="s">")"</span><span class="p">);</span> <span class="c1">// dequeue</span>
+<span class="p">}</span>
+</pre></div>
 
 <p>在不受并发控制的前提下，任意的括号序列都是合法的</p>
 <p>但我们需要进行适当的线程同步，使打印的括号序列满足：</p>
@@ -265,17 +269,18 @@ void type2_thread() {
 <section>
 <div class="slide-container"><div class=""><h2 id="api-contd">条件变量 API (cont'd)</h2>
 <p>和互斥锁联合使用</p>
-<pre class="codehilite"><code class="language-c">mutex_lock(&mutex);
+<div class="codehilite"><pre><span></span><span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
 
-// 任意代码 &lt;-----------+
-                    // |
-wait(&cv, &mutex);  // |
-                    // |
-// 任意代码 (包括循环) ---+
+<span class="c1">// 任意代码 &lt;-----------+</span>
+                    <span class="c1">// |</span>
+<span class="n">wait</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">,</span> <span class="o">&</span><span class="n">mutex</span><span class="p">);</span>  <span class="c1">// |</span>
+                    <span class="c1">// |</span>
+<span class="c1">// 任意代码 (包括循环) ---+</span>
 
-mutex_unlock(&mutex);
+<span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
 
-// signal 不受互斥锁的约束</code></pre>
+<span class="c1">// signal 不受互斥锁的约束</span>
+</pre></div>
 
 
 <ul>
@@ -285,27 +290,28 @@ mutex_unlock(&mutex);
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="-">条件变量：生产者-消费者问题</h2>
-<pre class="codehilite"><code class="language-c">void producer_thread() {
-  while (1) {
-    // produce
-    mutex_lock(&mutex);
-    if (count == n) wait(&cv, &mutex); // 等待“有空闲”
-    printf("("); // push
-    count++; signal(&cv);
-    mutex_unlock(&mutex);
-  }
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">producer_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// produce</span>
+    <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">count</span> <span class="o">==</span> <span class="n">n</span><span class="p">)</span> <span class="n">wait</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">,</span> <span class="o">&</span><span class="n">mutex</span><span class="p">);</span> <span class="c1">// 等待“有空闲”</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"("</span><span class="p">);</span> <span class="c1">// push</span>
+    <span class="n">count</span><span class="o">++</span><span class="p">;</span> <span class="n">signal</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">);</span>
+    <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
 
-void consumer_thread() {
-  while (1) {
-    mutex_lock(&mutex);
-    if (count == 0) wait(&cv, &mutex); // 等待“有数据”
-    printf(")"); // pop
-    count--; signal(&cv);
-    mutex_unlock(&mutex);
-    // consume
-  }
-}</code></pre>
+<span class="kt">void</span> <span class="nf">consumer_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="n">wait</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">,</span> <span class="o">&</span><span class="n">mutex</span><span class="p">);</span> <span class="c1">// 等待“有数据”</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">")"</span><span class="p">);</span> <span class="c1">// pop</span>
+    <span class="n">count</span><span class="o">--</span><span class="p">;</span> <span class="n">signal</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">);</span>
+    <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+    <span class="c1">// consume</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <ul>
@@ -325,13 +331,14 @@ void consumer_thread() {
 <ul>
 <li>条件变量不满足时 wait spin + 一旦条件可能满足，就唤醒所有等待的人</li>
 </ul>
-<pre class="codehilite"><code class="language-c">mutex_lock(&big_lock);
-while (!(cond)) {
-  wait(&cv, &big_lock);
-}
-assert(cond); // 一定为真
-// 其他需要原子性的操作
-mutex_unlock(&big_lock);</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">big_lock</span><span class="p">);</span>
+<span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">cond</span><span class="p">))</span> <span class="p">{</span>
+  <span class="n">wait</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">,</span> <span class="o">&</span><span class="n">big_lock</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">assert</span><span class="p">(</span><span class="n">cond</span><span class="p">);</span> <span class="c1">// 一定为真</span>
+<span class="c1">// 其他需要原子性的操作</span>
+<span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">big_lock</span><span class="p">);</span>
+</pre></div>
 <div class="fragment">
 <ul>
 <li>上述代码保证了 safety: wait 结束后条件一定为真</li>
@@ -418,17 +425,18 @@ mutex_unlock(&big_lock);</code></pre>
 </ul>
 </li>
 </ul>
-<pre class="codehilite"><code class="language-c">void producer() {
-  P(&empty);   // P()返回 -&gt; 得到手环
-  printf("("); // 假设线程安全
-  V(&fill);
-}
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">producer</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">);</span>   <span class="c1">// P()返回 -&gt; 得到手环</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"("</span><span class="p">);</span> <span class="c1">// 假设线程安全</span>
+  <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>
+<span class="p">}</span>
 
-void consumer() {
-  P(&fill);
-  printf(")");
-  V(&empty);
-}</code></pre>
+<span class="kt">void</span> <span class="nf">consumer</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">")"</span><span class="p">);</span>
+  <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
 
 
 <ul>
@@ -459,25 +467,26 @@ void consumer() {
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">忘了信号量，让我们来耍赖吧！</h2>
-<pre class="codehilite"><code class="language-c">#define cond (empty[lhs] && empty[rhs])
+<div class="codehilite"><pre><span></span><span class="cp">#define cond (empty[lhs] && empty[rhs])</span>
 
-void philosopher_thread(int id) {
-  int lhs = (id - 1 + n) % n, rhs = (id + 1) % n;
-  mutex_lock(&mutex);
-  while (!cond) {
-    wait(&cv, &mutex);
-  }
-  assert(cond);
-  empty[lhs] = empty[rhs] = 0;
-  mutex_unlock(&mutex);
+<span class="kt">void</span> <span class="nf">philosopher_thread</span><span class="p">(</span><span class="kt">int</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">lhs</span> <span class="o">=</span> <span class="p">(</span><span class="n">id</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">n</span><span class="p">)</span> <span class="o">%</span> <span class="n">n</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="p">(</span><span class="n">id</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">n</span><span class="p">;</span>
+  <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">cond</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">wait</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">,</span> <span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">cond</span><span class="p">);</span>
+  <span class="n">empty</span><span class="p">[</span><span class="n">lhs</span><span class="p">]</span> <span class="o">=</span> <span class="n">empty</span><span class="p">[</span><span class="n">rhs</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
 
-  __philosopher_eat();
+  <span class="n">__philosopher_eat</span><span class="p">();</span>
 
-  mutex_lock(&mutex);
-  emtpy[lhs] = empty[rhs] = 1;
-  broadcast(&cv); // 对所有人喊：叉子放回去啦，快看看吧！
-  mutex_unlock(&mutex);
-}</code></pre></div></div>
+  <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+  <span class="n">emtpy</span><span class="p">[</span><span class="n">lhs</span><span class="p">]</span> <span class="o">=</span> <span class="n">empty</span><span class="p">[</span><span class="n">rhs</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">broadcast</span><span class="p">(</span><span class="o">&</span><span class="n">cv</span><span class="p">);</span> <span class="c1">// 对所有人喊：叉子放回去啦，快看看吧！</span>
+  <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&</span><span class="n">mutex</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">忘了信号量，让一个人集中管理叉子吧！</h2>
@@ -485,22 +494,23 @@ void philosopher_thread(int id) {
 <ul>
 <li>分布式系统中非常常见的解决思路 (HDFS, ...)</li>
 </ul>
-<pre class="codehilite"><code class="language-c">void philosopher_thread(int id) {
-  send_request(id, EAT);
-  P(allowed[id]); // 直到manager允许我吃了才开始
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">philosopher_thread</span><span class="p">(</span><span class="kt">int</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">send_request</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="n">EAT</span><span class="p">);</span>
+  <span class="n">P</span><span class="p">(</span><span class="n">allowed</span><span class="p">[</span><span class="n">id</span><span class="p">]);</span> <span class="c1">// 直到manager允许我吃了才开始</span>
 
-  __philosopher_eat();
+  <span class="n">__philosopher_eat</span><span class="p">();</span>
 
-  send_request(id, DONE);
-}
+  <span class="n">send_request</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="n">DONE</span><span class="p">);</span>
+<span class="p">}</span>
 
-void waiter_thread() {
-  while (1) {
-    (id, status) = receive_request();
-    if (status == EAT) { ... }
-    if (status == DONE) { ... }
-  }
-}</code></pre></div></div>
+<span class="kt">void</span> <span class="nf">waiter_thread</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span> <span class="o">=</span> <span class="n">receive_request</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="n">EAT</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="n">DONE</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 </section>
 <section>
 <div class="slide-container"><div class=""><h2 id="_1">忘了那些复杂的同步算法吧</h2>
