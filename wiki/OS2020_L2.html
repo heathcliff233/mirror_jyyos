@@ -49,9 +49,10 @@
     <div class="article">
       <h1 id="l2-kmt">L2: 多处理器内核上的线程管理 (kmt)</h1>
 <div markdown="1"><div class="fenced fenced-red"><div>
-<h4 id="_1">官方测试用例已发布。</h4>
-<h4 id="online-judge">Online Judge 暂未发布。</h4>
-<p>如果你框架的 <code>main</code> 中发现了 <code>vme_init</code> 并引起问题，请将这一行删除，这是 jyy 的锅 😂 此外，今年的 native 虽然功能完整，但仍然处于试验阶段。考虑到稳定性，你可以以 qemu (x86-64 和 i386) 为准。</p>
+<h4 id="_1">常见问题</h4>
+<p>如果你框架的 <code>main</code> 中发现了 <code>vme_init</code> 并引起问题，请将这一行删除，这是 jyy 的锅 😂 此外，今年的 native 虽然功能完整，但仍然处于试验阶段。考虑到稳定性，你可以以 qemu (x86-64 和 i386) 为准。Online Judge 评测时只有 <code>x86-qemu</code> 和 <code>x86_64-qemu</code>。</p>
+<p>我们测试代码的时候，会替换我们的 <code>framework</code> 目录，因此你对其中文件 (例如 <code>kernel.h</code>) 的任何修改都会被消除。注意到我们的测试代码需要数据结构 (<code>sem_t</code> 等) 的定义，而这些定义并不在 <code>kernel.h</code> 中，因此你需要在 <code>common.h</code> 中包含它们，否则测试代码将无法编译。关于正确性标准，请参考 Section 3。</p>
+<p>如果你的实验提交到了 L1, 请修改 Makefile 中的 <code>MODULE := L2</code>。</p>
 </div></div></div>
 
 <div markdown="1"><div class="fenced fenced-red"><div>
@@ -390,15 +391,35 @@
 </blockquote>
 <h2 id="3">3. 正确性标准</h2>
 <div markdown="1"><div class="fenced fenced-red"><div>
-<h4 id="_1">不要打印多余的输出</h4>
-<p>在任何时候 (锁、中断、……) 时打印多余的输出都可能导致 Wrong Answer。因此我们建议你使用自己的 log 或 printk 函数 (而不是 printf; 我们的测试程序会使用 printf)，且它们的行为由预编译指令控制，仅在你本地编译时才打印数据。</p>
+<h4 id="_1">重要的注意事项 (有更新)</h4>
+<p>我们的代码 (<code>main</code>) 看起来是这样的：</p>
+<div class="codehilite"><pre><span></span>#include &lt;klib.h&gt;
+#include &lt;klib-macros.h&gt;
+#include &lt;am.h&gt;
+#include &lt;common.h&gt;
+
+... // 此处省略测试代码
+
+int main(const char *args) {
+  _ioe_init();
+  _cte_init(os-&gt;trap);
+  os-&gt;init();
+
+  init_workload(args);
+  _mpe_init(os-&gt;run);
+}
+</pre></div>
+
+
+<p>注意到我们的测试代码需要数据结构 (<code>sem_t</code> 等) 的定义，而这些定义并不在 <code>kernel.h</code> 中，因此你需要在 <code>common.h</code> 中包含它们，否则测试代码将无法编译。</p>
+<p>此外，<strong>不要打印多余的输出</strong>。在任何时候 (锁、中断、……) 时打印多余的输出都可能导致 Wrong Answer。因此我们建议你使用自己的 log 或 printk 函数 (而不是 printf; 我们的测试程序会使用 printf)，且它们的行为由预编译指令控制，仅在你本地编译时才打印数据。</p>
 <p>当然了，系统启动时 (<code>_mpe_init</code> 之前) 打印少量日志是没问题的。</p>
 </div></div></div>
 
 <h3 id="31-safety-liveness">3.1 Safety 和 Liveness</h3>
 <p>在任意时刻，操作系统中都可能有多个线程，你需要设计调度的策略在多个处理器中调度这些线程，使系统中能够被执行的线程尽可能不发生饥饿。</p>
 <div markdown="1"><div class="fenced fenced-red"><div>
-<h4 id="_1">一个特别的正确性要求</h4>
+<h4 id="hard-tests">一个特别的正确性要求 (仅针对 Hard Tests)</h4>
 <p>在线程数不过多的前提 (十几) 下，我们要求每个可运行的线程，给定足够长 (例如数秒) 的时间，能够被调度到每个处理器上执行。这个需求看起来很简单：稍微改一改 <code>thread-os-mp.c</code> 的调度器就行了。但你要警惕了！这可能比你想象的困难得多。</p>
 </div></div></div>
 
@@ -458,6 +479,7 @@
 
 
 <p>获取官方测试用例。代码合并后，因为我们对你的 <code>include/</code> 目录中的代码不做任何限制，你可能会出现一些诸如结构体未定义等问题，照常解决即可。如果发现测试用例中的 bugs，请向我们报告 (我们不完全保证测试用例的正确性😂)。</p>
+<p><strong>另外，提交时请不要激活官方测试用例 (例如启动 <code>dev</code> 模块)，它可能会导致测试失败</strong>。</p>
 </div></div></div>
 
 <h3 id="33-online-judge">3.3 Online Judge 上的测试用例</h3>

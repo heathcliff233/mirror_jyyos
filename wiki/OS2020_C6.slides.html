@@ -1,6 +1,790 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>[C6] 复习：用户眼中的操作系统</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="c6">[C6] 复习：用户眼中的操作系统</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">课程调休安排</h2>
+<blockquote>
+<p>5 月 1 日至 5 日放假调休，共 5 天。4 月 26 日 (星期日)、5 月 9 日 (星期六) 分别上 5 月 4 日 (星期一) 、5 月 5 日 (星期二) 的课/班。</p>
+<ul>
+<li><span class="red">福利 (干货) 代码课三连 + 互动</span> (exciting!)</li>
+<li>你们已经有了足够的理论储备了！</li>
+</ul>
+</blockquote>
+<p>本周日 (4.26, 调 5.4 星期一)</p>
+<ul>
+<li>下午 2 点上课</li>
+<li>期中复习的另一个主题 (调试操作系统内核)</li>
+</ul>
+<hr></hr>
+<p>下周一 (4.27)</p>
+<ul>
+<li>讲评、反馈、互动，请大家<span class="red">到课</span> (直播间)</li>
+<li>Panel Discussion (邀请神秘嘉宾)</li>
+</ul>
+<hr></hr>
+<p>下周四 (4.30)</p>
+<ul>
+<li>照常上课，最后一部分：进程间通信</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>作为上半学期的小结</p>
+<ul>
+<li>还记得这门课两个视角的操作系统吗？</li>
+</ul>
+</blockquote>
+<p>应用视角</p>
+<ul>
+<li>操作系统是一组 API<ul>
+<li>复习这组 API, Shell 是最棒的选择 ← <span class="red">本次课主题</span></li>
+</ul>
+</li>
+</ul>
+<p>硬件视角</p>
+<ul>
+<li>操作系统是一个 C 程序 (实现所有 APIs)<ul>
+<li>福利：调试操作系统内核 ← 下次课主题</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="os-api">应用视角: OS = API</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">我们学到了什么？</h2>
+<blockquote>
+<p>应用眼中的操作系统 = 一组对象和它们上面的操作</p>
+</blockquote>
+<p>状态机 (进程)</p>
+<ul>
+<li>分时共享 CPU 执行</li>
+<li>进程拥有进程号、寄存器、地址空间……</li>
+<li>管理进程的 API: fork, execve, exit</li>
+</ul>
+<p>“数据” 对象 (文件)</p>
+<ul>
+<li>文件：文件名到数据的映射<ul>
+<li><code>/bin/ls</code> → <code>"\x7f\x45\x4c\x46..."</code></li>
+<li><code>/home/jyy/how-to-survive.txt</code> → <code>"RTFM and STFW"</code></li>
+</ul>
+</li>
+</ul>
+<p>……</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">一个拷问灵魂的问题</h2>
+<blockquote>
+<p>这跟我们看到的 “操作系统” 不太一样啊！</p>
+<ul>
+<li>根据 strace 的结果 (gcc, xedit); 的确就这些 API<ul>
+<li>man 2 syscalls; 大部分不常见</li>
+</ul>
+</li>
+<li>问题出在：<span class="red">操作系统里到底有什么对象</span>？</li>
+</ul>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/deepin.jpg" width="640px"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统里的对象：终端</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="io">什么对象也没有，也得有个 I/O 设备</h2>
+<p>不然人就没法用计算机了！</p>
+<div class="fragment">
+<p><span class="float-right"><img src="../static/wiki/os/2019/img/vt100.jpg" width="300px"></img></span></p>
+<ul>
+<li><p><a href="https://en.wikipedia.org/wiki/Teleprinter">tty</a> (teleprinter; 电传打字机)</p>
+<ul>
+<li>最早就是机械打字机<ul>
+<li>物理输出到打印纸上</li>
+<li>物理打印不能“删除一个字符”<ul>
+<li>(只能打印“前面那个字符被删掉了”)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>CRT 技术出现后<ul>
+<li><del>Virtual</del> Video Terminal (终端)</li>
+<li>VT-52 (1975): 80 x 24; 双向滚动; 光标控制命令</li>
+<li>VT-100 (1978): 第一个支持 ANSI escape codes 的终端</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">人和计算机交互设备：发展</h2>
+<p>1970s</p>
+<ul>
+<li>终端 = 革命性的设计、非常先进的人机接口</li>
+</ul>
+<p>1980s……</p>
+<ul>
+<li>键盘、鼠标、显示器 = 标准人机接口</li>
+</ul>
+<p>2010s……</p>
+<ul>
+<li>iPhone/iPad 改变了人机交互 (触摸屏)<ul>
+<li>Siri → 各种人工智障</li>
+<li>我预期能看到这一页 slide 过时的那一天<ul>
+<li>语音/肢体自然交互？</li>
+<li>脑机接口？</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">回到终端：操作系统里的一个对象</h2>
+<blockquote>
+<p>终端是一个 I/O 设备</p>
+<p>终端是一个可以读写的对象</p>
+<ul>
+<li>“everything is a file”——终端也是个文件</li>
+</ul>
+</blockquote>
+<p>最小 Linux 也有 <code>/dev/console</code> (init 的 stdin/stdout/stderr)</p>
+<ul>
+<li>open 得到一个文件描述符</li>
+<li>使用 read 系统调用读取输入</li>
+<li>使用 write 系统调用写入输出<ul>
+<li>试试 <code>strace cat</code></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ansi-escape-codes">向终端输出: <a href="https://en.wikipedia.org/wiki/ANSI_escape_code">ANSI Escape Codes</a></h2>
+<p>一系列终端 “密码” (in-band 控制信号)</p>
+<ul>
+<li>Start with ESC (<code>\033</code>) <code>[</code></li>
+<li>光标移动；屏幕清除/滚动；设置前景/背景色/粗体……</li>
+<li>例子：<code>ls --color | less</code>，看到好多 ESC</li>
+</ul>
+<p>例子：我们的 sperf 使用 escape code:</p>
+<div class="codehilite"><pre><span></span><span class="cp">#define ESC "\033["</span>
+<span class="cp">#define move(x, y) put(ESC "%d;%dH", y + 1, x + 1)</span>
+<span class="cp">#define setbg(c)   put(ESC "48;5;%dm", c)</span>
+<span class="cp">#define setfg(c)   put(ESC "38;5;%dm", c)</span>
+<span class="cp">#define clear()    put(ESC "2J")</span>
+<span class="cp">#define reset()    put(ESC "39m" ESC "49m")</span>
+</pre></div>
+
+<ul>
+<li>因此如果打印二进制文件，“偶然” 的 escape code 可能改变终端的行为<ul>
+<li>reset (1)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">从终端输入</h2>
+<p>终端默认是 “cooked (canonical) mode”，即自带一个 “行编辑器”</p>
+<ul>
+<li>vim 用户: <code>set -o vi</code> (bash); <code>bindkey -v</code> (zsh)</li>
+<li>只有按下回车键，read 系统调用才返回</li>
+</ul>
+<hr></hr>
+<p>另一个 “raw mode” 按键即返回 (<a href="../static/wiki/os/2019/demos/tty-raw.c">tty-raw.c</a>)</p>
+<ul>
+<li>有了它，就能实现 vim 啦！</li>
+<li>有了它，给 read 设置一个 timeout，就能在没有按键的前提下更新屏幕啦！</li>
+<li>库函数 (STFW) 能使我们的终端无限接近图形界面<ul>
+<li>例子: <a href="../static/wiki/os/2019/demos/dialog.sh">dialog.sh</a><ul>
+<li>Wow!</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2">向终端输出 (2)</h2>
+<blockquote>
+<p>以为故事结束了？诡异的事情发生了……</p>
+</blockquote>
+<ul>
+<li><code>ls --color</code></li>
+<li><code>ls --color | less</code><ul>
+<li>你发现什么不同了吗？</li>
+<li>试试 <code>ls --color | cat</code></li>
+<li>还记得 fork 时候那个 “我瞎了” 的例子吗？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">让我们来破案吧！</h2>
+<blockquote>
+<p>以下两种情况，一定某一个成立</p>
+<ul>
+<li>终端对收到的输入做了特殊的处理</li>
+<li>应用程序根据是不是终端，写入了不同的数据<ul>
+<li>你们会如何破案？</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>比较 strace/ltrace 的 diff!</p>
+<div class="codehilite"><pre><span></span>strace ls --color<span class="o">=</span>auto             <span class="m">2</span>&gt; strace-a.log
+strace ls --color<span class="o">=</span>auto &gt; /dev/null <span class="m">2</span>&gt; strace-b.log
+ltrace ls --color<span class="o">=</span>auto             <span class="m">2</span>&gt; ltrace-a.log
+ltrace ls --color<span class="o">=</span>auto &gt; /dev/null <span class="m">2</span>&gt; ltrace-b.log
+</pre></div>
+</div>
+<div class="fragment">
+<p>破案结果</p>
+<ul>
+<li>libc: <code>isatty(1)</code> - stdout 是否是 tty (竟然看懂了)</li>
+<li>syscall: <code>ioctl(1, TCGETS, ...)</code><ul>
+<li>用于管理文件 (对象) 的系统调用；下半学期讲解</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">让我们来破案吧！ (cont'd)</h2>
+<blockquote>
+<p>我们还顺便破获了另一起 “案件”</p>
+<ul>
+<li>那些年坑过我们的 <code>printf</code></li>
+</ul>
+</blockquote>
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"Hello, %s"</span><span class="p">,</span> <span class="s">"World"</span><span class="p">);</span>
+  <span class="o">*</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="p">)</span><span class="nb">NULL</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// bug</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>四种情况：有/没有换行；输出到终端/非终端</p>
+<div class="fragment">
+<ul>
+<li>ltrace: 一切正常, printf 都执行了</li>
+<li>strace: 有时候没有 write<ul>
+<li>libc 在 main 执行前搞得鬼; 参考: setbuf (3)<ul>
+<li>unbuffered (stderr, tty), line buffered (stdout, tty), fully buffered (o.w.)</li>
+<li>我们会在文件系统时回到这个问题</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">终端控制</h2>
+<p>termios (3)</p>
+<ul>
+<li>“a general terminal interface that is provided to control asynchronous communications ports”</li>
+</ul>
+<p>有兴趣的同学：</p>
+<div class="codehilite"><pre><span></span>$ stty -a
+speed 38400 baud; rows 24; columns 80; line = 0;
+intr = ^C; quit = ^\; erase = ^?; kill = ^U; eof = ^D; eol = &lt;undef&gt;;
+eol2 = &lt;undef&gt;; swtch = &lt;undef&gt;; start = ^Q; stop = ^S; susp = ^Z; rprnt = ^R;
+werase = ^W; lnext = ^V; discard = ^O; min = 1; time = 0;
+-parenb -parodd -cmspar cs8 -hupcl -cstopb cread -clocal -crtscts
+-ignbrk -brkint -ignpar -parmrk -inpck -istrip -inlcr -igncr icrnl ixon -ixoff
+-iuclc -ixany -imaxbel iutf8
+opost -olcuc -ocrnl onlcr -onocr -onlret -ofill -ofdel nl0 cr0 tab0 bs0 vt0 ff0
+isig icanon iexten echo echoe echok -echonl -noflsh -xcase -tostop -echoprt
+echoctl echoke -flusho -extproc
+</pre></div>
+
+
+<ul>
+<li>ltrace/strace 看一下库函数/操作系统层面分别发生了什么</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">小结：终端</h2>
+<blockquote>
+<p>终端是操作系统里的一个对象 (文件)。</p>
+</blockquote>
+<p>支持的操作</p>
+<ul>
+<li>read<ul>
+<li>read 会等到有数据以后才返回</li>
+<li>这个特性对应用程序很有用</li>
+</ul>
+</li>
+<li>write<ul>
+<li>in-band 控制信号: ANSI Escape Code</li>
+<li>可以在终端上绘制字符</li>
+</ul>
+</li>
+<li>ioctl<ul>
+<li>终端控制</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">“那一个” 应用程序：用户眼中的操作系统</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">另一个拷问灵魂的问题</h2>
+<blockquote>
+<ol>
+<li><p>我们 (用户) 用操作系统干什么？？？</p>
+</li>
+<li><p>操作系统 = 对象 + API，我们怎么 “用” API 呢？</p>
+</li>
+</ol>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="interface">操作系统还需要一个人机接口 (Interface)</h2>
+<p>“那个程序” 管理人机的交互</p>
+<ul>
+<li>这个程序就是操作系统的外壳 (shell)<ul>
+<li>接收用户指令、启动/管理应用程序 (CLI; GUI)</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/os-overview.jpg" width="600px"></img></p>
+<p><span class="center">(source: openSUSE Wiki)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="unix-shell">UNIX Shell</h2>
+<blockquote>
+<p><span class="red">Shell 是一个编程语言</span>。</p>
+<ul>
+<li>“Bash  is  an  <code>sh</code>-compatible  command language interpreter that executes commands read from the standard input or from a file.”<ul>
+<li>interactive shell: (没有参数) 收到一行、执行一行</li>
+<li>non-interactive shell: 就是普通的语言解释器</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="codehilite"><pre><span></span>$ bash -c 'env' | grep PS1  # non-interactive
+$ env | grep PS1 # interactive
+PS1=$ 
+</pre></div>
+<div class="fragment">
+<blockquote>
+<p>“Shell 是人机接口” 的含义: <span class="red">interactive shell 是把用户给 I/O 设备的指令翻译成系统调用的应用程序</span>。</p>
+<ul>
+<li>是<span class="red">用户眼中的操作系统</span> (I/O 设备) 和<span class="red">应用眼中的操作系统</span> (系统调用) 的桥梁<ul>
+<li>完整流程：用户 → I/O 设备 → shell/应用程序 → 系统调用</li>
+<li>经过半学期的铺垫，今天解开了你关于操作系统的几乎所有困惑！</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="unix">脾气有点小古怪的 UNIX 世界</h2>
+<blockquote>
+<p>“Unix is user-friendly; it's just choosy about who its friends are.”</p>
+<ul>
+<li>但如果把 shell 理解成编程语言，“不好用” 好像也没什么毛病了<ul>
+<li>命令的语法也是这个语言的一部分</li>
+<li><del>你见过哪个编程语言 “好用” 的？</del></li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/xkcd-tar.png" width="800px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="shell">Shell: 语言设计</h2>
+<blockquote>
+<p>想象成 “表达式求值”</p>
+<ul>
+<li>Shell 中的表达式是为了 “让程序协作” 而设计的</li>
+</ul>
+</blockquote>
+<p>除了变量、条件、循环等，描述的是命令行工具的 “workflow”</p>
+<ul>
+<li>重定向: <code>cmd &gt; file &lt; file 2&gt; /dev/null</code></li>
+<li>顺序结构: <code>cmd1; cmd2</code>, <code>cmd1 && cmd2</code>, <code>cmd1 || cmd2</code></li>
+<li>管道: <code>cmd1 | cmd2</code></li>
+<li>预处理: <code>$()</code>, <code>&lt;()</code></li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>当然，既然是编程语言，难免有 dark corners</p>
+<ul>
+<li>例如，操作的优先级？<ul>
+<li><code>echo hello &gt; a.txt | cat</code></li>
+<li>试试 bash 和 zsh</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="shell">Shell 的实现：命令 → 系统调用</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="shell-cat">最基础版的 Shell: <code>cat</code></h2>
+<p>cat: “concatenate files and print on the standard output”</p>
+<ul>
+<li>还记得 strace 的结果吗？<ul>
+<li><code>read (0, cmd, 131072);</code></li>
+<li><code>write(1, cmd, nread);</code> (原样输出)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>注意 read/write 的参数</p>
+<ul>
+<li>访问的对象是<span class="red">文件描述符</span> (file descriptor, fd)<ul>
+<li><code>STDIN_FILENO</code> (0)</li>
+<li><code>STDOUT_FILENO</code> (1)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">什么是文件描述符？</h2>
+<blockquote>
+<p>Shell 需要从终端读取输入、向终端输出。终端是什么？</p>
+<ul>
+<li><span class="red">终端是操作系统里的一个对象</span>。</li>
+</ul>
+</blockquote>
+<p>文件描述符是进程用来访问操作系统对象的 “指针”</p>
+<ul>
+<li>open/pipe 获得、close 释放、read/write/ioctl 访问、dup/dup2 复制<ul>
+<li>思考题: <span class="green">freopen “消灭” 掉的 stdout 如何还回来？</span></li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/handle-translate.jpg" width="400px"></img></p>
+<p>任何操作系统都需要这样的机制</p>
+<ul>
+<li>Windows: 句柄 (<del>迷惑翻译行为</del>)<ul>
+<li>其实英文是很形象的 (把手)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件描述符</h2>
+<p>UNIX 认为，一个进程应该不会持有太多的操作系统对象</p>
+<ul>
+<li>用一个小整数就 OK 了<ul>
+<li>0, 1, 2 分别是 stdin, stdout, stderr</li>
+<li>open 会返回最小的未使用的整数</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<blockquote>
+<p>回顾：进程 = 状态机</p>
+<ul>
+<li><span class="red">文件描述符也是进程 (状态机) 的一部分</span><ul>
+<li>寄存器 <math class="inline-math">R</math></li>
+<li>内存 (地址空间) <math class="inline-math">M</math></li>
+<li>文件描述符 <math class="inline-math">F</math></li>
+</ul>
+</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">文件描述符 (cont'd)</h2>
+<blockquote>
+<p><span class="red">文件描述符在 fork/execve 时被继承</span></p>
+<ul>
+<li>fork: 指针的 <span class="red">shallow copy</span></li>
+<li>execve: 状态机的寄存器/地址空间被 reset<ul>
+<li>但文件描述符不变</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>这给了我们实现 shell 的完美机制！</p>
+<p>配合文件 APIs:</p>
+<ul>
+<li>open: 打开文件</li>
+<li>pipe: 返回读/写口两个文件描述符</li>
+<li>dup/dup2/close: “指针” 操作</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="shell">Shell: 实现重定向</h2>
+<blockquote>
+<p>破案 (一个你们未必注意到的事实)：为什么同一份代码，不经过任何修改，它可以输出到不同的地方？</p>
+<ul>
+<li>屏幕、文件、管道、网络</li>
+</ul>
+</blockquote>
+<div class="codehilite"><pre><span></span>$ echo Hello World
+Hello World
+$ echo Hello World &gt; a.txt
+</pre></div>
+<div class="fragment">
+<div class="codehilite"><pre><span></span><span class="kt">pid_t</span> <span class="n">p</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">redirect_stdout</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(...);</span>
+    <span class="n">dup2</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">STDOUT_FILENO</span><span class="p">);</span>
+    <span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">redirect_stderr</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+  <span class="n">execve</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">argv</span><span class="p">,</span> <span class="n">envp</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">bg</span><span class="p">)</span> <span class="n">wait</span><span class="p">(</span><span class="o">&</span><span class="n">status</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+<p><span class="center">(省略了无数处 error handling，所以知道为什么需要 RAII + 异常了吧)</span></p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">实现重定向 (cont'd)</h2>
+<p>System 的行为一旦丰富起来，坑就多了</p>
+<ul>
+<li>“状态机” 这样的工具就能帮助我们更好地理解了</li>
+</ul>
+<div class="codehilite"><pre><span></span>$ echo hello &gt; /etc/a.txt
+bash: /etc/a.txt: Permission denied
+
+$ sudo !!
+sudo echo hello &gt; /etc/a.txt
+bash: /etc/a.txt: Permission denied
+</pre></div>
+
+
+<p><span class="center">(我不是 sudo 了吗？)</span></p>
+<p><span class="center"><img src="../static/wiki/os/2019/img/sudo-sandwich.png" width="350px"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="shell">Shell: 实现管道通信</h2>
+<blockquote>
+<p>pipe (2): <code>int pipe(int pipefd[2]);</code> 在操作系统中创建一个管道</p>
+<ul>
+<li><code>pipefd[0]</code> - read end；<code>pipefd[1]</code> - write end</li>
+<li>pipe + fork 实现管道通信</li>
+</ul>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/pipe.gif" width="500px"></img></p>
+<p>RTFSC: <a href="../static/wiki/os/2020/demos/xv6-sh.c">xv6-sh.c</a></p>
+<ul>
+<li>看看别人怎么写 C 代码的！</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="shell">小结：实现 Shell</h2>
+<blockquote>
+<p>Shell: 把代码翻译成系统调用的序列的应用程序</p>
+<ul>
+<li>可以工作在交互模式 (接收 I/O 设备输入)</li>
+</ul>
+</blockquote>
+<hr></hr>
+<p>脚本语言</p>
+<ul>
+<li>控制结构: <code>if</code>, <code>for</code>, <code>while</code>, ...</li>
+<li>重定向: <code>cmd &gt; file &lt; file 2&gt; /dev/null</code></li>
+<li>顺序结构: <code>cmd1; cmd2</code>, <code>cmd1 && cmd2</code>, <code>cmd1 || cmd2</code></li>
+<li>管道: <code>cmd1 | cmd2</code></li>
+<li>预处理: <code>$()</code>, <code>&lt;()</code></li>
+</ul>
+<hr></hr>
+<p>使用的系统调用</p>
+<ul>
+<li>fork, execve, wait, ...</li>
+<li>open, pipe, dup2, close, read, write, ...</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">复习：应用眼中的操作系统</h2>
+<p>用户眼中的操作系统</p>
+<ul>
+<li>交互式 shell + shell 管理的应用程序</li>
+</ul>
+<p>应用眼中的操作系统</p>
+<ul>
+<li>一个目标<ul>
+<li>管理程序的执行流 (状态机)</li>
+</ul>
+</li>
+<li>一组紧凑的 API<ul>
+<li>fork, execve, exit, signal, kill, mmap, ...</li>
+<li>open, pipe, close, dup, read, write, mount, ...</li>
+</ul>
+</li>
+<li>一堆丰富的对象 ← <span class="red">在下半学期详细展开</span><ul>
+<li>devfs (设备), procfs (进程和状态), sysfs (内核对象), 管道、套接字、...</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>RTFM: open (2), bash (1)</li>
+<li>阅读 <a href="../static/wiki/os/2020/demos/xv6-sh.c">xv6-sh.c</a></li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

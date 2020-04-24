@@ -1,0 +1,222 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>期中测验</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">期中测验</h1>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">注意事项</h4>
+<ul>
+<li>测验时间: 2020 年 4 月 20 日 14:00 - 16:00</li>
+<li>独立完成 (自觉遵守)<ul>
+<li>除线程同步函数的手册 (manpages) 外，不得查阅其他资料 (例如，不能参考课程网站上的课件和 notes)、不得与其他人交流。如果你本地没有线程同步函数的手册，可以在互联网上查阅，但仅限于 manpages</li>
+</ul>
+</li>
+<li>遇到提交等问题请在 QQ 群中提出 (无直播)</li>
+<li>为让大家更好地遵守学术诚信，<strong>正确性不作为评分标准</strong><ul>
+<li>按时提交 (以服务器时间为准)，得 100%<ul>
+<li>如遇到网络意外情况，请在测验结束前邮件/QQ 告知 jyy，允许之后提交<ul>
+<li>(但 Git 记录应在 2 小时内)</li>
+</ul>
+</li>
+<li>如遇到服务器崩溃等，我们将再次组织大家提交</li>
+</ul>
+</li>
+<li>当天晚 23:59:59 前提交，得 80%</li>
+<li>周三 (4.22) 前提交，得 70%</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+
+<h2 id="0">0. 通知</h2>
+<p>五一调休部分课程安排：</p>
+<ul>
+<li>本周四 (4.24): 期中复习：应用眼中的操作系统 (终端和 Shell)</li>
+<li>本周日 (4.26 下午 2:00): 期中复习：硬件眼中的操作系统 (调试操作系统内核)</li>
+<li>下周一 (4.27): 讲座 & 答疑 & 助教线上见面会</li>
+<li>下周四 (4.30): 持久化：存储介质</li>
+</ul>
+<h2 id="1-50">1. 卷面部分 (50%)</h2>
+<p>请填写<a href="https://wj.qq.com/s2/5840214/769c">问卷</a>。如问卷未填写完毕就手滑提交，可以再次作答提交 (不用重复填写之前填过的部分)。请把问卷作为闭卷考试，独立完成。</p>
+<h2 id="2-50">2. 编程部分 (50%)</h2>
+<h3 id="21">2.1 问题描述</h3>
+<p>假设系统中有以下三种类型的线程 (每种类型的线程都有 <math class="inline-math">\ge 1</math> 个)：</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">type1</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">putchar</span><span class="p">(</span><span class="sc">'&lt;'</span><span class="p">);</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">type2</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">putchar</span><span class="p">(</span><span class="sc">'&gt;'</span><span class="p">);</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">type3</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">putchar</span><span class="p">(</span><span class="sc">'_'</span><span class="p">);</span> <span class="p">}</span>
+</pre></div>
+
+
+<p>如果它们并发/并行执行，我们会看到屏幕上打印交替出现的例如 <code>&lt;&gt;&lt;&lt;___&lt;&gt;...</code> 这样的字符串。现在，你需要同步这些线程，使得我们的线程不再是随意地打印字符，而是能够不断打印 “鱼” 的形状。一个合法的 “鱼” 形状是以下两种字符串之一：</p>
+<ul>
+<li><code>&lt;&gt;&lt;_</code> (向左看的鱼，以下划线结尾)</li>
+<li><code>&gt;&lt;&gt;_</code> (向右看的鱼，以下划线结尾)</li>
+</ul>
+<p>也就是你同步后的线程输出的字符串应该总是在屏幕上看到打印出的 “<code>&lt;&gt;&lt;_</code>” 或 “<code>&gt;&lt;&gt;_</code>”，如下图所示：</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/notes/img/fish-correct.png" width="640px"></img></p>
+<p>我们已经给出了一份框架代码 (在 2.2 节部分有下载链接)。你需要在框架代码的 TODO 处填入代码：</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">fish_init</span><span class="p">()</span> <span class="p">{</span> <span class="cm">/* TODO */</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">fish_before</span><span class="p">(</span><span class="kt">char</span> <span class="n">ch</span><span class="p">)</span> <span class="p">{</span> <span class="cm">/* TODO */</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">fish_after</span> <span class="p">(</span><span class="kt">char</span> <span class="n">ch</span><span class="p">)</span> <span class="p">{</span> <span class="cm">/* TODO */</span> <span class="p">}</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="n">roles</span><span class="p">[]</span> <span class="o">=</span> <span class="s">"&lt;&lt;&lt;&lt;&lt;&gt;&gt;&gt;&gt;___"</span><span class="p">;</span>
+
+<span class="c1">// 程序运行后会调用 fish_init() 一次</span>
+<span class="c1">// 然后创建若干个线程执行 fish_thread()</span>
+<span class="kt">void</span> <span class="nf">fish_thread</span><span class="p">(</span><span class="kt">int</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="n">role</span> <span class="o">=</span> <span class="n">roles</span><span class="p">[</span><span class="n">id</span><span class="p">];</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fish_before</span><span class="p">(</span><span class="n">role</span><span class="p">);</span>
+    <span class="n">putchar</span><span class="p">(</span><span class="n">role</span><span class="p">);</span> <span class="c1">// should not hold *any* mutex lock now</span>
+    <span class="n">fish_after</span><span class="p">(</span><span class="n">role</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>你填入的代码会在 <code>putchar(role)</code> 之前和之后执行。在你的代码执行后，我们要求：</p>
+<ol>
+<li><code>putchar(role)</code> 执行时，线程不得持有任何互斥锁；</li>
+<li>上述程序不断打印 “鱼” 的形状，即多线程程序的任意输出都是以下程序某个可能输出的前缀 (假设 <code>rand</code> 可以返回真随机数)。</li>
+</ol>
+<div class="codehilite"><pre><span></span><span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"%s"</span> <span class="o">?</span> <span class="n">rand</span><span class="p">()</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">?</span> <span class="s">"&lt;&gt;&lt;_"</span> <span class="o">:</span> <span class="s">"&gt;&lt;&gt;_"</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="c1">// example: &lt;&gt;&lt;_&lt;&gt;&lt;_&gt;&lt;&gt;_&gt;&lt;&gt;_&lt;&gt;&lt;_&gt;&lt;&gt;_&lt;&gt;&lt;_&gt;&lt;&gt;_&lt;&gt;&lt;_&gt;...</span>
+</pre></div>
+
+
+<p>你可以定义互斥锁、条件变量或信号量，或一些静态数据/局部变量 (在 <code>fish_init</code> 中初始化)，例如以下代码都是合法的：</p>
+<div class="codehilite"><pre><span></span><span class="n">pthread_mutex_t</span> <span class="n">lk</span>   <span class="o">=</span> <span class="n">PTHREAD_MUTEX_INITIALIZER</span><span class="p">;</span>
+<span class="n">pthread_cond_t</span>  <span class="n">cond</span> <span class="o">=</span> <span class="n">PTHREAD_COND_INITIALIZER</span><span class="p">;</span>
+<span class="n">sem_t</span> <span class="n">sem</span><span class="p">;</span>
+</pre></div>
+
+
+<p>在你提交的 <code>fish_before</code>, <code>fish_after</code> 函数中，你只允许执行纯粹的计算 (局部/全局状态的修改)，以及调用我们允许的互斥/同步函数：</p>
+<ul>
+<li>互斥锁 <code>pthread_mutex_lock</code>, <code>pthread_mutex_unlock</code></li>
+<li>条件变量 <code>pthread_cond_wait</code>, <code>pthread_cond_signal</code>, <code>pthread_cond_broadcast</code></li>
+<li>信号量 <code>sem_init</code>, <code>sem_wait</code>, <code>sem_post</code></li>
+</ul>
+<p>除此之外，不能调用其他库函数、执行系统调用等。数据竞争是 undefined behavior。当然了，我们鼓励你在编程的过程中使用 printf, assert 等帮助你调试。请在提交时删除多余的打印 (或使用编译选项避免输出)；程序应满足的断言 assert 可以保留。</p>
+<h3 id="22">2.2 代码获取与提交</h3>
+<p><a href="../static/wiki/os/2020/demos/os-midterm.zip">点此下载</a>期中测验代码包。同<a href="OS2020_Labs.html">操作系统课程实验</a>一样，在 Linux 环境下请使用 make 命令编译你的代码，它会记录你编程的过程。不完整的 Git 记录将被 Online Judge 拒绝。提交时，设置好 <code>STUID</code> (学号) 和 <code>STUNAME</code> (中文姓名) 环境变量，然后在终端中执行 <code>make submit</code> 提交。Online Judge 不会返回你程序的评测结果，但会检查 Git 记录，在下面你可以看到你的提交记录。</p>
+<ul>
+<li>特别注意：请不要改变 “<code>os-midterm</code>” 的目录名。否则 Online Judge 将会找不到 Git 记录而拒收你的提交。<ul>
+<li>期中考试时，只有你看到绿色的 “Received”，才表明我们收到了你的提交。</li>
+<li>现已开放 Online Judge，你可能看到你之前的提交变为了编译错误/all easy test fail，但我们依然认可你的提交。</li>
+</ul>
+</li>
+</ul>
+<div plugin="submission(course='OS2020', module='Midterm')"><div class="accordion submission" id="accordionExample">
+
+  <div class="card">
+    <div class="card-header submit-card">
+      <form action="../upload.html" method="post" enctype="multipart/form-data">
+        <div class="form-row align-items-center">
+            <label class="col-form-label">OS2020-Midterm</label> 提交结果
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+</div></div>
+
+<h3 id="23">2.3 正确性标准</h3>
+<p>对于任意只包含 <code>&lt;&gt;_</code> 三种字符的字符串 <code>roles</code> 且每个字符至少出现一次，你的程序应该能在屏幕上不断以不太慢的速度显示出两种方向的 “鱼”，就可以认为正确。我们给出了一个测试用例 (<code>roles[] = "&lt;&lt;&lt;&lt;&lt;&gt;&gt;&gt;&gt;___"</code>, 共 12 个线程供你测试)。</p>
+<p>此外，你的程序可能会存在一定的不公平性/随机性，例如某种字符串出现的概率会稍大一些，这些都是允许的。但如果输出不合法、只看到一种方向的鱼或是程序异常终止，你的程序都将被认为是错误的。 </p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
