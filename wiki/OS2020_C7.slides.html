@@ -1,6 +1,681 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>[C7] 复习：硬件眼中的操作系统</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="c7">[C7] 复习：硬件眼中的操作系统</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">预告：明天 (周一) 下午的课程</h2>
+<blockquote>
+<p><span class="red">举行线上交流/互动活动</span></p>
+<ul>
+<li>后半部分在 Zoom 完成；请大家提前安装</li>
+<li>(学校壕，已升级到 Zoom 教育版本)<ul>
+<li><del>用来上课，顺便用来开组会 😂</del></li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>14:00-15:00 期中讲评、反馈、互动</p>
+<ul>
+<li>正常上课 (bilibili 直播间)</li>
+</ul>
+<p>15:00-16:00 Panel Discussion</p>
+<ul>
+<li>(神秘嘉宾 & 助教)</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>作为上半学期的小结</p>
+<ul>
+<li>还记得这门课两个视角的操作系统吗？</li>
+</ul>
+</blockquote>
+<p>应用视角</p>
+<ul>
+<li>操作系统是一组 API<ul>
+<li>复习这组 API, Shell 是最棒的选择 ← 上次课主题</li>
+</ul>
+</li>
+</ul>
+<p>硬件视角</p>
+<ul>
+<li>操作系统是一个 C 程序 (实现所有 APIs)<ul>
+<li>福利：调试操作系统内核 ← <span class="red">本次课主题</span></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="c">操作系统 = C 程序</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="api">操作系统 = 对象 + API</h2>
+<blockquote>
+<p>硬件眼中的操作系统</p>
+<ul>
+<li>一个程序，管理这些对象、实现这些 API<ul>
+<li>“模拟状态机的执行”</li>
+<li>“提供对象操作的代码”</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>UNIX/Linux 操作系统</p>
+<ul>
+<li>加载第一个进程 (init)</li>
+<li>管理 I/O 设备中断</li>
+<li>执行系统调用</li>
+</ul>
+<hr></hr>
+<p>道理很简单，实现不简单</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="xv6-fork">例子: xv6 fork 系统调用导读</h2>
+<p>fork: 复制进程的地址空间 & 文件描述符的浅拷贝</p>
+<div class="codehilite"><pre><span></span>  <span class="c1">// Allocate process.</span>
+  <span class="k">if</span><span class="p">((</span><span class="n">np</span> <span class="o">=</span> <span class="n">allocproc</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">){</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="c1">// Copy process state from proc.</span>
+  <span class="k">if</span><span class="p">((</span><span class="n">np</span><span class="o">-&gt;</span><span class="n">pgdir</span> <span class="o">=</span> <span class="n">copyuvm</span><span class="p">(</span><span class="n">curproc</span><span class="o">-&gt;</span><span class="n">pgdir</span><span class="p">,</span> <span class="n">curproc</span><span class="o">-&gt;</span><span class="n">sz</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">){</span>
+    <span class="n">kfree</span><span class="p">(</span><span class="n">np</span><span class="o">-&gt;</span><span class="n">kstack</span><span class="p">);</span>
+    <span class="n">np</span><span class="o">-&gt;</span><span class="n">kstack</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">np</span><span class="o">-&gt;</span><span class="n">state</span> <span class="o">=</span> <span class="n">UNUSED</span><span class="p">;</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">np</span><span class="o">-&gt;</span><span class="n">sz</span> <span class="o">=</span> <span class="n">curproc</span><span class="o">-&gt;</span><span class="n">sz</span><span class="p">;</span>
+  <span class="n">np</span><span class="o">-&gt;</span><span class="n">parent</span> <span class="o">=</span> <span class="n">curproc</span><span class="p">;</span>
+  <span class="o">*</span><span class="n">np</span><span class="o">-&gt;</span><span class="n">tf</span> <span class="o">=</span> <span class="o">*</span><span class="n">curproc</span><span class="o">-&gt;</span><span class="n">tf</span><span class="p">;</span>
+
+  <span class="c1">// Clear %eax so that fork returns 0 in the child.</span>
+  <span class="n">np</span><span class="o">-&gt;</span><span class="n">tf</span><span class="o">-&gt;</span><span class="n">eax</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">NOFILE</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">curproc</span><span class="o">-&gt;</span><span class="n">ofile</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+      <span class="n">np</span><span class="o">-&gt;</span><span class="n">ofile</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">filedup</span><span class="p">(</span><span class="n">curproc</span><span class="o">-&gt;</span><span class="n">ofile</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+  <span class="p">...</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork">虚拟存储的另一个礼物：近乎免费的 fork</h2>
+<blockquote>
+<p>之前提到，fork “近乎免费”，但它不是要复制整个状态机吗？</p>
+<ul>
+<li>xv6 里刚看过 <code>copyuvm</code></li>
+<li>明明是一个一个页面复制的</li>
+</ul>
+</blockquote>
+<p>现代操作系统的实现</p>
+<ul>
+<li>只读的页面不用复制 (共享)<ul>
+<li>例如代码和只读数据</li>
+</ul>
+</li>
+<li>读写的页面需要复制，但不必立即复制<ul>
+<li>(数据、堆区、堆栈)<ul>
+<li>只要父子进程暂时不写，就可以当只读数据处理</li>
+<li><span class="red">任意一方写入之前复制即可</span></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="copy-on-write">Copy-on-Write</h2>
+<p>利用分页机制</p>
+<ul>
+<li>把读写权限的页面标记为只读</li>
+<li>写时产生缺页异常，操作系统为写的进程复制页面</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>也是一个算法 trick</p>
+<ul>
+<li>persistent data structure (我们在文件系统时还会看到)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/persistent-ds.jpg"></img></p>
+<ul>
+<li>试试 <a href="https://courses.csail.mit.edu/6.851/">6.851 @ MIT</a> (Erik Demaine)</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="copy-on-write">Copy-on-Write 的实现</h2>
+<blockquote>
+<p>进程可能会 fork 多次</p>
+<ul>
+<li>我们需要引用计数</li>
+</ul>
+</blockquote>
+<p>页面的 life-cycle</p>
+<ul>
+<li>mmap 映射：不做任何事，等待 page fault<ul>
+<li>read page fault 且存在只读的副本：映射；引用计数 + 1</li>
+</ul>
+</li>
+<li>fork 创建子进程时<ul>
+<li>所有页面的访问权限改为只读 (copy-on-write)<ul>
+<li>所有页面的引用计数 + 1 (可以使用一些数据结构 tricks 加速)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>write page fault<ul>
+<li>如果引用计数 > 1，复制一份 (可写，引用计数为 1)</li>
+<li>被复制的页面引用计数 - 1</li>
+</ul>
+</li>
+<li>unmap (execve/exit) 时<ul>
+<li>引用计数 - 1 (减到 0 时可以归还给 cache/buffer)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fork-unix">Fork: UNIX 给我们的礼物</h2>
+<p>近乎免费的进程 “快照”</p>
+<ul>
+<li><p>F. Qin, et al. <a href="https://dl.acm.org/citation.cfm?id=1095833">Rx: Treating bugs as allergies--A safe method to survive software failures</a>. In <em>Proc. of SOSP</em>, 2005.</p>
+<ul>
+<li>程序有 bug 找不到怎么办？<ul>
+<li>定期打上快照 (fork)，fail 了就把执行环境改改再试，好了就继续吧</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/qin-rx.png" width="800px"></img></p>
+<div class="fragment">
+<blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/qb.webp" width="110px"></img>
+我们也在用 fork 快照做很好玩的工作</p>
+<ul>
+<li>这就是 system 的魔法！ ← <span class="del">签订契约，成为魔法少女</span></li>
+<li>(再次暗示；以及：<a href="https://zh.moegirl.org/QB%E5%A8%98">这是什么梗</a>)</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">现实很丰满，理想很骨感</h2>
+<blockquote>
+<p>如果真要让你实现一个这玩意，估计会调试到死。</p>
+<ul>
+<li>你一定体会到被 L1/L2 支配的恐惧了</li>
+</ul>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/bug-comic.jpg" width="640px"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">再一次遇见调试理论</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fault-error-failure">Fault, Error 和 Failure: 复习</h2>
+<p>想调试操作系统内核？</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/fault-error-failure.png" width="640px"></img></p>
+<div class="fragment">
+<hr></hr>
+<p>开始 debug (failure → fault) 的旅程</p>
+<ul>
+<li>首先，你要能稳定地重现 failure<ul>
+<li>尽可能把 failure 定位到代码的某一部分</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fault-error">Fault → Error: 测试</h2>
+<p>一些基础类型的线程</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">producer</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">empty</span><span class="p">);</span> <span class="n">_putc</span><span class="p">(</span><span class="sc">'('</span><span class="p">);</span> <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>  <span class="p">}</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">consumer</span><span class="p">()</span> <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">P</span><span class="p">(</span><span class="o">&</span><span class="n">fill</span><span class="p">);</span>  <span class="n">_putc</span><span class="p">(</span><span class="sc">')'</span><span class="p">);</span> <span class="n">V</span><span class="p">(</span><span class="o">&</span><span class="n">emtpy</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">printer</span><span class="p">()</span>  <span class="p">{</span> <span class="n">tid</span><span class="o">++</span><span class="p">;</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"%d"</span><span class="p">,</span> <span class="n">tid</span><span class="p">);</span> <span class="p">}</span> <span class="p">}</span>
+<span class="kt">void</span> <span class="nf">yielder</span><span class="p">()</span>  <span class="p">{</span> <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="n">_yield</span><span class="p">();</span> <span class="p">}</span>
+</pre></div>
+
+<hr></hr>
+<p>和各种复杂情况的组合</p>
+<ul>
+<li>线程类型的组合 (<code>[[]]]]; [[[]py; pppyyyp</code>...)</li>
+<li>在线程运行过程中插入 lock/unlock/P/V</li>
+<li>在几个关键点插入 delay</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p><strong><span style="font-variant: small-caps">Small Scope Hypothesis</span></strong>. <em>A high proportion of bugs can be found by testing the program for all test inputs within some small scope</em>.</p>
+<ul>
+<li>我们的另一个解读：“任何人类能理解的 bug, 都能存在一种简单的方式描述出来” → 所以 “测试” 就是枚举这种简单的描述 🤔</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="error-failure">Error → Failure: 检查</h2>
+<blockquote>
+<p>操作系统内核的特殊性</p>
+<ul>
+<li>C 语言产生 UB 后可能会发生 <span class="red">memory corruption</span><ul>
+<li>引发任意严重的后果……</li>
+<li>神秘重启……<ul>
+<li>至今所有同学都卡在 CPU Reset 了哈哈哈哈哈哈</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>kasan 是个非常有效的 bug 检测工具<ul>
+<li>但实现 kasan 太困难了？怎么办？</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>你其实知道每一个 field 的 data type!</p>
+<ul>
+<li>任何内存都可以是 canary!</li>
+<li><p>出问题的时候及时预警 (把 error 尽早变成 failure, 而不是等到神秘重启)</p>
+<ul>
+<li><code>assert(IN_RANGE(ctx-&gt;rip, RANGE(0x100000, &etext)))</code></li>
+<li>small integer → <code>assert(n &lt;= 100)</code></li>
+<li>(试试 xv6 的 <code>struct proc</code>)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="memory-corruption">调试 Memory Corruption</h2>
+<p>体验极差！因为同一个 bug 的 failure 每次都不一样</p>
+<ul>
+<li>怎么办？？</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>使用 <span class="red">watch point</span>!</p>
+<ul>
+<li>你们终于知道 NEMU PA 的良苦用心了吧！<ul>
+<li>你还记我们上次用 watch point 是做什么的？</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>背后的逻辑很简单</p>
+<ul>
+<li>一定有人 (指令) corrupt 了那个内存</li>
+<li>找到那条指令就能定位到 corruption</li>
+<li>如果你能找到一个 “被 corrupt” 的内存<ul>
+<li>加一个 watch point</li>
+<li>顺藤摸瓜<span class="red">找到谁是最先 corrupt 内存的</span></li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="1-lab-1">福利 (1): Lab 1 性能诊断</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug">一个有趣的性能 Bug</h2>
+<blockquote>
+<p>一个有趣的性能问题 (导致 < 1Mops)</p>
+<ul>
+<li>你能看出来吗？</li>
+</ul>
+</blockquote>
+<div class="codehilite"><pre><span></span><span class="k">union</span> <span class="n">slab</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="p">{</span>
+    <span class="n">cpu_t</span> <span class="o">*</span><span class="n">owner</span><span class="p">;</span>
+    <span class="k">struct</span> <span class="n">bitmap</span> <span class="n">bitmap</span><span class="p">;</span>
+    <span class="p">...</span>
+  <span class="p">};</span>
+  <span class="kt">uint8_t</span> <span class="n">data</span><span class="p">[</span><span class="n">SLAB_SIZE</span><span class="p">];</span>
+<span class="p">};</span>
+
+<span class="kt">void</span> <span class="nf">slab_free</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">union</span> <span class="n">slab</span> <span class="o">*</span><span class="n">slab</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">ROUNDDOWN</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">SLAB_SIZE</span><span class="p">);</span>
+  <span class="n">spin_lock</span><span class="p">(</span><span class="o">&</span><span class="n">slab</span><span class="o">-&gt;</span><span class="n">owner</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug">如何找到这个 Bug?</h2>
+<p>首先，你必须触发它</p>
+<ul>
+<li>触发条件：一个处理器上分配、另一个处理器上 free<ul>
+<li>如何构造这样的 workload?</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>然后你需要一个性能诊断工具</p>
+<ul>
+<li>你只是单纯地想知道 “<span class="red">哪部分代码用了最多的时间</span>”<ul>
+<li>还记的 sperf 吗？</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="profiler">正确的打开方式：使用 Profiler</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/perf_events_map.png" width="700px"></img></p>
+<p>定时对程序进程采样，供后续性能分析</p>
+<ul>
+<li>记录: <code>perf record --call-graph dwarf [command]</code></li>
+<li>检查: <code>perf report</code></li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="2-lab-2-bug">福利 (2): Lab 2 的隐形 Bug</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">一个事实</h2>
+<blockquote>
+<p>我理解你们有巨大的惰性就想着用 printf 和乱改代码调试</p>
+<ul>
+<li><span class="red">极少数的人能成功</span></li>
+<li><span class="red">大部分人最后的结果就是放弃</span></li>
+</ul>
+</blockquote>
+<p>Get out of your comfort zone!</p>
+<ul>
+<li><p>你们到我这个年龄，突破自我就越来越难了……</p>
+<ul>
+<li>每天都在教学事故 (备不完课) 的边缘徘徊 😂</li>
+</ul>
+</li>
+<li><p><span class="red">绝对值得</span>的工具，无论你感到多恐惧</p>
+<ul>
+<li>用 gdb 调试 QEMU<ul>
+<li>参考往期视频</li>
+</ul>
+</li>
+<li>寄存器 dump 和 back trace<ul>
+<li>参考 xv6</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="lab2-bug">Lab2: 一个令人智熄的 Bug</h2>
+<p>出现在把线程 schedule 到其他 core 上</p>
+<ul>
+<li>如果进行处理器 “绑定” (像 <a href="../static/wiki/os/2020/demos/thread-os-mp.c">thread-os-mp.c</a> 那样)<ul>
+<li>没问题</li>
+<li>压力测试全对</li>
+</ul>
+</li>
+<li>一旦允许跨处理器调度就<ul>
+<li>PC 指针进入诡异位置<ul>
+<li>crash, 神秘重启, ...</li>
+</ul>
+</li>
+<li>无理由的死锁</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">复习：调试理论</h2>
+<p>Bug 为什么难找？</p>
+<ul>
+<li>Fault → Error → Failure<ul>
+<li>这个 failure 一点头绪都没有，就是个莫名其妙的神秘重启/出错</li>
+<li>每次还都不一样<ul>
+<li><span class="red">有时候删掉 printf 就没了</span></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>但这个例子很好调 😃 看看哪里发生了异常</p>
+<ul>
+<li>Triple fault 会导致重启</li>
+<li>一般是 <code>#GP</code> (13) 或者 <code>#PF</code> (14)<ul>
+<li>✅ 你们可以在 CTE 中捕获这些问题 (但不解决所有问题)</li>
+<li>✅ QEMU 提供了 <code>-d</code> 和 <code>-D</code> 选项</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">画个状态机！</h2>
+<div class="codehilite"><pre><span></span><span class="n">_Context</span> <span class="o">*</span><span class="nf">on_interrupt</span><span class="p">(</span><span class="n">_Event</span> <span class="n">ev</span><span class="p">,</span> <span class="n">_Context</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">lock</span><span class="p">();</span> <span class="c1">// BIG LOCK</span>
+  <span class="p">...</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">current</span> <span class="o">!=</span> <span class="n">IDLE</span><span class="p">)</span>
+    <span class="n">current</span><span class="o">-&gt;</span><span class="n">cpu</span> <span class="o">=</span> <span class="p">(</span><span class="n">current</span><span class="o">-&gt;</span><span class="n">cpu</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">ncpu</span><span class="p">;</span>
+
+  <span class="n">next</span> <span class="o">=</span> <span class="n">IDLE</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="n">ntask</span><span class="p">;</span> <span class="n">n</span><span class="p">;</span> <span class="n">n</span><span class="o">--</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">tasks</span><span class="p">[</span><span class="n">CPU</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">].</span><span class="n">cpu</span> <span class="o">==</span> <span class="n">_cpu</span><span class="p">())</span> <span class="p">{</span>
+      <span class="n">next</span> <span class="o">=</span> <span class="o">&</span><span class="n">tasks</span><span class="p">[</span><span class="n">CPU</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">];</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="n">current</span> <span class="o">=</span> <span class="n">next</span><span class="p">;</span>
+  <span class="n">unlock</span><span class="p">();</span>
+  <span class="k">return</span> <span class="n">next</span><span class="o">-&gt;</span><span class="n">context</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>所有共享数据看起来都有原子性</p>
+<ul>
+<li>但恰恰有一个你没考虑到的情况 (very subtle)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">如何修复？</h2>
+<blockquote>
+<p>你会得到一个非常像 Read-Copy-Update (RCU) 的 solution</p>
+<ul>
+<li>留给大家的礼物 😓 (<del>同学们：才不想要这个礼物呢</del>)</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/parallel-hard.jpg" width="300px"></img></p>
+<p>在 Linux Kernel 会频繁地看到 <code>rcu_xxx</code></p>
+<ul>
+<li>就是这个 RCU</li>
+<li>Further reading: P. E. McKenny (Ed.). <a href="https://mirrors.edge.kernel.org/pub/linux/kernel/people/paulmck/perfbook/perfbook.html">Is Parallel Programming Hard, And, If So, What Can You Do About It?</a>, 2019.<ul>
+<li>大佬是 RCU 的作者 (发明人)</li>
+<li>一本非常 modern 的教科书<ul>
+<li>去追求 non-trivial 的东西</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<blockquote>
+<p>这里总结了课程的前半部分！</p>
+<ul>
+<li>(<span class="red">应用视角</span>) 用户 → I/O 设备 → shell/应用程序 → 操作系统 API</li>
+<li>(<span class="red">机器视角</span>) 操作系统 API ← C Runtime, I/O, 中断 ← 指令 ← 机器</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>调试操作系统内核：调试理论</p>
+<ul>
+<li>Fault → Error → Failure<ul>
+<li>调试的本质：<span class="red">检查执行 trace，找到和预期不符的地方</span></li>
+<li>调试操作系统内核的诀窍<ul>
+<li>做好测试 (fault → error)</li>
+<li>做好检查 (error → failure)</li>
+<li>做好隔离 (缩短 trace)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>RTFM & RTFSC (xv6)</li>
+<li>happy hacking (L1 & L2)!</li>
+</ul>
+</div></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
