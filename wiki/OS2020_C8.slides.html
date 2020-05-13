@@ -1,6 +1,560 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>[C8] 信号和 Job Control</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="c8-job-control">[C8] 信号和 Job Control</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>作为上半学期的小结</p>
+<ul>
+<li>还记得这门课两个视角的操作系统吗？<ul>
+<li>但我们讲过的系统调用似乎并不足以实现应用程序所有的需求</li>
+<li>例如让 shell 管理多个程序的执行 (Ctrl-C)</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>从宏观上</p>
+<ul>
+<li>应用视角：操作系统是一组 API<ul>
+<li>复习这组 API, Shell 是最棒的选择 ← 上上次课主题</li>
+</ul>
+</li>
+<li>硬件视角：操作系统是一个 C 程序 (实现所有 APIs)<ul>
+<li>福利：调试操作系统内核 ← 上次课主题</li>
+</ul>
+</li>
+</ul>
+<p>如果我们有 Ctrl-C 这样一个具体的需求，操作系统应该怎样设计/实现？</p>
+<ul>
+<li>UNIX 信号</li>
+<li>job control</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="unix">UNIX 信号</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">回顾我们学习过的系统调用</h2>
+<p>状态机管理</p>
+<ul>
+<li>(状态机) fork, execve, exit</li>
+<li>(地址空间) mmap, munmap</li>
+</ul>
+<p>对象 (文件)/指针 (文件描述符) 管理</p>
+<ul>
+<li>open, pipe, close, dup, read, write, ...</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>另一个灵魂拷问的问题</p>
+<ul>
+<li>为什么 Ctrl-C 能退出程序？</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ctrl-c">Ctrl-C: 一点也不简单</h2>
+<blockquote>
+<p>如果你仔细想一想，Ctrl-C 似乎很复杂！</p>
+</blockquote>
+<div class="fragment">
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/meme-vim.jpg" width="150px"></img></p>
+<p>Ctrl-C 并不能杀掉所有程序</p>
+<ul>
+<li>Stack Overflow: <a href="https://stackoverflow.blog/2017/05/23/stack-overflow-helping-one-million-developers-exit-vim/">helping one <em>million</em> developers exit vim</a><ul>
+<li>这些是怎么发生的？</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<p>Ctrl-C 是在程序运行的时候按下的</p>
+<ul>
+<li>谁收到了 Ctrl-C 这个输入？<ul>
+<li>shell: 不是我! <code>read(STDIN_FILENO, buf, size);</code></li>
+<li>a.out: 不是我! <code>read(STDIN_FILENO, buf, size);</code></li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ctrl-c">Ctrl-C 的背后</h2>
+<p>涉及若干操作系统中的对象</p>
+<ul>
+<li>按下 Ctrl-C 的终端<ul>
+<li>tty (1)</li>
+<li><code>echo hello &gt; $(tty)</code> (我们甚至可以向其他 tty 打印)</li>
+</ul>
+</li>
+<li>被 Ctrl-C 的进程<ul>
+<li>这个问题稍微有些复杂</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>tty 向前台的进程组 (process group) 发送 SIGINT 信号。</p>
+<ul>
+<li>进程组我们稍后再讲</li>
+<li>先假设给一个进程发信号好了</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="signal">信号 (Signal) 机制</h2>
+<p>如何<span class="red">异步</span>地通知进程某件事的发生？</p>
+<ul>
+<li>管道 (pipe)/共享内存 (mmap) 都是同步的进程间通信机制<ul>
+<li>除非进程主动读/写，否则通信就是一厢情愿的</li>
+</ul>
+</li>
+<li>我们的硬件提供了某个异步的机制，你想到了吗？</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>中断！</p>
+<ul>
+<li>虚拟化：进程是 “虚拟计算机”<ul>
+<li>计算机上有<ul>
+<li>在事件到来的时候中断处理器</li>
+<li>跳转到处理器预设的中断处理程序</li>
+</ul>
+</li>
+<li>进程上也可以有<ul>
+<li>在事件到来的时候 signal 进程</li>
+<li>跳转到处理器预设的 signal 处理程序</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="signal">signal 系统调用：注册信号处理</h2>
+<p>ANSI C signal handling</p>
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;signal.h&gt;</span><span class="cp"></span>
+<span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="kt">sighandler_t</span><span class="p">)(</span><span class="kt">int</span><span class="p">);</span>
+<span class="kt">sighandler_t</span> <span class="nf">signal</span><span class="p">(</span><span class="kt">int</span> <span class="n">signum</span><span class="p">,</span> <span class="kt">sighandler_t</span> <span class="n">handler</span><span class="p">);</span>
+</pre></div>
+
+<p>为编号为 <code>signum</code> 的信号设置处理程序 <code>handler</code> (注意不是 handle)</p>
+<div class="fragment">
+<ul>
+<li>信号类型: RTFM! signal (7)<ul>
+<li>你们一开始会觉得读手册很痛苦</li>
+<li>但你会很惊奇地发现，过了这个学期，你会觉得读手册很享受<ul>
+<li>高效、准确、全面 (不像网上不靠谱的文章，长得要死还经常说错)</li>
+<li>因为你有了足够的知识储备，可以和手册对话了 (专业人士的标志)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>signal handler<ul>
+<li><code>SIG_IGN</code> (ignore), <code>SIG_DFL</code> (default), 或是一个函数的地址<ul>
+<li>demo: <a href="../static/wiki/os/2020/demos/signal-handler.c">signal-handler.c</a><ul>
+<li>stty 可以查看更多的终端控制命令 (Ctrl-D, Ctrl-\, ...)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="kill">kill 系统调用：发送信号</h2>
+<p><code>kill -SIGNAME pid</code></p>
+<ul>
+<li>可以对刚才的 signal-handler.c 发送 <code>SIGINT</code>, <code>SIGQUIT</code>, ...<ul>
+<li><code>SIGKILL</code> (9) 是不可忽略的信号</li>
+<li>(强行终止)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>为什么不推荐使用 kill -9?</p>
+<ul>
+<li>“The signals <code>SIGKILL</code> and <code>SIGSTOP</code> cannot be caught or ignored”<ul>
+<li>阻止了程序做 graceful shutdown</li>
+<li>例如删除临时文件<ul>
+<li>我们在 <code>SIGQUIT</code> 的时候调用 <code>exit()</code></li>
+<li>libc 会调用 <code>atexit()</code> 注册的处理程序</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="sigsegv-sigfpe">SIGSEGV 和 SIGFPE</h2>
+<p>Ring 3 程序运行的时候会产生<span class="red">异常</span></p>
+<ul>
+<li>page fault (且属于非法访问)</li>
+<li>divide by zero (非法访问; UB)<ul>
+<li>UNIX 系统会给进程发送一个信号</li>
+<li>Segmentation Fault 就是收到 SIGSEGV 后的 default handler 打印的</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>UNIX (System V) 信号其实是有一些 dark corners 的</p>
+<ul>
+<li>如果 <code>SIGSEGV</code> 里再次 <code>SIGSEGV</code>?<ul>
+<li>POSIX.1 solved the portability mess by specifying <code>sigaction(2)</code>, which provides explicit control of the semantics when a signal handler is invoked; use that interface instead of <code>signal()</code>. <ul>
+<li>支持多线程 (早期的 UNIX 还没有多线程)</li>
+<li>支持信号屏蔽</li>
+<li>可以从 <code>si_addr</code> 取出发生异常的内存地址</li>
+<li>……</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">信号在操作系统里的实现</h2>
+<p>只要进程不在 CPU 上运行</p>
+<ul>
+<li>不论是另一个进程执行 kill 还是当前进程发生异常</li>
+<li>进程的状态 (寄存器/内存) 都被 “封存” 在物理内存中<ul>
+<li>回顾 <a href="../static/wiki/os/2020/demos/trivial-os.c">trival-os.c</a>/xv6</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<p>实现信号</p>
+<ul>
+<li><span class="red">“模拟” 执行一次函数调用</span><ul>
+<li>保存寄存器现场</li>
+<li>准备参数、调用注册的 signal handler</li>
+<li>恢复寄存器现场，return 回到程序原先的执行流<ul>
+<li>Linux 的实现会复杂一些 (通过系统调用)</li>
+<li>因为需要通知操作系统信号处理完成</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>如果你能没有障碍地理解上述内容，祝贺你！你已经完成了 “过关”</p>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">信号机制：小结</h2>
+<blockquote>
+<p>随着课程的深入，我们对 “应用眼中的操作系统” 的理解越来越好了</p>
+<ul>
+<li>大家可以回过头来思考 “操作系统设计” 的问题</li>
+<li>为什么我们需要这些 APIs?</li>
+</ul>
+</blockquote>
+<p>异步进程间通信的系统调用</p>
+<ul>
+<li>signal/sigaction: 设置中断处理函数</li>
+<li>kill: 发送信号</li>
+</ul>
+<p>同步进程间通信的系统调用</p>
+<ul>
+<li>pipe</li>
+<li>mmap (共享内存)</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="job-control">Job Control</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">另一个拷问灵魂的问题</h2>
+<blockquote>
+<p>如果一个进程 <code>fork()</code> 了很多份</p>
+<ul>
+<li>我们按 Ctrl-C 到底是杀掉一个，还是杀掉全部？</li>
+<li>(站在操作系统设计者的角度考虑这个问题)</li>
+</ul>
+</blockquote>
+<p>进程的管理似乎没有那么简单！</p>
+<div class="codehilite"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp"></span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fork</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">pid</span> <span class="o">=</span> <span class="n">getpid</span><span class="p">();</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="mi">4096</span><span class="p">];</span>
+    <span class="kt">int</span> <span class="n">nread</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">STDIN_FILENO</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">nread</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"pid = %d got %d chars</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">pid</span><span class="p">,</span> <span class="n">nread</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="shell-job-control">Shell 的重要功能: Job Control</h2>
+<blockquote>
+<p>等效于 graphical shell (Windows/MacOS) 窗口的 “-” “x”……</p>
+<ul>
+<li>命令行也可以管理多个程序的运行！</li>
+</ul>
+</blockquote>
+<p>任务管理</p>
+<ul>
+<li><code>jobs</code>: 查看 (<code>+</code>: most current job; <code>-</code>: previous job)</li>
+<li><code>kill %1</code> 杀掉 job (<code>/bin/kill %1</code> 就不行，为什么？)</li>
+<li>Ctrl-C 给前台 job 发送 <code>SIGINT</code></li>
+</ul>
+<p>前台/后台运行</p>
+<ul>
+<li><code>./a.out &</code> 创建 job 后台运行</li>
+<li>Ctrl-Z 可以把前台 job 放到后台 (并暂停)<ul>
+<li>vim 放到后台就 “suspended”</li>
+</ul>
+</li>
+<li><code>bg</code> 可以在后台继续运行</li>
+<li><code>fg</code> 可以切换到前台</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="job-control-rtfm">Job Control: RTFM</h2>
+<blockquote>
+<p>官方手册 setpgid/getpgid(2) 是最好的文档，解释了 process group, session, controlling terminal 之间的关系</p>
+</blockquote>
+<ul>
+<li><p>A child created via fork(2) inherits its parent's <em>process group ID</em>.  The PGID is preserved across an execve(2).</p>
+</li>
+<li><p>Each process group is a member of a <em>session</em> and each process is a member of the session of which its process group is a member.</p>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/tty-session.png" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="job-control-rtfm-contd">Job Control: RTFM (cont'd)</h2>
+<ul>
+<li>A session can have a <em>controlling terminal</em>.<ul>
+<li>At any time, one (and only one) of the process groups in the session can be the <em>foreground process group</em> for the terminal; the remaining process groups are in the <em>background</em>.<ul>
+<li><code>./a.out &</code> 创建新的进程组 (使用 setpgid)</li>
+</ul>
+</li>
+<li>If a signal is generated  from  the  terminal  (e.g., typing the interrupt key to generate <code>SIGINT</code>), that signal is sent to the foreground process group.<ul>
+<li>破案了! Ctrl-C 是终端发的信号，发给它的 foreground 进程组</li>
+<li>所有 fork 出的进程 (默认同一个 PGID) 都会收到信号退出</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="job-control-rtfm-contd">Job Control: RTFM (cont'd)</h2>
+<ul>
+<li><p>Only  the foreground process group may read(2) from the terminal; if a background process group tries to read(2) from the terminal, then the group is sent a <code>SIGTTIN</code> signal, which suspends it.</p>
+<ul>
+<li>这解释了 <code>cat &</code> 时你看到的 “suspended (tty input)”</li>
+<li>同一个进程组的进程 read tty 会竞争<ul>
+<li>通常你不会写这样的程序</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>The <code>setpgid()</code> and <code>getpgrp()</code> calls are used by programs such as bash(1) to create process groups in order to implement shell job control.</p>
+<ul>
+<li>如果希望从进程组里 detach, 使用 setpgid</li>
+<li><code>ps -eo pid,pgid,cmd</code> 可以查看进程的 pgid</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="job-control">Job Control: 小结</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/tty-overview.png" width="800px"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<blockquote>
+<p>今天其实讲的是 “操作系统的设计”</p>
+<ul>
+<li>当我们有需求的时候，就会在操作系统中提供相应的对象/API <ul>
+<li>带着需求去理解操作系统的 API 会容易很多</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>操作系统为了 shell 能实现 job control 提供以下机制</p>
+<ul>
+<li>操作系统中的对象<ul>
+<li>终端 (和人交互)</li>
+<li>process group, session, ...</li>
+</ul>
+</li>
+<li>系统调用 API<ul>
+<li>signal, kill, setpgid, getpgid,  ...</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>查看 setpgid 和 wait 的手册</li>
+<li>尝试使用 job control 管理系统里的多个进程组</li>
+</ul>
+</div></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

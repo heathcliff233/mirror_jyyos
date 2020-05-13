@@ -95,7 +95,7 @@
 <li>访问设备前必须调用 <code>_ioe_init()</code> 完成设备初始化；</li>
 <li><code>_io_read</code> 和 <code>_io_write</code> 是同步的，即 API 会等操作完成后才返回 (例如像 <code>VIDEO</code> 设备的 <code>FBCTRL</code> 寄存器写入绘图命令，会等图形绘制完毕后返回)，操作过程中可能访问内存。</li>
 <li>不支持设备的运行时加载。如果系统中存在某个设备，则它从系统启动开始一直存在到系统 (<code>_halt()</code> 或崩溃)；</li>
-<li>读取/写入不存在的设备，返回 <code>0</code>；否则返回读取/写入的字节数。<ul>
+<li>读取/写入不存在的设备，返回 <code>&lt;= 0</code> 的数值；否则返回读取/写入的字节数。<ul>
 <li>在操作系统实验中，你可以假设所有 AbstractMachine 设备都存在；但你自己实现的某个硬件里可能就缺少定时器或持久存储。</li>
 </ul>
 </li>

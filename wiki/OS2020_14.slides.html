@@ -1,0 +1,630 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>输入/输出设备</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">输入/输出设备</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>很多人 (你们的同学们、家长们) 都有一个认识</p>
+<ul>
+<li>“计算机系就是装 (修) 电脑的”</li>
+<li><del>但上了计算机系发现根本不是这么回事啊</del><ul>
+<li>因为大家对电脑的印象只有 I/O 设备</li>
+</ul>
+</li>
+</ul>
+<p>问题：CPU 和操作系统是如何访问/管理 I/O 设备的？</p>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>I/O 设备和总线<ul>
+<li>6 个设备的例子</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="io">I/O 设备</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="io">I/O 设备</h2>
+<blockquote>
+<p>I/O 设备是沟通计算机和物理世界的桥梁</p>
+<ul>
+<li>没有 I/O 设备，计算机就只能 “计算”<ul>
+<li>把内存里的值搬到寄存器、运算、写回</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>在 CPU 看来</p>
+<ul>
+<li><p>I/O 设备是一个能与 CPU 交换数据的接口</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/canonical-device.png" width="600px"></img></p>
+</li>
+<li><p>实际上 CPU 和设备的控制器交互</p>
+<ul>
+<li>CPU 并不知道图形是如何打印到纸上、像素点是怎么绘制到屏幕上的</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="cpu-io">CPU 如何访问 I/O 设备？</h2>
+<p>I/O 设备以<span class="red">导线</span> (实际是某种接口协议) 的方式连接到计算机上的</p>
+<ul>
+<li>老式键盘/鼠标 (PS/2)</li>
+<li>显卡的插槽 (PCIe)</li>
+<li>优盘的插口 (USB type-A/type-C)</li>
+<li>……</li>
+</ul>
+<hr></hr>
+<p>CPU 使用 port I/O 或 memory-mapped I/O 访问</p>
+<ul>
+<li>使用 in/out 指令，访问 I/O 设备的寄存器<ul>
+<li>例子：键盘、鼠标、串口</li>
+</ul>
+</li>
+<li>直接执行 memory dereference 访问 memory-mapped I/O 设备<ul>
+<li>例子：显存、PCI、APIC</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1">例子 (1): 键盘控制器</h2>
+<p>IBM PC/AT 8042 PS/2 (Keyboard) Controller</p>
+<ul>
+<li>“硬编码” 到两个 I/O port: <code>0x60</code> (data), <code>0x64</code> (status/command)</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Command Byte</th>
+<th>Use</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0xED</td>
+<td>LED 灯控</td>
+<td>ScrollLock/NumLock/CapsLock</td>
+</tr>
+<tr>
+<td>0xF3</td>
+<td>设置键盘重复速度</td>
+<td>30Hz - 2Hz; Delay: 250 - 1000ms</td>
+</tr>
+<tr>
+<td>0xF4/0xF5</td>
+<td>打开/关闭</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>0xFE</td>
+<td>重新发送</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>0xFF</td>
+<td>RESET</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">inb</span><span class="p">(</span><span class="mh">0x64</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">((</span><span class="n">status</span> <span class="o">&</span> <span class="mh">0x1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 没有输入</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">&</span> <span class="mh">0x20</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 鼠标</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">code</span> <span class="o">=</span> <span class="n">inb</span><span class="p">(</span><span class="mh">0x60</span><span class="p">)</span> <span class="o">&</span> <span class="mh">0xff</span><span class="p">;</span>
+    <span class="c1">// 按键的 “扫描码”</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2">例子 (2): 磁盘控制器</h2>
+<p>ATA controller</p>
+<ul>
+<li>primary: <code>0x1f0 - 0x1f7</code>; secondary: <code>0x170 - 0x177</code></li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">waitdisk</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span>
+    <span class="p">(</span><span class="n">in_byte</span><span class="p">(</span><span class="mh">0x1f7</span><span class="p">)</span> <span class="o">&</span> <span class="mh">0xc0</span><span class="p">)</span> <span class="c1">// status (read)</span>
+      <span class="o">!=</span> <span class="mh">0x40</span><span class="p">)</span> <span class="p">;</span> <span class="c1">// RDY (ready)</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">readsect</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dst</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sect</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">waitdisk</span><span class="p">();</span>
+  <span class="n">out_byte</span><span class="p">(</span><span class="mh">0x1f2</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>          <span class="c1">// sector count (1)</span>
+  <span class="n">out_byte</span><span class="p">(</span><span class="mh">0x1f3</span><span class="p">,</span> <span class="n">sect</span><span class="p">);</span>       <span class="c1">// sector</span>
+  <span class="n">out_byte</span><span class="p">(</span><span class="mh">0x1f4</span><span class="p">,</span> <span class="n">sect</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">);</span>  <span class="c1">// cylinder (low)</span>
+  <span class="n">out_byte</span><span class="p">(</span><span class="mh">0x1f5</span><span class="p">,</span> <span class="n">sect</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span><span class="p">);</span> <span class="c1">// cylinder (high)</span>
+  <span class="n">out_byte</span><span class="p">(</span><span class="mh">0x1f6</span><span class="p">,</span> <span class="p">(</span><span class="n">sect</span> <span class="o">&gt;&gt;</span> <span class="mi">24</span><span class="p">)</span> <span class="o">|</span> <span class="mh">0xe0</span><span class="p">);</span> <span class="c1">// drive</span>
+  <span class="n">out_byte</span><span class="p">(</span><span class="mh">0x1f7</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">);</span>       <span class="c1">// command (write)</span>
+
+  <span class="n">waitdisk</span><span class="p">();</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SECTSIZE</span> <span class="o">/</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span> <span class="o">++</span><span class="p">)</span>
+    <span class="p">((</span><span class="kt">uint32_t</span> <span class="o">*</span><span class="p">)</span><span class="n">dst</span><span class="p">)[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">in_long</span><span class="p">(</span><span class="mh">0x1f0</span><span class="p">);</span> <span class="c1">// data</span>
+<span class="p">}</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="3">例子 (3): 中断控制器</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/6502-pinout.jpg" width="300px"></img></p>
+<p>CPU 有一个中断引脚</p>
+<ul>
+<li>收到某个特定的电信号会触发中断<ul>
+<li>保存 5 个寄存器 (cs, rip, rflags, ss, rsp)</li>
+<li>跳转到中断向量表对应项执行</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>系统中的其他设备可以向中断控制器连线</p>
+<ul>
+<li>Intel 8259 PIC<ul>
+<li>programmable interrupt controller</li>
+<li>可以设置中断屏蔽、中断触发等……</li>
+</ul>
+</li>
+<li>APIC (Advanced PIC)<ul>
+<li>local APIC<ul>
+<li>中断向量表, IPI, 时钟中断, ……</li>
+</ul>
+</li>
+<li>I/O APIC<ul>
+<li>其他 I/O 设备</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="4">例子 (4): 总线</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="cpu-io">回顾：CPU 如何访问 I/O 设备？</h2>
+<blockquote>
+<ul>
+<li>使用 in/out 指令，访问 I/O 设备的寄存器</li>
+<li>直接执行 memory dereference 访问 memory-mapped I/O 设备</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/6502-pinout.jpg" width="300px"></img></p>
+<hr></hr>
+<p>但我们的处理器只有很少量的接口</p>
+<ul>
+<li>6502 (8-bit): 40 pins</li>
+<li>8086 (16-bit): 40 pins</li>
+<li>80386DX (32-bit): 132 pins</li>
+<li>LGA1151 (64-bit): 1151 pins<ul>
+<li><del>跪 CPU 的梗</del></li>
+<li>这些指令是如何控制那么多 I/O 设备的？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="io">总线：一个特殊的 I/O 设备</h2>
+<blockquote>
+<p>提供 “<span class="red">另一个地址空间</span>” 和地址空间上的设备访问</p>
+<ul>
+<li>把收到的地址 (总线地址) 和数据进行转发</li>
+<li>例子: port I/O 的端口就是总线上的地址<ul>
+<li>IBM PC 的 CPU 其实只看到这一个 I/O 设备</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>这样 CPU 只需要直连一个总线 (例如今天是 PCI) 就行了</p>
+<ul>
+<li>总线可以桥接其他总线 (例如 PCI → USB)</li>
+<li><code>lspci -tv</code> 和 <code>lsusb -tv</code>: 查看系统中总线上的设备<ul>
+<li>概念简单，实际非常复杂……<ul>
+<li>电气特性</li>
+<li>burst 传输</li>
+<li>中断</li>
+<li>DMA (不需要 CPU 参与的数据复制)</li>
+<li>热插拔 (plug-and-play)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="pci-device-probe">例子：PCI Device Probe</h2>
+<p><a href="../static/wiki/os/2020/demos/pci-probe.c">pci-probe.c</a> (AbstractMachine, x86-64/i386)</p>
+<ul>
+<li>试着给 QEMU 增加 <code>-soundhw ac97</code> 的运行选项</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">bus</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">bus</span> <span class="o">&lt;</span> <span class="mi">256</span><span class="p">;</span> <span class="n">bus</span><span class="o">++</span><span class="p">)</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">slot</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">slot</span> <span class="o">&lt;</span> <span class="mi">32</span><span class="p">;</span> <span class="n">slot</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">info</span> <span class="o">=</span> <span class="n">pciconf_read</span><span class="p">(</span><span class="n">bus</span><span class="p">,</span> <span class="n">slot</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="kt">uint16_t</span> <span class="n">id</span>   <span class="o">=</span> <span class="n">info</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span><span class="p">,</span> <span class="n">vendor</span> <span class="o">=</span> <span class="n">info</span> <span class="o">&</span> <span class="mh">0xffff</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">vendor</span> <span class="o">!=</span> <span class="mh">0xffff</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">"%02d:%02d device %x by vendor %x"</span><span class="p">,</span> <span class="n">bus</span><span class="p">,</span> <span class="n">slot</span><span class="p">,</span> <span class="n">id</span><span class="p">,</span> <span class="n">vendor</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">id</span> <span class="o">==</span> <span class="mh">0x100e</span> <span class="o">&&</span> <span class="n">vendor</span> <span class="o">==</span> <span class="mh">0x8086</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">" &lt;-- This is an Intel e1000 NIC card!"</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</pre></div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="5-dma">例子 (5): DMA</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">中断没能解的问题</h2>
+<p>假设程序希望写入 1GiB 的数据到磁盘</p>
+<ul>
+<li>即便磁盘已经准备好，依然需要非常浪费缓慢的循环</li>
+<li>out 指令写入的是设备缓冲区，需要去<span class="red">总线</span>上绕一圈<ul>
+<li>cache disable; store 其实很慢的</li>
+</ul>
+</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="n">GiB</span> <span class="o">/</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">outl</span><span class="p">(</span><span class="n">PORT</span><span class="p">,</span> <span class="p">((</span><span class="n">u32</span> <span class="o">*</span><span class="p">)</span><span class="n">buf</span><span class="p">)[</span><span class="n">i</span><span class="p">]);</span>
+<span class="p">}</span>
+</pre></div>
+
+<blockquote>
+<p>能不能设计一个 I/O 设备来完成设备和内存之间的数据传输？</p>
+</blockquote>
+<p>好像 <code>memcpy_to_port(ATA0, buf, length);</code></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="direct-memory-access-dma">Direct Memory Access (DMA)</h2>
+<p>DMA: 在系统里增加一个新的 CPU, 专门执行 “<code>memcpy</code>” 程序</p>
+<ul>
+<li>不觉得用通用处理器实现它太浪费了？<ul>
+<li>实际实现：直接把 DMA 控制器连接在总线和内存上</li>
+<li>(PCI 总线自带 DMA)</li>
+</ul>
+</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="k">enum</span> <span class="n">dma_mtype</span> <span class="p">{</span> <span class="n">DMA_MEMORY</span><span class="p">,</span> <span class="n">DMA_MMIO</span><span class="p">,</span> <span class="n">DMA_PIO</span><span class="p">,</span> <span class="n">DMA_PCIE</span> <span class="p">};</span>
+<span class="k">struct</span> <span class="n">dma_rq</span> <span class="p">{</span>
+  <span class="k">enum</span> <span class="n">dma_mtype</span> <span class="n">src_type</span><span class="p">,</span> <span class="n">dst_type</span><span class="p">;</span>
+  <span class="kt">uintptr_t</span> <span class="n">size</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">;</span>
+  <span class="kt">uint8_t</span>   <span class="n">trunk</span><span class="p">[</span><span class="n">TRUNK_SIZE</span><span class="p">];</span>
+<span class="p">}</span> <span class="o">*</span><span class="n">rq</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">dma_processor</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">wait_for_rq</span><span class="p">();</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">uintptr_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">rq</span><span class="o">-&gt;</span><span class="n">size</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">rq</span><span class="o">-&gt;</span><span class="n">chunk_size</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">dma_load</span> <span class="p">(</span><span class="o">&</span><span class="n">rq</span><span class="o">-&gt;</span><span class="n">trunk</span><span class="p">,</span> <span class="n">rq</span><span class="o">-&gt;</span><span class="n">src</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+      <span class="n">dma_store</span><span class="p">(</span><span class="o">&</span><span class="n">rq</span><span class="o">-&gt;</span><span class="n">trunk</span><span class="p">,</span> <span class="n">rq</span><span class="o">-&gt;</span><span class="n">dst</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">raise_interrupt</span><span class="p">(</span><span class="n">IRQ_DMA</span><span class="p">);</span> <span class="c1">// inter-processor interrupt</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="dma">DMA: 内存一致性</h2>
+<p>还记得 “并发编程：从入门到放弃” 吗？</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">do_dma</span><span class="p">(...)</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="o">*</span><span class="n">rq</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">dma_rq</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span>
+  <span class="n">notify_dma_device</span><span class="p">();</span> <span class="c1">// DMA 是否看到写入 buf 的数据？</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>如果你知道一些 CPU 内部的工作原理，一定会觉得 “这事不简单”</p>
+<ul>
+<li><code>movl $1, (x)</code> → store buffer → L1 cache (write back) → L2 cache (write back) → L3 cache (write back)<ul>
+<li>DMA 如果直接访问内存，岂不是根本无法和 CPU 交流了？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="dma-contd">DMA: 内存一致性 (cont'd)</h2>
+<p>硬件维护一致性</p>
+<ul>
+<li>所以知道为什么 CPU 要带 PCIe lanes 了吧</li>
+<li>cache 里的热数据可以直接进 DMA!</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/Z390.png" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="dma-contd">DMA: 内存一致性 (cont'd)</h2>
+<p>软件/硬件共同维护一致性</p>
+<ul>
+<li>Linux: <code>dma_alloc_coherent()</code></li>
+<li>Windows: <code>KeFlushIoBuffers()</code></li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/DMA-coherence.png" width="600px"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="6-gpu">例子 (6): GPU</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="gpu-io">GPU: 既是 I/O 设备，也是处理器</h2>
+<p>GPU 的功能实际是执行多处理器并行程序 (例如 OpenGL, CUDA, ...)</p>
+<ul>
+<li>将执行结果写入内存 (和/或视频输出)</li>
+<li>nvcc: 把 main 编译/链接成 ELF; hello 编译成 GPU 指令</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="n">__global__</span> 
+<span class="kt">void</span> <span class="nf">hello</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">b</span><span class="p">)</span> <span class="p">{</span> <span class="n">a</span><span class="p">[</span><span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span> <span class="o">+=</span> <span class="n">b</span><span class="p">[</span><span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">];</span> <span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="n">a</span><span class="p">[</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="s">"Hello "</span><span class="p">,</span> <span class="n">b</span><span class="p">[</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="o">*</span><span class="n">ad</span><span class="p">,</span> <span class="o">*</span><span class="n">bd</span><span class="p">;</span>
+  <span class="n">cudaMalloc</span><span class="p">((</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&</span><span class="n">ad</span><span class="p">,</span> <span class="n">N</span><span class="p">);</span> <span class="n">cudaMalloc</span><span class="p">((</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&</span><span class="n">bd</span><span class="p">,</span> <span class="n">N</span><span class="p">);</span> 
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+
+  <span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">ad</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span> <span class="c1">// DMA</span>
+  <span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">bd</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span> 
+
+  <span class="n">dim3</span> <span class="n">dimBlock</span><span class="p">(</span> <span class="n">blocksize</span><span class="p">,</span> <span class="mi">1</span> <span class="p">);</span>
+  <span class="n">dim3</span> <span class="n">dimGrid</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span> <span class="p">);</span>
+  <span class="n">hello</span><span class="o">&lt;&lt;&lt;</span><span class="n">dimGrid</span><span class="p">,</span> <span class="n">dimBlock</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">ad</span><span class="p">,</span> <span class="n">bd</span><span class="p">);</span> <span class="c1">// 在 GPU 执行</span>
+
+  <span class="n">cudaMemcpy</span><span class="p">(</span> <span class="n">a</span><span class="p">,</span> <span class="n">ad</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">cudaMemcpyDeviceToHost</span> <span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+  <span class="p">...</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="gpu">GPU 和游戏有什么关系？</h2>
+<p>我们写过 amgame 了，游戏不就是画点么……</p>
+<ul>
+<li>但 CPU 画不过来啊<ul>
+<li>4K 60fps: 497,664,000 pixel/s</li>
+<li>大型 3D 游戏的场景<ul>
+<li>几百万个多边形描述形状, tessellation, 各种 shaders (例如 <a href="https://zhuanlan.zhihu.com/p/41269520">ambient occlusion</a>), ...</li>
+<li>我们需要超高性能的并行处理器 (GPU)!</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/death-stranding.jpg" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="gpu">GPU 的内部构造</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/turing-sm.jpg" width="350px"></img></p>
+<p>非常复杂的异构多处理器系统</p>
+<ul>
+<li>Nvidia RTX 2080 Ti: 68 SMs<ul>
+<li>Streaming Multiprocessor<ul>
+<li>INT32, FP32, Tensor/RT Cores</li>
+<li>可以看成 64 个 “CUDA” cores</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>SM 之间是 L2 Cache</li>
+<li>每个 core 都只做少量的事情<ul>
+<li>(就像 DMA)</li>
+<li>对比 CPU: 更低的功耗、更多的数量</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="gpu-rendering-pipeline">GPU 和 Rendering Pipeline</h2>
+<p><span class="center"><img src="../static/wiki/os/2019/img/gpu-1.png" width="800px"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="rendering-pipeline">Rendering Pipeline 和游戏的关系？</h2>
+<p>在原始图形上做<span class="red">像素级</span>的修改就可以实现几乎任何视觉效果</p>
+<ul>
+<li>更何况 3D 游戏有准确的模型、光源、材质等信息</li>
+<li>那些炫酷的画面都是 “计算出来” 骗你的 😂</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/ps.jpg" width="500px"></img>
+<img alt="" class="center" src="../static/wiki/os/2020/slides/img/before-after-ps.jpg" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="cpu-gpu">小结: CPU 和 GPU 如何给我们带来快乐？</h2>
+<blockquote>
+<p>游戏 (娱乐产业) 集计算机科学领域之大成</p>
+<ul>
+<li>游戏/硬件厂商勾结，更好的硬件、更好玩的游戏</li>
+<li>大家花 (不算太贵的) 钱买快乐 (<del>云玩家血赚</del>)</li>
+</ul>
+</blockquote>
+<p><span class="float-right"><img src="../static/wiki/os/2019/img/g-fat.gif" width="300px"></img></span></p>
+<p>在游戏的每一帧</p>
+<ul>
+<li>游戏引擎在 CPU 中更新游戏逻辑<ul>
+<li>UI 元素 → <span class="blue">人机交互</span></li>
+<li>玩家的状态</li>
+<li>怪物的位置</li>
+<li>AI 的决策 → <span class="blue">人工智能</span></li>
+</ul>
+</li>
+<li>CPU 准备好代码和数据给 GPU → <span class="blue">体系结构</span><ul>
+<li>cudaMemcpy, ... → <span class="blue">计算机系统</span></li>
+<li>通知显示控制器渲染 <code>render&lt;&lt;&lt;dim1,dim2&gt;&gt;&gt;(...)</code> → <span class="blue">编译器/PL</span></li>
+<li>rendering pipeline → <span class="blue">计算机图形学</span></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>I/O 设备与驱动</p>
+<ul>
+<li>3 个简单设备的例子<ul>
+<li>键盘、磁盘, PIC</li>
+</ul>
+</li>
+<li>3 个复杂设备的例子<ul>
+<li>总线, DMA, GPU</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>根据 lecture notes 阅读教科书相应部分</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

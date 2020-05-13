@@ -1,0 +1,744 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>持久化：1-bit 信息的存储</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="1-bit">持久化：1-bit 信息的存储</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="l2">一些有关 L2 的更新</h2>
+<blockquote>
+<p>因为 Online Judge 的 bug (<del>其实是大家做不完</del>)</p>
+<ul>
+<li>L2 soft deadline 延长到 5.17</li>
+</ul>
+</blockquote>
+<p>Bug symptom</p>
+<ul>
+<li>所有同学的提交 Online Judge 都返回相同的 Wrong Answer</li>
+<li>开发版本一切正常</li>
+</ul>
+<hr></hr>
+<p>Root cause</p>
+<ul>
+<li>在某次用错误程序测试的时候，在框架里留下了一个 <code>build/</code><ul>
+<li>这个 <code>/build</code> 在本地是旧的，make 总是重编译</li>
+<li>部署以后因为未知的原因，没有编译 (总是测试一个旧的 binary)</li>
+</ul>
+</li>
+<li>诊断过程：猜测是环境的问题<ul>
+<li>发现 <code>build/</code> 没有删掉</li>
+<li>尝试删掉，bug 解决</li>
+<li>(所以当天很快就搞定了)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>进入持久化部分</p>
+<ul>
+<li>持久地存储代码/数据/文档一直是计算机世界最基础的需求</li>
+<li>操作系统也相应提供对象和 APIs<ul>
+<li>它们是怎样设计/实现的？</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>持久化概述</li>
+<li>存储介质的故事<ul>
+<li>怎样存储 1-bit 信息？<ul>
+<li>磁、光、电</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="persistence">持久化 (Persistence)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">开始持久化之旅</h2>
+<blockquote>
+<p>Persistence: “<em>A firm or obstinate continuance in a course of action in spite of difficulty or opposition</em>.”</p>
+</blockquote>
+<p>为什么要在这门课讨论持久化？</p>
+<ul>
+<li>应用眼中的操作系统 = 对象 + 操作对象的 API<ul>
+<li>早期操作系统里的对象，除了进程就是文件<ul>
+<li>making information persist, despite computer crashes, disk failures, or power outages is a tough and interesting challenge</li>
+</ul>
+</li>
+<li>文件系统接管了 UNIX 世界的 “对象管理”</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>持久化：有关 “操作系统里的对象” 的故事</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">持久化的第一课：存储介质</h2>
+<blockquote>
+<p>为了使数据能持久地存储，存储设备必须基于物理上容纳数据的介质</p>
+<ul>
+<li>non-volatility</li>
+</ul>
+</blockquote>
+<p>存储设备</p>
+<ul>
+<li>逻辑上可以看成是一个 bit/byte array<ul>
+<li>1 TB 的磁盘 = 1 TB 个 1-byte (<math class="inline-math">8 * 10^{12}</math> 个 1-bit)</li>
+<li>通常支持按块 (block) 的方式读写</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>几个重要的维度：价格、扩展性 (容量)、速度、可靠性</p>
+<ul>
+<li>全面占优的新技术会取代旧的技术<ul>
+<li>大家看到的: SSD 取代 HDD</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">存储介质：磁</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="magnetic-tape-1928">磁带 (Magnetic Tape, 1928)</h2>
+<p>用磁介质存储 1-Bit 信息</p>
+<ul>
+<li>物理空间一定区域的磁介质<ul>
+<li>N/S 极的朝向作为 1-bit</li>
+</ul>
+</li>
+</ul>
+<p>例子：磁带</p>
+<ul>
+<li>纸带上均匀粘上 <math>\textrm{Fe}_2\textrm{O}_3</math></li>
+<li>支持顺序写入/读取</li>
+<li>写入：电磁铁磁化；读取：电磁感应 + 放大</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/fritz.jpg" width="400px"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">磁带：优点和缺点</h2>
+<p><span class="green">优点</span></p>
+<ul>
+<li>成本很低</li>
+<li>容量大</li>
+</ul>
+<p><span class="red">缺点</span></p>
+<ul>
+<li>存在机械部件</li>
+<li>速度较慢且只能顺序读写 ← 有没有办法克服？</li>
+<li>保存环境苛刻</li>
+</ul>
+<p><span class="blue">应用场景</span></p>
+<ul>
+<li>冷数据的专用备份</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="magnetic-drum-1932">磁鼓 (Magnetic Drum, 1932)</h2>
+<p>“并行版” 磁带</p>
+<ul>
+<li>如果把磁带看成 “一维” 存储<ul>
+<li>磁鼓就是磁带的集合</li>
+</ul>
+</li>
+<li>更快的速度</li>
+<li>更好的随机 read/write 性能</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/drum-memory.jpg" width="400px"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hard-disk-1956">磁盘 (Hard Disk, 1956)</h2>
+<p>“二维并行版” 磁带</p>
+<ul>
+<li>我们可以用整个二维平面来存储 bits</li>
+<li>在二维平面上寻址需要两个维度的控制</li>
+</ul>
+<p>依靠 3D 技术，有望突破 100 TB 存储</p>
+<p><span class="center"><img src="../static/wiki/os/2019/img/hard-disk-mag.jpg" width="600px"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">磁盘 (cont'd)</h2>
+<p><span class="center"><img src="../static/wiki/os/2019/img/disk-mechanism.jpg" width="500px"></img></span> </p>
+<hr></hr>
+<p>盘片 + 柱面 + 磁道 + 扇区 = 定位到 512 字节</p>
+<ul>
+<li>为了读/写一个扇区<ol>
+<li>读写头需要到对应的磁道</li>
+<li>转轴将盘片旋转到读写头的位置</li>
+</ol>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">磁盘：优点和缺点</h2>
+<p><span class="green">优点</span></p>
+<ul>
+<li>成本很低</li>
+<li>容量大<ul>
+<li>二维平面上铺满了磁带 (高密度)</li>
+<li>多个盘片</li>
+</ul>
+</li>
+</ul>
+<p><span class="red">缺点</span></p>
+<ul>
+<li>随机读写性能降低</li>
+<li>存在机械部件、可靠性相对一般<ul>
+<li>读写头划伤盘片……</li>
+</ul>
+</li>
+</ul>
+<p><span class="blue">应用场景</span></p>
+<ul>
+<li>计算机系统的主力数据存储</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">磁盘：性能调优</h2>
+<blockquote>
+<p>为了读/写一个扇区</p>
+<ol>
+<li>读写头需要到对应的磁道<ul>
+<li>7200rpm → 120rps → “寻道” 时间 8.3ms</li>
+</ul>
+</li>
+<li>转轴将盘片旋转到读写头的位置<ul>
+<li>读写头移动时间通常也需要几个 ms</li>
+</ul>
+</li>
+</ol>
+</blockquote>
+<p>通过缓存/调度等缓解</p>
+<ul>
+<li>例如著名的 “电梯” 调度算法</li>
+<li>现代 HDD 都有很好的 firmware 管理磁盘 I/O 调度<ul>
+<li><code>/sys/block/[dev]/queue</code></li>
+<li><code>noop deadline [cfq]</code></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="floppy-disk-1971">软盘 (Floppy Disk, 1971)</h2>
+<blockquote>
+<p>降低交换数据的成本：把磁盘 (硬盘) 的读写头和盘片分开</p>
+</blockquote>
+<p>电脑上有一份读写头 (floppy drive)</p>
+<p>盘片可以自由移动 (floppy disk)</p>
+<ul>
+<li>(<span class="green">优点</span>) 增加了便携性，降低了成本</li>
+<li>(<span class="red">缺点</span>) 速度/可靠性不可避免会降低</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">软盘 (cont'd)</h2>
+<p><span class="float-right"><img src="../static/wiki/os/2019/img/pal-floppy.jpg" width="250px"></img></span>  8" (1971), 5.25" (1975), 3.5" (1981)</p>
+<ul>
+<li>最初的软盘成本很低，就是个纸壳子</li>
+<li>3.5 英寸软盘已经是 “硬” 的了</li>
+<li>一个软件的 release 可能需要很多张软盘，需要在游戏过程中频繁换盘</li>
+</ul>
+<p>时间回到 1996 年 (小学三年级)</p>
+<ul>
+<li>戴鞋套进计算机房 (无盘, 80486 @ 66 MHz)</li>
+<li>带一张 1.44 MB 软盘上课</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/floppy-disk.jpg" width="500px"></img></span> </p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">存储介质：坑 (光)</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="compact-disk-cd-1980">Compact Disk (CD, 1980)</h2>
+<p>除了磁介质以外，还有别的办法可以存储 1-bit 吗？</p>
+<ul>
+<li><span class="red">挖坑</span><ul>
+<li>在完美反射光线的表面上挖出 (几乎) 不反射光线的坑</li>
+<li>激光扫过表面，就能读出坑的信息来</li>
+</ul>
+</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/cdplay.gif" width="300px"></img></span> </p>
+<hr></hr>
+<p>之后有了 CD-RW，可以用激光器烧出一个坑来 (这个操作可以)</p>
+<ul>
+<li>其实不是坑，是 phase change 晶体 (挖坑能量太大)</li>
+<li>用 append-only 的数据结构实现读/写</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1-bit">1-Bit 信息的存储</h2>
+<p>入坑 = 出坑 = 1; 其他 = 0</p>
+<ul>
+<li>EFM (Eight-to-Fourteen-Modulation) 编码<ul>
+<li>1 之间至少有两个 0</li>
+<li>14 个 pits 表示 1-byte</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/cd-bits.png" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">挖坑的技术进展</h2>
+<p>CD (740 MB)</p>
+<ul>
+<li>780nm 红外激光</li>
+</ul>
+<p>DVD (4.7 GB)</p>
+<ul>
+<li>635nm 红色激光</li>
+</ul>
+<p>Blue Ray (128 GB)</p>
+<ul>
+<li>405nm 蓝紫色激光</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">挖坑：优点和缺点</h2>
+<p><span class="green">优点</span></p>
+<ul>
+<li>成本极低</li>
+<li>容易大量复制</li>
+</ul>
+<p><span class="red">缺点</span></p>
+<ul>
+<li>存在机械部件<ul>
+<li>顺序读取性能尚可</li>
+<li>随机读取很慢</li>
+<li>可靠性差</li>
+</ul>
+</li>
+<li>挖坑容易，填坑难<ul>
+<li>适合只读的场景</li>
+</ul>
+</li>
+</ul>
+<p><span class="blue">应用场景</span></p>
+<ul>
+<li><del>数字产品发行</del> (被互联网挤压得几乎没有生存空间了)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">挖坑技术：不止是数据存储</h2>
+<p><br></br>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/EUV.jpg" width="800px"></img></p></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="finally">Finally, 电</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="solid-state-drive-1991">Solid State Drive (1991)</h2>
+<p>之前的持久存储介质都有致命的缺陷</p>
+<ul>
+<li>磁：机械部件导致 ms 级延迟</li>
+<li>坑 (光): 一旦挖坑，填坑很困难 (CD是只读的)</li>
+</ul>
+<p>最后还得靠<span class="red">电</span> (电路) 解决问题</p>
+<div class="fragment">
+<hr></hr>
+<p>Flash Memory</p>
+<ul>
+<li>floating gate 的充电/放电实现 1-bit 信息的存储</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/nand-flash.jpg" width="800px"></img></span> </p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="flash-memory">Flash Memory</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/2xserver.jpg" width="500px"></img></p>
+<p>几乎全是<span class="green">优点</span></p>
+<ul>
+<li>扩展性好 (容量大)<ul>
+<li>3D 空间里每个 <math class="inline-math">(x, y, z)</math> 都是一个 bit</li>
+<li>IMBA 特性：容量越大，速度越快 (电路级并行)</li>
+</ul>
+</li>
+<li>没有机械部件 (可靠)</li>
+<li>还便宜<ul>
+<li>这让市场上其他竞争对手怎么生存 😂</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="usb-flash-disk-1999">USB Flash Disk (1999)</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/upan.jpg" width="400px"></img></p>
+<p>优盘容量大、速度快、相当便宜</p>
+<ul>
+<li>很快就取代了软盘，成为了人手 <math class="inline-math">n</math> 个的存储介质<ul>
+<li>Compact Flash (CF, 1994)</li>
+<li>USB Flash Disk (1999, “朗科”)</li>
+<li>……</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>但是！Flash Drive 在很长一段时间里都没有取代 HDD, 一定有致命的<span class="red">缺点</span></p>
+<ul>
+<li>放电 (erase) 做不到 100% 放干净<ul>
+<li>放电数千/数万次以后，就好像是 “充电” 状态了</li>
+<li>dead cell</li>
+</ul>
+</li>
+<li>“wear out”</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="nand-flash-contd">NAND Flash (cont'd)</h2>
+<blockquote>
+<p>我亲身经历的故事：现在 SSD 已经开始全面取代 HDD 了</p>
+<ul>
+<li>为什么？</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>软件的进步</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/ssd.png" width="700px"></img></p>
+<ul>
+<li>每一个 SSD 上都有运行着管理软件的操作系统<ul>
+<li>FTL: flash translation layer<ul>
+<li>wear leveling: 软件管理那些可能出问题的 blocks</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="wear-leveling">Wear Leveling</h2>
+<p>维护一个 block lookup table (BLT)</p>
+<ul>
+<li>然后 copy-on-write!</li>
+<li>垃圾回收、block 重分配……</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/wear-leveling.jpeg" width="700px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">为什么不要用便宜优盘存储重要数据？</h2>
+<p>优盘, SD 卡, SSD 都有不同复杂程度的 FTL</p>
+<ul>
+<li>软件/硬件系统的复杂程度不同，效率/寿命也不同<ul>
+<li>典型的 SSD: CPU, on-chip RAM, 缓存, store buffer, 操作系统 ...</li>
+<li>寿命: ~1 PiB 数据写入 (~1,000 年寿命)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/fake-hdd.jpg" width="400px"></img></p>
+<p>优盘限于体积、功耗、成本等</p>
+<ul>
+<li>通常使用简单的 FTL 实现</li>
+<li>但如果是 × 宝 9.9 包邮的优盘……<ul>
+<li>芯片一毛钱都能省</li>
+<li>做个直接映射……</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ftl">FTL: 性能、可靠性、安全性的难题</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/chenguanxi.jpg" width="200px"></img></p>
+<p>大家可记得修电脑引发的血案？</p>
+<ul>
+<li>首先，(快速) 格式化是没用的<ul>
+<li>(M5 会告诉你这一点)</li>
+</ul>
+</li>
+<li>在你理解了 FTL 之后<ul>
+<li>即便格式化后写入数据 (不写满)<ul>
+<li>同一个 LBA 被覆盖</li>
+<li>但 PBA 依然存储了数据 (copy-on-write)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>另一个 memory system 相关的安全问题</p>
+<ul>
+<li>Row Hammer<ul>
+<li>O. Mutlu and J. Kim. RowHammer: A retrospective. <em>IEEE Trans. on Computer-Aided Design of Integrated Circuits and Systems</em> (TCAD), 2019.</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ssd">SSD 的可靠性：另一个故事</h2>
+<p>什么？硬件里的软件？</p>
+<ul>
+<li>其实非常复杂：算法, cache; store buffer; ...</li>
+</ul>
+<p>谁写出来的？<span class="blue">那可得有 bug 啊</span>！</p>
+<ul>
+<li>让我们好好构造疯狂的 workloads，把它弄挂吧！</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/mai-fast13.jpg" width="400px"></img></span> </p>
+<blockquote>
+<p>M. Zheng, et al. Understanding the robustness of SSDs under power fault. In <em>Proc. of FAST</em>, 2013.</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">有趣的故事：结果</h2>
+<p>这篇 paper 促进了硬件厂商对 FTL 的大幅改进</p>
+<ul>
+<li>在 2015 年之后出产的产品，已经几乎无法找到这样的问题了 (cool!)</li>
+</ul>
+<p><br></br>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Model</th>
+<th>Year</th>
+<th>Bug?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SSD#1, 10, 8, 9, 6, 2</td>
+<td>A</td>
+<td>2011 x 3, 2012 x 2, 2010</td>
+<td>Y</td>
+</tr>
+<tr>
+<td>SSD#2</td>
+<td>B</td>
+<td>2010</td>
+<td>Y</td>
+</tr>
+<tr>
+<td>SSD#3, 11, 12</td>
+<td>C</td>
+<td>2011</td>
+<td>Y</td>
+</tr>
+<tr>
+<td>SSD#4, 13</td>
+<td>D</td>
+<td>2011</td>
+<td>-</td>
+</tr>
+<tr>
+<td>SSD#5, 14, 7, 15</td>
+<td>E</td>
+<td>2009, 2011 x 2, 2012</td>
+<td>Y</td>
+</tr>
+</tbody>
+</table></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">存储介质：未来</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="non-volatile-memory">Non-Volatile Memory</h2>
+<p>存储技术一直在发展</p>
+<ul>
+<li>新工艺<ul>
+<li>例子: Intel/Micron 3D XPoint (PCM)</li>
+</ul>
+</li>
+<li>更大的容量</li>
+<li>更快的速度</li>
+<li>更低的功耗</li>
+<li>更先进的软件管理</li>
+</ul>
+<hr></hr>
+<p>Memory system 的性能/功耗一直是个很大的问题</p>
+<ul>
+<li>多核心处理器、GPU、TPU, ... 全部都对内存带宽有巨大的需求</li>
+<li>NVM 容量超过 DRAM, 性能开始接近 DRAM, 会发生什么？</li>
+</ul>
+<blockquote>
+<p>计算机系统基础/操作系统书的教科书都将被改写。</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>持久存储设备</p>
+<ul>
+<li>1-bit 在物理世界中的存储<ul>
+<li>磁、光、电</li>
+</ul>
+</li>
+<li>无论如何存储，抽象地看<ul>
+<li>实际上是 1-bit 的集合</li>
+<li>可以执行 (persist 的) 读/写操<ul>
+<li>通常支持以块为单位读/写</li>
+<li>这构成了 persistence 的基础</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>根据 lecture notes 阅读教科书相应部分</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

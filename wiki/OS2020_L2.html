@@ -49,6 +49,10 @@
     <div class="article">
       <h1 id="l2-kmt">L2: 多处理器内核上的线程管理 (kmt)</h1>
 <div markdown="1"><div class="fenced fenced-red"><div>
+<p>考虑到 OJ bug 和大家都痛不欲生，L2 的 soft deadline 延长到 5.17。</p>
+</div></div></div>
+
+<div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">常见问题</h4>
 <p>如果你框架的 <code>main</code> 中发现了 <code>vme_init</code> 并引起问题，请将这一行删除，这是 jyy 的锅 😂 此外，今年的 native 虽然功能完整，但仍然处于试验阶段。考虑到稳定性，你可以以 qemu (x86-64 和 i386) 为准。Online Judge 评测时只有 <code>x86-qemu</code> 和 <code>x86_64-qemu</code>。</p>
 <p>我们测试代码的时候，会替换我们的 <code>framework</code> 目录，因此你对其中文件 (例如 <code>kernel.h</code>) 的任何修改都会被消除。注意到我们的测试代码需要数据结构 (<code>sem_t</code> 等) 的定义，而这些定义并不在 <code>kernel.h</code> 中，因此你需要在 <code>common.h</code> 中包含它们，否则测试代码将无法编译。关于正确性标准，请参考 Section 3。</p>
@@ -65,7 +69,7 @@
 <ul>
 <li>如果你合并时发生了冲突，说明你修改了 <code>framework/</code> 下的代码。作为代价，请 STFW 如何解决 git pull 时的冲突。如果你对你的操作不自信，操作之前记得备份你的 <code>os-workbench</code> 目录，这个目录包含了你所有的 git 记录。</li>
 </ul>
-<p>Soft Deadline: 2020 年 5 月 3 日 23:59:59。</p>
+<p>Soft Deadline: 2020 年 5 月 17 日 23:59:59。</p>
 <p>本实验在 L1 代码的基础上完成。但如果你完全没有完成 L1，依然可以合并代码并开始 L2 (例如使用一个非常简单的 kalloc/kfree 实现)。需要提交以学号命名的 .pdf 格式实验报告 (保存在 <code>kernel/</code> 目录下，在 L1 的实验报告之后添加)。除非特殊情况，本次实验报告新增内容<strong>不建议超过 2 页 A4 纸</strong>。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的 bug 等。</p>
 </div></div></div>
 
