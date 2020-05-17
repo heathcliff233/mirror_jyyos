@@ -96,7 +96,7 @@
 <p>操作系统对每个同学来说都既陌生又熟悉。一方面每天我们都在使用操作系统，另一方面它又是现今计算机系统中最神秘和复杂的软件之一。首先，操作系统是一个典型的 “system”——它完成对计算机硬件系统的<span class="red">抽象</span>，提供应用程序的运行环境：</p>
 <ul>
 <li>从应用程序的视角看，操作系统定义了一系列的对象。操作系统定义了一系列的对象 (进程/线程、地址空间、文件、设备……) 和操纵它们的 API (系统调用)。这组强大的 API 把计算机的硬件资源有序地管理起来，它不仅能实现应用程序 (浏览器、游戏……)，还支持着各类神奇的系统程序 (容器、虚拟机、调试器、游戏外挂……)；</li>
-<li>从硬件的视角看，操作系统是一个拥有访问全部硬件功能的程序 (操作系统就是个 C 程序，不用怕)。硬件会帮助操作系统完成最初的初始化和加载，之后，操作系统完加载第一个程序后，从此作为 “中断处理程序” 在后台管理整个计算机系统。</li>
+<li>从硬件的视角看，操作系统是一个拥有访问全部硬件功能的程序 (操作系统就是个 C 程序，不用怕)。硬件会帮助操作系统完成最初的初始化和加载，之后，操作系统加载完第一个程序后，从此作为 “中断处理程序” 在后台管理整个计算机系统。</li>
 </ul>
 <p>操作系统使用正确的抽象使构造庞大的计算机软件/硬件生态从不可能变为可能。这门课围绕操作系统是<span class="red">如何设计</span> (应用程序视角)、<span class="red">怎样实现</span> (硬件视角) 两个角度展开。</p>
 <hr></hr>
@@ -145,7 +145,7 @@
 <li><span class="box box-red">持久化</span>  <a href="OS2020_IODev.html">输入/输出设备</a> <a href="OS2020_14.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
   | <a href="OS2020_IODev.html">设备驱动程序</a> <a href="OS2020_15.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
   | <a href="OS2020_M5.html">[M5] frecov</a></li>
-<li><span class="box box-red">持久化</span>    <span class="box box-yellow">C</span> 文件系统 API <a href=""><img alt="" src="../static/img/slides.png" width="18px"></img></a>
+<li><span class="box box-red">持久化</span>    <a href="OS2020_FSAPI.html">文件系统 API</a> <a href="OS2020_16.slides.html"><img alt="" src="../static/img/slides.png" width="18px"></img></a>
   | <span class="box box-yellow">C</span> 文件系统实现 <a href=""><img alt="" src="../static/img/slides.png" width="18px"></img></a>
   | <a href="">[L3] vfs</a></li>
 <li><span class="box box-red">持久化</span>  持久数据的可靠性 <a href=""><img alt="" src="../static/img/slides.png" width="18px"></img></a>
