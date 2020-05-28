@@ -1,0 +1,513 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>[C9] 文件系统实现</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="c9">[C9] 文件系统实现</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>文件系统 = 磁盘上的数据结构，支持</p>
+<ul>
+<li>文件操作 (open, read, write, lseek, mmap, ...)</li>
+<li>目录树操作 (mkdir, link, unlink, ...)</li>
+</ul>
+</blockquote>
+<p>如何设计数据结构，如何实现操作？</p>
+<ul>
+<li>FAT</li>
+<li>ext2</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">数据结构设计</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">回到数据结构课</h2>
+<blockquote>
+<p>根据抽象数据类型支持的操作，设计、实现数据结构的内存表示，并在运行库的基础上实现所有操作。</p>
+</blockquote>
+<p>《数据结构》课程的一些基本假设</p>
+<ul>
+<li>内存 (RAM) 是 random-access 的，允许随机访问<ul>
+<li>cache 帮我们填补了 DRAM 的延迟</li>
+</ul>
+</li>
+<li>允许使用操作系统的内存管理<ul>
+<li>malloc/free, new/delete, ...</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件系统：磁盘上的数据结构</h2>
+<p>磁盘上实现数据结构的挑战</p>
+<ul>
+<li>磁盘是以 block 为单位访问的<ul>
+<li>性能: <del>sequential access > random access</del><ul>
+<li>今天不是了！“碎片” 无所谓了！</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>没有 malloc 等库函数的支持<ul>
+<li><code>struct block disk[NBLOCK]</code> 上唯一的 API: <code>read_blk</code>, <code>write_blk</code></li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>一个疯狂的想法：封装成 random access memory 去实现复杂数据结构？</p>
+<ul>
+<li>今天看来很难<ul>
+<li>完全不考虑 block 的话会导致大量的数据读写浪费</li>
+<li>今天的 DRAM 依靠多级 cache 才勉强实现 “random access”<ul>
+<li>cache-friendly 的程序运行得更快</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>但也不是不可能<ul>
+<li>现在随机读写已经和顺序读写一样快了……</li>
+<li>教科书随时可能被改写</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件系统：设计需求</h2>
+<p>目录树操作</p>
+<ul>
+<li>link, unlink, mkdir, ...</li>
+</ul>
+<p>文件 (虚拟磁盘) 操作</p>
+<ul>
+<li>stat, read, write, lseek, ...</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/dir-tree.png" width="500px"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="fat">FAT</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1980">让时间回到 1980 年</h2>
+<p>5.25" 软盘：单面 180 KiB</p>
+<ul>
+<li>360 个 512B 扇区 (sectors)</li>
+<li>在这样的设备上持久化数据，应该选用怎样的数据结构？</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/floppy-drives.jpg" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fat">FAT 文件系统：分析</h2>
+<blockquote>
+<p>抛开 workload 谈优化，就是耍流氓。</p>
+</blockquote>
+<p>需求</p>
+<ul>
+<li>树状的目录结构</li>
+<li>系统中以小文件为主 (几个 block 以内)</li>
+<li>无需支持链接</li>
+</ul>
+<p>实现方式</p>
+<ul>
+<li>链表<ul>
+<li>任何复杂的高级数据结构都显得浪费</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">用链表存储数据：两种设计</h2>
+<ol>
+<li>在每个数据块后放置指针<ul>
+<li><span class="green">优点</span>：实现简单、无须单独开辟存储空间</li>
+<li><span class="red">缺点</span>：数据的大小不是 <math>2^k</math>; 单纯的 lseek 需要读整块数据</li>
+</ul>
+</li>
+<li>将指针集中存放在文件系统的某个区域<ul>
+<li><span class="green">优点</span>：局部性好；lseek 更快</li>
+<li><span class="red">缺点</span>：集中存放的数据损坏将导致数据丢失 (怎么办？)</li>
+</ul>
+</li>
+</ol>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/fat32_layout.gif" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="file-allocation-table">File Allocation Table</h2>
+<p>FAT-12/16/32 (FAT entry，即 “next 指针” 的大小)</p>
+<ul>
+<li>把磁盘分成 “cluster”<ul>
+<li>文件系统头部 BPB (BIOS Parameter Block) 标记了 cluster 的大小</li>
+</ul>
+</li>
+<li>在一段区域里 (FAT) 连续存放指针 (12/16/32-bit)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/diskblocks-fat.jpg" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="file-allocation-table-contd">File Allocation Table (cont'd)</h2>
+<p><a href="../static/wiki/os/MSFAT-spec.pdf">RTFM</a> 得到必要的细节</p>
+<ul>
+<li><code>0</code>: free; <code>2...MAX</code>: allocated; </li>
+<li><code>ffffff7</code>: bad cluster; <code>ffffff8-ffffffe</code>, <code>-1</code>: end-of-file</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/FAT-number.png" width="850px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">目录树实现：目录文件</h2>
+<blockquote>
+<p>目录 = 文件/目录的集合</p>
+<ul>
+<li>它本身也是一个数据结构<ul>
+<li>文件名 → 文件信息的映射</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>以普通文件的方式存储 “目录” 这个数据结构</p>
+<ul>
+<li>FAT: 目录 = 32-byte 定长目录项的集合</li>
+<li>操作系统在解析时把标记为目录的目录项 “当做” 目录即可<ul>
+<li>可以用连续的若干个目录项存储 “长文件名”</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/FAT-dent.png" width="800px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fat">FAT: 性能与可靠性</h2>
+<p>性能</p>
+<ul>
+<li>(+) 小文件简直太合适了</li>
+<li>(-) 但大文件的随机访问就不行了<ul>
+<li>4 GiB 的文件跳到末尾 (4 KiB cluster) 有 <math class="inline-math">2^{20}</math> 次链表 next 操作</li>
+<li>缓存能部分解决这个问题</li>
+</ul>
+</li>
+<li>在 FAT 时代，磁盘连续访问性能更佳<ul>
+<li>使用时间久的磁盘会产生碎片 (fragmentation)<ul>
+<li>malloc 也会产生碎片，不过对性能影响不太大</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>可靠性</p>
+<ul>
+<li>维护若干个 FAT 的副本防止元数据损坏<ul>
+<li>额外的同步开销</li>
+</ul>
+</li>
+<li>损坏的 cluster 在 FAT 中标记</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="ext2unix">ext2/UNIX 文件系统</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="systems-build-something">Systems: 不仅是 “Build Something”</h2>
+<blockquote>
+<p>“Understand something”</p>
+</blockquote>
+<p>实证研究是计算机系统/计算机软件研究中很重要的一部分</p>
+<ul>
+<li>真实系统的需求、行为往往未必是你想象的那样</li>
+<li>必须对实际系统的行为进行调研</li>
+</ul>
+<p>一些例子：</p>
+<ul>
+<li>对 system workload 的 study、建模、构造 (例如Cloud Workloads)</li>
+<li>对 bug 模式的 study (例如并发 bug ≈ deadlock + AV + OV)</li>
+<li>对行为的 study (例如 Github 上的开源项目；大家的 Git log)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件系统设计需求</h2>
+<p>使 “实际 workload” 下的性能尽可能好</p>
+<table>
+<thead>
+<tr>
+<th><strong>Summary</strong></th>
+<th><strong>Findings</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Most files are small</td>
+<td>Roughly 2K is the most common size</td>
+</tr>
+<tr>
+<td>Average file size is growing</td>
+<td>Almost 200K is the average</td>
+</tr>
+<tr>
+<td>Most bytes are stored in large files</td>
+<td>A few big files use most of the space</td>
+</tr>
+<tr>
+<td>File systems contains lots of files</td>
+<td>Almost 100K on average</td>
+</tr>
+<tr>
+<td>File systems are roughly half full</td>
+<td>Even as disks grow, file systems remain ~50% full</td>
+</tr>
+<tr>
+<td>Directories are typically small</td>
+<td>Many have few entries; most have 20 or fewer</td>
+</tr>
+</tbody>
+</table>
+<hr></hr>
+<ul>
+<li>M. Satyanarayanan. A study of file sizes and functional lifetimes. In <em>Proc. of SOSP</em>, 1981.<ul>
+<li>(TOPS-10; 1981) ~25%: 1 block; ~50%: < 5 blocks; ~75%: < 10 blocks</li>
+</ul>
+</li>
+<li>N. Agrawal, et al. A five-year study of file-system metadata. In <em>Proc. of FAST</em>, 2007.<ul>
+<li>(Windows; 2000) ~50: < 4KiB; ~85%: < 64KiB</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ext2unix">ext2/UNIX 文件系统</h2>
+<blockquote>
+<ol>
+<li>集中存储文件的元数据 (inode; index node)</li>
+<li><em>Fath/slow path</em>: 大小文件可以用不同方式处理</li>
+</ol>
+</blockquote>
+<p>回顾我们只有 <code>struct block[]</code></p>
+<ul>
+<li>对磁盘进行分组</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/fs-ext2.png" width="600px"></img></p>
+<ul>
+<li>1024B superblock: inode 数量、block group 信息、……<ul>
+<li><a href="../static/wiki/os/2020/demos/ext2.h">ext2.h</a> 里有你需要知道的一切</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ext2-inode">ext2 inode</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/ext2-inode.gif" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ext2">ext2 目录文件</h2>
+<blockquote>
+<p>与 FAT 本质相同：在文件上建立目录的数据结构</p>
+</blockquote>
+<p>注意到 inode 统一存储</p>
+<ul>
+<li>文件名到 inode 编号的 key-value mapping</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/ext2-dirent.jpg" width="640px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="ext2">ext2: 性能与可靠性</h2>
+<p>大文件的随机读写性能提升明显 (<math class="inline-math">O(1)</math>)</p>
+<ul>
+<li>支持链接 (一定程度减少空间浪费)</li>
+<li>inode 在磁盘上连续存储，便于缓存/预取</li>
+<li>依然有碎片的问题</li>
+</ul>
+<p>但可靠性依然是个很大的问题</p>
+<ul>
+<li>存储 inode 的数据块损坏是很严重的</li>
+<li>在下周的课程中展开</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">寻找更高效的数据结构？</h2>
+<blockquote>
+<p>在磁盘上实现一个新的抽象层？</p>
+<ul>
+<li>把磁盘虚拟成近似 “random access”、支持动态分配的数据结构</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/btrfs-cow.png" width="450px"></img></p>
+<p>btrfs: <em>Everything is a B-tree</em></p>
+<ul>
+<li>The BTRFS B-tree... knows only about “keys, items, and block headers.”<ul>
+<li>O. Rodeth, et al. BTRFS: The Linux B-tree filesystem. <em>ACM Transactions on Storage</em> (ToS), 9(3), 2013.</li>
+</ul>
+</li>
+<li>数据结构由多个 copy-on-write 的 tree 组成<ul>
+<li>subvolume, extent allocation tree, checksum tree, chunk and device tree, reloc tree, ...</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>两个具体文件系统的实现</p>
+<ul>
+<li>FAT<ul>
+<li>数据结构：FAT</li>
+<li>元数据存储在目录项中</li>
+</ul>
+</li>
+<li>ext2<ul>
+<li>数据结构：bitmap + inode + 索引</li>
+<li>元数据存储在 inode 中</li>
+</ul>
+</li>
+</ul>
+<p>从 “数据结构” 的角度去理解文件系统</p>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>开始 labs</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

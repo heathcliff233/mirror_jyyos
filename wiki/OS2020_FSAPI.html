@@ -1,6 +1,200 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>500 Internal Server Error</title>
-<h1>Internal Server Error</h1>
-<p>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.</p>
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>文件系统 API</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="api">文件系统 API</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a> 第 39 章。</p>
+<p>课外阅读材料：</p>
+<ul>
+<li>A. Baumann, et al. <a href="https://dl.acm.org/doi/10.1145/3317550.3321435">A <code>fork()</code> in the road</a>. In <em>Proc. of HotOS</em>, 2019.</li>
+</ul>
+</div></div></div>
+
+<h2 id="_1">文件系统概念</h2>
+<p>让应用程序直接管理磁盘并不是个好主意——你可以想象程序之间需要协调磁盘的并发访问，并且如果有程序出了 bug，其他程序的数据就可能被无故 “摧毁”。因此，为了更好地帮助应用程序管理持久数据，一个很自然的想法就是对磁盘进行 “虚拟化”，让应用程序访问 “虚拟” 的磁盘，实现应用与应用之间的隔离。</p>
+<p>文件系统就此诞生：它可以看成是一个从 “路径” 到 “虚拟磁盘” 的映射——每一个路径，例如若干大家熟悉的文件，虽然可以按照 “目录树” 来理解，但也可以理解成 key-value mapping (key 是路径名，value 是 “虚拟磁盘” 中的数据)：</p>
+<ul>
+<li><code>/proc/1234/maps</code> 映射到一组文本数据，标记了pid = 1234进程的内存映射情况；</li>
+<li><code>dev/sda</code> 映射到实际的物理磁盘；</li>
+<li><code>/home/jyy/Projects/wiki/server.py</code> 映射到文件系统中的一个文件 (虚拟磁盘)。</li>
+</ul>
+<p>从另一个角度，文件系统中的每个文件 (目录) 也都是操作系统中的对象，我们可以使用操作系统的 API 管理它们。</p>
+<h2 id="_2">目录树的创建</h2>
+<p>在 Linux (UNIX) 中，文件系统的根是 “<code>/</code>”，一切目录/文件都从根文件系统可达。文件系统中的目录构成一个树状的结构。下图是 Linux <a href="https://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html">Filesystem Hierarchy Standard</a> 中规定的一些目录和文件。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/FHS.png" width="640px"></img></p>
+<p>不过 Linux 系统的启动。在我们之前最小的 <a href="../static/wiki/os/2020/demos/linux-minimal.zip">Linux 系统镜像</a> 中，整个系统中就只有两个文件，一个是 busybox (系统中唯一的可执行文件)，和 init，一个启动的脚本：</p>
+<div class="codehilite"><pre><span></span>initramfs
+├── busybox
+└── init
+</pre></div>
+
+
+<p>这两个程序构成了系统启动的 “initramfs”, 正确的断句方式是 “init-ram-fs”——在初始化时内存中加载的文件系统。在真实的系统中，initramfs 包含了系统启动必要的程序：</p>
+<ul>
+<li>必要的内核模块 (例如设备驱动、文件系统等)。内核模块可以理解成操作系统内核运行时需要加载的动态链接库。模块的卸载机制还可以用于内核代码的更新。</li>
+<li>配置文件、启动系统所需的二进制文件 (如 bash)、动态链接库 (如 libc) 等。</li>
+</ul>
+<p>当然了，我们的演示程序中处于简单起见，使用静态链接方式连接了 busybox, 也不需要额外的驱动程序，因此就只有两个文件。在真实的 Linux 系统中的 <code>/boot/</code> 目录中可以看到 initrd.img 文件，里面有几十 MiB 的数据——同学们在更新系统遇到 Linux 内核或一些相关更新的时候，都会遭遇 Generate initramfs 这一耗时操作，就是为了更新这个初始的文件系统。</p>
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="initrdimg">想知道 initrd.img 里有什么？</h4>
+<p><code>initrd.img</code> 是个cpio archive (实际是 cpio archive 拼接而成的)。如果你有兴趣看看 Linux 初始文件系统中包含哪些文件，请 STFW。</p>
+</div></div></div>
+
+<p>但无论如何这几十 MiB 的 “初始镜像” 都不是我们看到的完整的文件系统——就像我们的最小 Linux 启动后，大家熟悉的 <code>/proc</code>, <code>/dev</code>, <code>/sys</code>，在系统中都没有。这些文件系统都是 init 和之后的应用程序使用 mount 系统调用挂载的。mount 完成的工作是<strong>把一个设备和一个文件系统实现联系起来，在设备上创建一个文件系统实例，并且把创建的文件系统 “替换” 到文件系统中的一个目录中</strong>。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/notes/img/mount.jpg" width="400px"></img></p>
+<p>如此一来，系统中的一个目录就成为了某个设备上文件系统的 “根”。这样我们就可以把多个设备 (硬盘、USB Flash Disk, ...) 都放置到同一个文件系统中。而在 Windows 中，“挂载” 通常是发生在 “驱动器” 层面的 (drive letter assignment)，例如插入 USB Flash Disk 以后会分配一个新的 “盘符”。使用 <code>mount -l</code> 命令可以查看系统中已经挂载的设备：</p>
+<div class="codehilite"><pre><span></span>sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+udev on /dev type devtmpfs (rw,nosuid,relatime,size=4052568k,nr_inodes=1013142,mode=755)
+devpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000)
+tmpfs on /run type tmpfs (rw,nosuid,noexec,relatime,size=816800k,mode=755)
+/dev/sda2 on / type ext4 (rw,relatime,data=ordered)
+...
+</pre></div>
+
+
+<p>挂载是通过 <code>mount</code> 系统调用实现的：</p>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">mount</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">source</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">target</span><span class="p">,</span>
+          <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filesystemtype</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">mountflags</span><span class="p">,</span>
+          <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">);</span>
+</pre></div>
+
+
+<blockquote>
+<p><code>mount()</code>  attaches  the filesystem specified by source (which is often a pathname referring to a device, but can also be the pathname of a directory or file, or a dummy string) to the location (a directory or file) specified by the pathname in target.</p>
+</blockquote>
+<p>例如，<code>mount /dev/sdb1 /mnt</code> 可以将某个磁盘设备 (通常是 USB) 挂载到<code>/mnt</code>。mount 也可以把一个文件直接挂载到文件系统中，不过是通过创建一个 loopback device (回环设备，将到设备的读/写请求重新转换为到文件的读/写) 实现的——这恰好体现了 “文件是虚拟化的磁盘” 的思想，我们可以通过 strace 观察 mount 命令的行为：</p>
+<div class="codehilite"><pre><span></span><span class="err">openat(AT_FDCWD, "/dev/loop-control", O_RDWR|O_CLOEXEC) = 3</span>
+<span class="err">ioctl(3, LOOP_CTL_GET_FREE)                             = 3</span>
+<span class="err">...</span>
+<span class="err">mount("/dev/loop3", "/mnt", "ext4", MS_MGC_VAL, NULL)   = 0</span>
+</pre></div>
+
+
+<p>在 loop (4) 的手册中：</p>
+<blockquote>
+<p><code>LOOP_CTL_GET_FREE</code>: Allocate or find a free loop device for use.  On success, the device number is returned as the result of the call.  This operation takes no argument.</p>
+</blockquote>
+<p><code>ioctl</code>() 返回了一个新的 loopback device 编号 (3)。之后的系统调用序列自动检测文件系统的类型为 ext4，然后使用 <code>mount</code> 系统调用完成挂载。</p>
+<h2 id="_3">目录/文件管理</h2>
+<p>有了完整的文件系统树，目录操作大家就非常熟悉了——在 Windows “资源管理器”、Linux 发行版中的 “文件管理器” 中，我们每天都对目录完成各种操作：创建目录、删除目录、重命名……Linux 提供了一系列的系统调用来管理文件系统中的目录和文件。这些系统调用会被 Linux 系统转发给具体的文件系统实现，请大家阅读教科书学习相关的内容。</p>
+<p>文件 (虚拟磁盘) 的访问时通过文件描述符完成的。今天文件描述符是访问操作系统对象的 “handle”，但最早的时候文件描述符的主要功能就是访问文件。我们可以对文件描述符执行文件访问操作：</p>
+<ul>
+<li>mmap，将文件数据映射到地址空间中的连续一段；</li>
+<li>read，读取数据并更新偏移量；</li>
+<li>write，写入数据并更新偏移量；</li>
+<li>lseek，修改文件描述符偏移量。使用 <code>SEEK_CUR</code>, <code>SEEK_SET</code> 和 <code>SEEK_END</code> 分别从当前位置、文件头部、文件尾部更新偏移量；</li>
+<li>ftruncate，改变文件的大小。</li>
+</ul>
+<p>文件描述符管理中，比较令人困惑的部分是文件描述符在 fork/execve 之后的行为。为了让父进程能灵活配置子进程的输入输出文件，UNIX 系统很自然地设计 execve() 系统调用的行为是继承进程原先的文件描述符 (自然也继承偏移量)。但 fork 之后，文件描述符中偏移量的行为就没有那么简单了：</p>
+<ul>
+<li>系统中如果有多个 <code>O_APPEND</code> 的进程，它们将始终写入文件的末尾；</li>
+<li>父子进程共享偏移量。例如父子进程都用 <code>printf()</code> 打印日志。当 <code>./a.out &gt; a.log</code> 时，父子进程需要共享偏移量以保证它们的日志不会互相覆盖。</li>
+</ul>
+<p>另一个麻烦之处是 <code>dup()</code> 复制的文件描述符，它似乎也应该和原先的文件描述符共享偏移量：我们可以用 dup 实现文件描述符的备份 (例如 stdout)：</p>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">stdout_fd_bak</span> <span class="o">=</span> <span class="n">dup</span><span class="p">(</span><span class="n">STDOUT_FILENO</span><span class="p">);</span> <span class="c1">// 备份</span>
+<span class="n">fflush</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span><span class="o">:</span>
+
+<span class="n">freopen</span><span class="p">(...,</span> <span class="n">stdout</span><span class="p">);</span> <span class="c1">// 替换stdout对应的文件描述符</span>
+<span class="p">...</span>
+<span class="n">fclose</span><span class="p">(</span><span class="n">stdout</span><span class="p">);</span>
+
+<span class="n">dup2</span><span class="p">(</span><span class="n">stdout_fd_bak</span><span class="p">,</span> <span class="n">STDOUT_FILENO</span><span class="p">);</span> <span class="c1">// 恢复</span>
+</pre></div>
+
+
+<p>关于这些细节，请大家阅读教科书第 39 章内容。实际上，操作系统内的 API 随着操作系统的演化。我们看到 Linux 经历了单处理器到多处理器、互联网的蓬勃发展、单机到云计算/数据中心的变迁，也发生了很多变化。随着计算机软件系统 (甚至编程语言，例如 C++ 和 Java) 的成长，很多老的机制在保持兼容性的同时，API 之间交互的复杂性也爆炸式地增长——例如操作系统中新增任何机制，都需要考虑和 fork 的交互；有些机制甚至 “放弃” 了对 fork 的支持，例如线程 (pthreads) 在 fork 之后只有执行 fork 的线程能继续执行。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

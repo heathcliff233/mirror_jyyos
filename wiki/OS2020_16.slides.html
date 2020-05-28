@@ -1,6 +1,597 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>文件系统 API</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="api">文件系统 API</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>即便完成了设备的抽象 (read + write + ioctl)，应用程序直接访问设备也是不合理的</p>
+<ul>
+<li>文件系统：存储设备的虚拟化</li>
+</ul>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>为什么需要文件系统？</li>
+<li>目录和文件</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">为什么需要文件系统？</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">为什么需要文件系统？</h2>
+<p>操作系统有将数据安全可靠地 “持久化” 到存储设备的需求</p>
+<ul>
+<li>程序、应用数据、代码、文本、……</li>
+</ul>
+<p>让应用程序直接通过驱动访问存储设备 (1950s)？</p>
+<ul>
+<li>系统中有非常多的程序，每个程序本身的存储就是问题</li>
+<li>每个程序还需要考虑各种访问权限、并发控制……</li>
+<li>程序出 bug 了，不小心弄坏了整块磁盘</li>
+</ul>
+<blockquote>
+<p>持久数据管理：设计目标</p>
+<ol>
+<li>提供合理的 API 使应用程序能管理持久数据</li>
+<li>尽可能使出问题 (或恶意) 的程序不会影响到其他程序的数据</li>
+</ol>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件系统：存储设备的虚拟化</h2>
+<p>磁盘 (I/O 设备) = 一个可以读/写的字节序列</p>
+<p><span class="red">虚拟磁盘</span> (文件) = 一个可以读/写/的动态字节序列</p>
+<ul>
+<li><code>std::vector&lt;char&gt;</code></li>
+<li>类比<ul>
+<li>进程 (虚拟 CPU): 分时共享一个 CPU</li>
+<li>虚拟存储：多个虚拟地址空间</li>
+<li>文件：多个虚拟磁盘</li>
+</ul>
+</li>
+</ul>
+<p><span class="red">虚拟磁盘管理</span></p>
+<ul>
+<li>虚拟磁盘 (文件) 的名称管理、查找……</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">文件系统：存储设备虚拟化 (cont'd)</h2>
+<p>文件系统是<span class="red">保存在持久存储上的数据结构</span></p>
+<ul>
+<li>规定了数据在磁盘上的存储方式</li>
+<li>允许对数据结构进行的操作<ul>
+<li>文件/目录系统调用</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>文件系统实现 = 数据结构的查询/修改操作</p>
+<ul>
+<li>文件系统未必需要实现成操作系统的一部分<ul>
+<li>“文件管理” 服务进程：有访问存储设备的权限</li>
+<li>其他进程：与文件管理进程通信发送文件操作请求</li>
+</ul>
+</li>
+<li>FUSE "file system in user space"<ul>
+<li><a href="https://github.com/libfuse/libfuse">libfuse</a></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">目录和文件</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">层次结构的文件系统</h2>
+<p>文件：可读写的数据对象；虚拟磁盘</p>
+<ul>
+<li>系统中可能有数百万的文件</li>
+<li>key-value 的方式不便于人类用户使用</li>
+</ul>
+<p>目录：文件/目录的集合 (形成一棵树)</p>
+<ul>
+<li>目录体现了<span class="red">局部性</span>：相关的数据存放在相近的目录</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/dir-tree.png" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="filesystem-hierarchy-standard-fhs"><a href="http://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html">Filesystem Hierarchy Standard</a> (FHS)</h2>
+<p>This standard (FHS) enables:</p>
+<ul>
+<li>Software to predict the location of installed files and directories, and</li>
+<li>Users to predict the location of installed files and directories</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/FHS.png" width="600px"></img></p>
+<ul>
+<li>例如 macOS 虽然是 UNIX 的内核 (BSD), 但就不遵循 Linux FHS<ul>
+<li>工具链等也略有不同 (dtrace, ktrace, trace, ...)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="api">文件 API</h1>
+<p><br></br>
+<p>(修改文件中的数据)</p></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">复习：文件描述符</h2>
+<blockquote>
+<p>文件描述符：进程用来访问操作系统对象的 “指针”</p>
+</blockquote>
+<p>还没有 “everything is a file” 的时候就是一个打开的文件</p>
+<ul>
+<li><code>STDIN_FILENO</code> (0)</li>
+<li><code>STDOUT_FILENO</code> (1)</li>
+<li><code>STDERR_FILENO</code> (2)</li>
+<li>open/pipe 获得</li>
+<li>close 释放</li>
+<li>dup/dup2 复制</li>
+<li>fork 时继承</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="mmap">mmap</h2>
+<p>使用 open 打开一个文件后</p>
+<ul>
+<li>用 <code>MAP_SHARED</code> 将文件映射到地址空间中</li>
+<li>用 <code>MAP_PRIVATE</code> 创建一个 copy-on-write 的副本</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">mmap</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span> <span class="n">prot</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span>
+  <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">);</span> <span class="c1">// 映射 fd 的 offset 开始的 length 字节</span>
+<span class="kt">int</span> <span class="nf">munmap</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">length</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">msync</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">addr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+</pre></div>
+
+<p>小问题：</p>
+<ul>
+<li>映射的长度超过文件大小会发生什么？</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>(RTFM, “Errors” section): <strong><code>SIGBUS</code></strong> Attempted access to a portion of the buffer that does not correspond to the file (for example, beyond the end of the file, including the case where another process has truncated the file).</p>
+<ul>
+<li>bus error 的常见来源 (M5)</li>
+<li>ftruncate 可以改变文件大小</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件访问的游标 (偏移量)</h2>
+<blockquote>
+<p>文件的读写自带 “游标”，这样就不用每次都指定写到哪里了</p>
+<ul>
+<li>方便了程序员</li>
+</ul>
+</blockquote>
+<p>例子</p>
+<ul>
+<li><code>read(fd, buf, 512);</code> - 第一个 512 字节</li>
+<li><code>read(fd, buf, 512);</code> - 第二个 512 字节</li>
+<li><code>lseek(fd, -1, SEEK_END);</code> - 最后一个字节<ul>
+<li>so far, so good</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1">偏移量管理：没那么简单 (1)</h2>
+<p>mmap, lseek, ftruncate 互相交互的情况</p>
+<ul>
+<li>初始时文件大小为 0<ol>
+<li>mmap (<code>length</code> = 2 MiB)</li>
+<li>lseek to 3 MiB (<code>SEEK_SET</code>)</li>
+<li>ftruncate to 1 MiB</li>
+</ol>
+</li>
+</ul>
+<blockquote>
+<p>在任何时刻，写入数据的行为是什么？</p>
+<ul>
+<li>blog posts 不会告诉你全部</li>
+<li>RTFM & 做实验！</li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2">偏移量管理：没那么简单 (2)</h2>
+<blockquote>
+<p>文件描述符在 fork 时会被子进程继承。</p>
+</blockquote>
+<p>父子进程应该共用偏移量，还是应该各自持有偏移量？</p>
+<ul>
+<li>这决定了 <code>offset</code> 存储在哪里</li>
+</ul>
+<hr></hr>
+<p>考虑应用场景</p>
+<ul>
+<li>父子进程同时写入文件<ul>
+<li>各自持有偏移量 → 父子进程需要协调偏移量的竞争<ul>
+<li>(race condition)</li>
+</ul>
+</li>
+<li>共享偏移量 → 操作系统管理偏移量<ul>
+<li>虽然仍然共享，但操作系统保证 <code>write</code> 的原子性 ✅</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">偏移量管理：行为</h2>
+<p>操作系统的每一个 API 都可能和其他 API 有交互 😂</p>
+<ol>
+<li>open 时，获得一个独立的 offset</li>
+<li>dup 时，两个文件描述符共享 offset</li>
+<li>fork 时，父子进程共享 offset</li>
+<li>execve 时文件描述符不变</li>
+<li><code>O_APPEND</code> 方式打开的文件，偏移量永远在最后 (无论是否 fork)<ul>
+<li>modification of the file offset and the write operation  are  performed  as  a single atomic step</li>
+</ul>
+</li>
+</ol>
+<hr></hr>
+<p>这也是 fork 被批评的一个原因</p>
+<ul>
+<li>(在当时) 好的设计可能成为系统演化过程中的包袱<ul>
+<li>今天的 fork 可谓是 “补丁满满”</li>
+<li>A. Baumann, et al. <a href="https://dl.acm.org/doi/10.1145/3317550.3321435">A <code>fork()</code> in the road</a>. In <em>Proc. of HotOS</em>, 2019.</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="api">目录/文件系统 API</h1>
+<p><br></br>
+<p>(修改文件系统的形态)</p></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">目录管理：创建/删除</h2>
+<p>这个简单 (trivial)</p>
+<ul>
+<li>mkdir<ul>
+<li>创建一个目录</li>
+<li>可以设置访问权限</li>
+</ul>
+</li>
+<li>rmdir<ul>
+<li>删除一个空目录</li>
+<li>没有 “递归删除” 的系统调用<ul>
+<li>(应用层能实现的，就不要在操作系统层实现)</li>
+<li><code>rm -rf</code> 会遍历目录，逐个删除</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hard">硬 (hard) 链接</h2>
+<p>需求：系统中可能有同一个运行库的多个版本</p>
+<ul>
+<li><code>libc-2.27.so</code>, <code>libc-2.26.so</code>, ...</li>
+<li>还需要一个 “当前版本的 libc”<ul>
+<li>程序需要链接 “<code>libc.so.6</code>”</li>
+<li>能否避免文件的一份拷贝？</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>硬连接：允许一个文件被多个目录引用</p>
+<ul>
+<li>目录中仅存储指向文件数据的指针</li>
+<li>链接目录 ❌</li>
+<li>跨文件系统 ❌</li>
+</ul>
+<blockquote>
+<p>小知识：其实所有的文件都是硬连接 (删除文件使用 unlink 系统调用)</p>
+<ul>
+<li>引用计数减 1，减少到 0 时文件数据被回收</li>
+<li>试试 <code>strace rm a.txt</code></li>
+</ul>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="symbolic">软 (symbolic) 链接</h2>
+<p>软链接：在文件里存储一个 “跳转提示”</p>
+<ul>
+<li>软链接也是一个文件<ul>
+<li>当引用这个文件时，去找另一个文件</li>
+<li>另一个文件的绝对/相对路径以文本形式存储在文件里</li>
+<li>可以跨文件系统、可以链接目录、……</li>
+</ul>
+</li>
+<li>允许多层链接<ul>
+<li>a → b → c</li>
+</ul>
+</li>
+<li>可以创建软连接的硬链接<ul>
+<li>(因为软链接也是文件)</li>
+<li><code>ls -i</code> 可以看到</li>
+</ul>
+</li>
+<li>操作系统在处理软链接时会执行路径解析<ul>
+<li>事情好像越来越复杂了 😂</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">进程的 “当前目录”</h2>
+<p>working/current directory</p>
+<ul>
+<li><code>pwd</code> 命令或 <code>$PWD</code> 环境变量可以查看</li>
+<li><code>chdir</code> 系统调用修改<ul>
+<li>对应 shell 中的 cd</li>
+<li>注意 cd 是 shell 的内部命令<ul>
+<li>不存在 <code>/bin/cd</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>文件系统引入的混乱</p>
+<ul>
+<li>线程是共享 working directory, 还是各自独立持有一个？</li>
+<li>如果符号链接成环？<ul>
+<li><code>ln -s . a</code></li>
+<li>所有处理符号链接的程序 (tree, find, ...) 都要考虑递归的情况</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件系统的挂载</h2>
+<p>UNIX 允许任何一个目录都可以作为另一个文件系统的 “根”</p>
+<ul>
+<li>非常有用的 feature</li>
+<li>还记得我们的 “最少” Linux 吗？<ul>
+<li>procfs, sysfs (文件系统实现) 是使用 mount 挂载的</li>
+</ul>
+</li>
+<li>M5 (frecov) 中大家也可以直接把镜像挂载到本地<ul>
+<li>mount 工具<ul>
+<li>检测镜像类型 (vfat)</li>
+<li>如果有 <code>/sbin/mount.vfat</code>，则调用 (部分特殊文件系统使用)</li>
+<li>否则执行 <code>mount</code> 系统调用<ul>
+<li><code>mount("/dev/loop4", "/mnt", "vfat", MS_MGC_VAL, NULL)</code></li>
+<li>把文件封装成一个 “loopback device” (回环设备), loop (4)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="api">文件系统 API 没能覆盖的需求</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">持久数据管理：不只是文件</h2>
+<blockquote>
+<p>文件是虚拟的磁盘；目录适用于管理少量文件。</p>
+</blockquote>
+<p>树状结构在结构化数据 (数据结构) 上的天生劣势</p>
+<ul>
+<li>目录中有 1,000,000 个文件</li>
+<li>查找文件名包含 “123” 的文件<ul>
+<li>按照现有的文件系统实现，需要遍历所有文件</li>
+</ul>
+</li>
+</ul>
+<p>文件系统没能解决的需求</p>
+<ul>
+<li>大量的数据 (订单、用户、网络……)</li>
+<li>非顺序存储的查询</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">基于文件系统的更多抽象</h2>
+<blockquote>
+<p>在文件系统 (虚拟磁盘) 上继续抽象</p>
+<ul>
+<li>就像我们在内存 (random access memory) 上构建各种数据结构<ul>
+<li>binary heap, binary search tree, hash table, ...</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>关系数据库</p>
+<ul>
+<li>二维表、关系代数</li>
+</ul>
+<p>key-value store</p>
+<ul>
+<li>持久化的 <code>std::map</code></li>
+</ul>
+<p>VCS (git, svn, ...)</p>
+<ul>
+<li>目录树的快照集合</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>文件系统 API</p>
+<ul>
+<li>文件和目录</li>
+<li>文件管理/目录管理 API<ul>
+<li>open, mmap, read, write, lseek, ftruncate, chdir, mkdir, rmdir, link, unlink, symlink, mount, ...</li>
+<li>你们会在 L3 中体验性地实现一部分<ul>
+<li>体会一下简化的 “系统软件” 的复杂性</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>阅读教科书 39 章 <ul>
+<li>在 Linux 中尝试各种文件系统管理的命令</li>
+</ul>
+</li>
+<li>M5: frecov; L3: vfs</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

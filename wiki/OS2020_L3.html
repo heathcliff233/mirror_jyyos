@@ -1,0 +1,185 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>L3: 文件系统实现 (vfs)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="l3-vfs">L3: 文件系统实现 (vfs)</h1>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">常见问题</h4>
+<p>(框架代码已更新，讲义/OJ 暂时没有完成)</p>
+<p>如果你的实验提交到了 L2, 请修改 Makefile 中的 <code>MODULE := L3</code>。</p>
+</div></div></div>
+
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">截止日期</h4>
+<p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin L3</span>
+</pre></div>
+
+
+<p>Soft Deadline: 2020 年 6 月 28 日 23:59:59。</p>
+<p>本实验在 L2 代码的基础上完成。但如果你完全没有完成 L2，依然可以合并代码并开始 L3。只要实现正确的 mkfs，并且能在 <code>vfs_init</code> 之后正确读写磁盘上的文件，就可以通过一定的测试用例。</p>
+<p>需要提交以学号命名的 .pdf 格式实验报告 (保存在 <code>kernel/</code> 目录下，在 L2 的实验报告之后添加)。除非特殊情况，本次实验报告新增内容<strong>不建议超过 2 页 A4 纸</strong>。请在实验报告中描述你在实验中遇到的特别值得一提的事件，例如你代码的架构设计、特别精巧的实现、遇到印象深刻的 bug 等。</p>
+</div></div></div>
+
+<div plugin="submission(course='OS2020', module='L3')"><div class="accordion submission" id="accordionExample">
+
+  <div class="card">
+    <div class="card-header submit-card">
+      <form action="../upload.html" method="post" enctype="multipart/form-data">
+        <div class="form-row align-items-center">
+            <label class="col-form-label">OS2020-L3</label> 提交结果
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+</div></div>
+
+<h2 id="1">1. 背景</h2>
+<p>在这个实验中，我们在多处理器分时多线程的基础上实现<strong>线程安全</strong>的虚拟文件系统 (virtual file system, VFS) API，并且在 VFS 这一抽象层上实现若干不同的文件系统：</p>
+<ul>
+<li>在存储设备 (<code>sda</code>) 上支持完整文件和目录操作的文件系统 “ultra-simple file system” (ufs);</li>
+<li>虚拟的 procfs，提供一系列只读的、反映操作系统内部状态的文件；</li>
+<li>虚拟的 devfs，将操作系统中的设备抽象为可以访问的文件，并为这些文件提供读写操作。</li>
+</ul>
+<p>实现完成后，系统中的多个线程就能通过文件系统 API 读写文件——至此我们离现代操作系统就只有一步之遥 (下一个实验)：为每个线程附属一个独立的地址空间 (通过虚拟存储实现)，线程就变成了我们熟知的进程，操作系统就完整了。大家不妨再次回顾一下 <a href="../static/wiki/os/2020/demos/trivial-os.c"><code>trival-os.c</code></a>，你们一定感到自己对操作系统的理解越来越深入了。</p>
+<h2 id="2">2. 实验描述</h2>
+<h3 id="21">2.1 实验总览</h3>
+<p>这个实验在 pmm 和 kmt 的基础上，在磁盘上实现持久的文件系统，并且在线程级别支持文件描述符和文件/目录操作 API——vfs 的 API 看起来就像是大家在系统调用中使用的那样！</p>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">ufs_stat</span><span class="p">;</span>
+<span class="n">MODULE</span><span class="p">(</span><span class="n">vfs</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)();</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">write</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">read</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">close</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">open</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">lseek</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">int</span> <span class="n">whence</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">link</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">oldpath</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">newpath</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">unlink</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">fstat</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="k">struct</span> <span class="n">ufs_stat</span> <span class="o">*</span><span class="n">buf</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">mkdir</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">chdir</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">dup</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>注意到我们的框架中还提供了 <code>framework/user.h</code>, 这个文件是用户进程 (假想有的话)/内核之间共享的，它定义了诸如 <code>struct ufs_stat</code>, 以及若干函数参数的含义，和目录文件的格式。例如 <code>whence</code> 中的 <code>SEEK_SET</code>, <code>SEEK_CUR</code> 和 <code>SEEK_END</code>：</p>
+<div class="codehilite"><pre><span></span><span class="cp">#define T_DIR     1</span>
+<span class="cp">#define T_FILE    2</span>
+
+<span class="cp">#define SEEK_CUR  0</span>
+<span class="cp">#define SEEK_SET  1</span>
+<span class="cp">#define SEEK_END  2</span>
+
+<span class="cp">#define O_RDONLY  00000000</span>
+<span class="cp">#define O_WRONLY  00000001</span>
+<span class="cp">#define O_RDWR    00000002</span>
+<span class="cp">#define O_CREAT   00000100</span>
+
+<span class="k">struct</span> <span class="n">ufs_stat</span> <span class="p">{</span>
+  <span class="kt">uint32_t</span> <span class="n">id</span><span class="p">,</span> <span class="n">type</span><span class="p">,</span> <span class="n">size</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="n">ufs_dirent</span> <span class="p">{</span>
+  <span class="kt">uint32_t</span> <span class="n">inode</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="n">name</span><span class="p">[</span><span class="mi">28</span><span class="p">];</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">));</span>
+</pre></div>
+
+
+<p>请不要修改上述框架中的定义，但文件系统的数据结构设计、线程同步等你都可以自由发挥！虽然文件系统的实现原理简单，但实现文件系统的工作量够大 (而且要小心处理很多 error handling)，请你做好调试代码的心理准备 😁。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
