@@ -1,0 +1,462 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>崩溃一致性</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">崩溃一致性</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>RAID 可以容忍磁盘的 fail-stop</p>
+<ul>
+<li>但这并不意味着我们的文件系统就可靠了！</li>
+</ul>
+</blockquote>
+<p>本讲概述</p>
+<ul>
+<li>崩溃一致性：持久数据可靠性的另一个维度</li>
+<li>崩溃恢复<ul>
+<li>fsck</li>
+<li>journaling</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">持久数据的可靠性：另一个维度</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="crash-consistency">崩溃一致性 (Crash Consistency)</h2>
+<p>断电、系统软件/硬件 bug, ...</p>
+<p><img alt="" class="center" src="../static/wiki/os/2019/img/cat-crash-consistency.jpg"></img></p>
+<blockquote>
+<p><strong>Crash Consistency</strong>: Move the file system from one consistent state (e.g., before the file got appended to) to another atomically (e.g., after the inode, bitmap, and new data block have been written to disk).</p>
+</blockquote>
+<p><span class="center">(你们平时编程时假设不会发生的事，操作系统都要给你兜底)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">导致崩溃一致性问题的原因</h2>
+<blockquote>
+<p>数据结构的维护需要多个数据块的写入。</p>
+</blockquote>
+<p>如果系统不发生 crash, 磁盘 eventually 会帮我们顺序写入</p>
+<ul>
+<li>RAID: write(<math class="inline-math">V_0</math>) <math class="inline-math">\to</math> write(<math class="inline-math">A_0</math>) write(<math class="inline-math">B_0</math>)</li>
+<li>ext2 (文件追加写入一块): write(inode); write(bitmap); write(data);</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>多次写入没有原子性保证 😂</p>
+</blockquote>
+<p>磁盘 firmware: 为了性能，我拼了！</p>
+<ul>
+<li>除非特别要求 (发送 flush 指令)，否则默认乱序执行请求</li>
+<li>甚至可能发现 block data corruption<ul>
+<li>假设 checksum 可以发现</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">原子性的丧失：后果</h2>
+<p>考虑文件追加写的三个 writes</p>
+<ul>
+<li>[1] 文件的 inode (size、索引) [2] data bitmap [3] data block<ul>
+<li><math>\{1\}</math> - corrupted filesystem</li>
+<li><math>\{2\}</math> - dead block</li>
+<li><math>\{3\}</math> - random writes</li>
+<li><math>\{1,2\}</math> - incorrect data</li>
+<li><math>\{1,3\}</math> - corrupted filesystem</li>
+<li><math>\{2,3\}</math> - dead block</li>
+</ul>
+</li>
+</ul>
+<p>更复杂的情况你还敢想吗？</p>
+<ul>
+<li>大文件多级索引的更新</li>
+<li>link/unlink</li>
+<li>跨数据块的目录文件更新 (rename)</li>
+<li>……</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="fsck">崩溃恢复: FSCK</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="file-system-checking-fsck">File System Checking (FSCK)</h2>
+<blockquote>
+<p>FSCK: 根据磁盘上已有的信息，恢复出 “最可能” 的数据结构</p>
+</blockquote>
+<p>恢复规则：例子</p>
+<ul>
+<li>检查 inode 标记的数据块是否 bitmap 都标记为 “1”</li>
+<li>检查 inode 数据是否 “看起来合法”，否则删除</li>
+<li>检查是否存在 dangling link<ul>
+<li>没有链接的 inode 被移到 lost+found 目录中)</li>
+</ul>
+</li>
+<li>……</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="file-system-checking-fsck">File System Checking (FSCK)</h2>
+<p>FSCK 的挑战</p>
+<ul>
+<li>在发生不一致的时候很难决定 “到底什么是对的”</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/fsck-recovery.png" width="700px"></img></p>
+<ul>
+<li>H. S. Gunawi, et al. SQCK: A declarative file system checker. In <em>Proc. of OSDI</em>, 2008.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fsck">如果 fsck 的时候发生崩溃 😂</h2>
+<p>fsck 也是程序，fsck 也要访问文件系统</p>
+<ul>
+<li>如果 fsck 时发生崩溃，会发生什么？<ul>
+<li>O. R. Gatla, et al. Towards robust file system checkers. In <em>Proc. of FAST</em>, 2018.</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>文件系统可能进入彻底无法恢复的状态！</p>
+</blockquote>
+<p>我们还需要一个更 “constructive” 的办法实现崩溃一致性</p>
+<ul>
+<li>假设数据没有发生损坏，只是 multi-write 原子性被破坏</li>
+<li>(数据损坏时依然需要 FSCK)</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="journaling">崩溃恢复: Journaling</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="journaling">日志 (Journaling)</h2>
+<blockquote>
+<p>假设磁盘提供 write (写入数据块) 和 sync (等待数据落盘)</p>
+<ul>
+<li>我们能否实现一种 crash-safe 的数据结构？</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>简化的问题: append-only 的 block vector</p>
+<ul>
+<li>atomic-append(blocks); 随机读取 read(blk)</li>
+</ul>
+<p>实现方法</p>
+<ul>
+<li>保证之前的数据落盘后才写下一份数据</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/journaling.png" width="800px"></img></p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="copy-on-write">插曲: 实现 Copy-on-Write 的数据结构</h2>
+<p>我们可以用 block vector 实现树结构！</p>
+<ul>
+<li>修改一个节点：把树从根到改节点的路径复制一份 <math class="inline-math">O(\log n)</math></li>
+</ul>
+<p>BTRFS: everything is a B-tree</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/btrfs-cow.png" width="700px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="multi-write">实现 Multi-Write 的原子性</h2>
+<p>数据结构有两种实现方法</p>
+<ol>
+<li>存储实际<span class="red">数据结构</span><ul>
+<li>文件系统的 “直观” 表示</li>
+<li>crash unsafe</li>
+</ul>
+</li>
+<li>append-only 记录所有<span class="red">历史操作</span><ul>
+<li>需要 replay 所有操作才能得到数据结构的当前状态</li>
+<li>crash safe (用 journal 实现)</li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p>我们可以同时维护这两种数据结构，同时得到它们的好处！</p>
+</blockquote>
+<div class="fragment">
+<p>Journaled file system</p>
+<ol>
+<li>用 atomic-append 将操作写入 journal，并等待落盘</li>
+<li>更新磁盘上的数据结构<ul>
+<li>如果不崩溃，始终通过磁盘上的数据结构访问</li>
+</ul>
+</li>
+<li>crash 以后根据 journal 重构数据结构</li>
+</ol>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="multi-write-contd">实现 Multi-Write 的原子性 (cont'd)</h2>
+<p>数据结构 v.s. 历史操作</p>
+<ul>
+<li>也称为 “redo logging”, “write-ahead logging”</li>
+<li>另一种 undo logging: 记录如何 “抵消” 操作 (即块中的数值)</li>
+</ul>
+<hr></hr>
+<p>在磁盘上存储数据结构</p>
+<ul>
+<li>一旦一段历史已经体现在数据结构中，这段历史就不再需要了<ul>
+<li>因此一般只需要开辟较小的区域用于 journaling </li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="xv6-journaling">xv6 Journaling</h2>
+<p>buffer cache (bio.c)</p>
+<ul>
+<li><code>bget</code>, <code>brelease</code>, <code>bread</code>, <code>bwrite</code></li>
+</ul>
+<p>journaling (log.c)</p>
+<ul>
+<li><code>begin_op</code>, <code>end_op</code> (主要的调用在 sysfile.c)<ul>
+<li>这两个 API 使编程变得容易得多了 (例如 <code>sys_link</code>)</li>
+</ul>
+</li>
+<li><code>commit</code><ul>
+<li><code>write_log</code></li>
+<li><code>write_head</code></li>
+<li>将 head 的 <code>log.lh.n</code> 清零，再写入 (TxEnd)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="journaling">Journaling: 优化</h2>
+<p>批处理 (xv6; jbd)</p>
+<ul>
+<li>多次系统调用的 Tx 合并成一个，减少 log 的大小</li>
+<li>jbd: 定期 write back</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>Checksum (ext4)</p>
+<ul>
+<li>不再标记 TxBegin/TxEnd</li>
+<li>直接标记 Tx 的长度和 checksum</li>
+</ul>
+</div>
+<div class="fragment">
+<hr></hr>
+<p>Metadata journaling (ext4 default)</p>
+<ul>
+<li>数据占磁盘写入的绝大部分<ul>
+<li>只对 inode 和 bitmap 做 journaling 可以提高性能</li>
+</ul>
+</li>
+<li>保证文件系统的目录结构是一致的；但数据可能丢失</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="metadata-journaling">Metadata Journaling</h2>
+<blockquote>
+<p>这是一个 trade-off。</p>
+<ul>
+<li>提升了性能</li>
+<li>牺牲了文件系统的一致性</li>
+</ul>
+</blockquote>
+<p>从应用视角来看，文件系统的行为可能很怪异</p>
+<ul>
+<li>各类系统软件 (git, sqlite, gdbm, ...) 不幸中招<ul>
+<li>T. S. Pillai. All file systems are not created equal: On the complexity of crafting crash-consistent applications. In <em>Proc. of OSDI</em>, 2014.</li>
+<li>(os-workbench 里的小秘密)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><a href="https://zhuanlan.zhihu.com/p/25188921">更多的应用程序可能发生 data loss</a></p>
+<ul>
+<li>我们的工作: GNU coreutils, gmake, gzip, ... 也有问题<ul>
+<li>Y. Jiang, et al. Crash consistency validation made easy. In <em>Proc. of FSE</em>, 2016.</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="multi-write">为应用程序提供 Multi-Write 的一致性？</h2>
+<p>TxOS: 提供三个新的系统调用</p>
+<ul>
+<li>xbegin, xend, xabort</li>
+<li>实现多个系统调用的原子性<ul>
+<li>应用场景：数据更新、软件更新、check-use……</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>阅读材料</p>
+<ul>
+<li>D. E. Porter, et al. Operating system transactions. In <em>Proc. of SOSP</em>, 2009. </li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>崩溃一致性：保持数据在持久存储上的原子性</p>
+<ul>
+<li>fsck: 扫描磁盘、重建数据结构</li>
+<li>journaling: 使用 write-ahead logging</li>
+<li>操作系统中非常具有挑战性的难题<ul>
+<li>FSCQ (OSDI'2016): 我证明了文件系统的 crash consistency！</li>
+<li>Hydra (SOSP'2019): 我把你证明过的系统测出 bug 了 😂</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>阅读 xv6 文件系统部分的代码</li>
+<li>阅读教科书和讲义中的阅读材料</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

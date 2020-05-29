@@ -1,0 +1,641 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>持久数据的可靠性</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">持久数据的可靠性</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>我们已经知道了文件系统的实现 (FAT, ext2)</p>
+<ul>
+<li>但我们做出了很多不切实际的假设<ul>
+<li>磁盘是可靠的</li>
+<li>计算机是可靠的</li>
+<li>……</li>
+</ul>
+</li>
+<li>但我们必须在不可靠的物理世界里构造可靠的持久存储</li>
+</ul>
+</blockquote>
+<p>本讲概述</p>
+<ul>
+<li>持久数据的可靠性问题<ul>
+<li>fault model: random corruption 和 fail-stop</li>
+</ul>
+</li>
+<li>实现更可靠的存储<ul>
+<li>备胎 & 备胎的虚拟化</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">持久数据的可靠性问题</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">宝贵的持久数据</h2>
+<p>我们真的希望数据能 “persistent”</p>
+<ul>
+<li>游戏数据丢失——今晚没法玩了</li>
+<li>手机数据损坏无法开机——今天没法过了</li>
+<li>电脑硬盘坏了——这几周没法过了</li>
+<li>组里服务器硬盘挂了——这几个月没法过了，得给项目卖命</li>
+<li>教务系统崩坏，所有学分丢失——这几年没法过了，重修所有课程</li>
+<li>银行/支付宝弄丢了你的账号——破产了，没法活了 😂</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<blockquote>
+<p>“创业公司 “前沿数控” 2018 年 8 月 5 日发文称，公司存放在腾讯云上的精准注册用户以及内容数据全部丢失，并且不能恢复，造成公司平台全部停运的状态……对此索赔 1000 余万元。腾讯云回应……受所在物理硬盘固件版本 bug 导致的静默错误 (写入数据和读取出来的不一致) 影响 (硬件公司不为此负责)，文件系统元数据损坏，仅能赔偿 13 万余元现金或云资源的额外补偿。”</p>
+</blockquote>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">持久数据的可靠性问题</h2>
+<blockquote>
+<p>任何物理存储介质都有失效的可能。</p>
+</blockquote>
+<p>你依然希望在存储设备失效的时候能保持数据的完整</p>
+<ul>
+<li>最好还能保证一定的性能</li>
+</ul>
+<hr></hr>
+<p>世界上没有 “绝对” 的可靠</p>
+<ul>
+<li>不能保证明天战争不会爆发/三体人不会进攻地球/世界不会毁灭 😂</li>
+<li>但你依然选择信任教务处 (<del>可能不那么信任</del>)/银行/支付宝<ul>
+<li>为什么？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">增加持久数据可靠性的方法</h2>
+<blockquote>
+<p>备胎 😂</p>
+</blockquote>
+<p>教务处保留了所有期末成绩的纸质副本</p>
+<ul>
+<li>期末考试后会提交所有批阅的试卷、成绩表、成绩分布</li>
+<li>提交到教务系统的成绩是 “不可更改” 的<ul>
+<li>除非提交一份书面申请，书面申请会与成绩保存在一起</li>
+</ul>
+</li>
+<li>假设教务系统崩溃 v.s. 教务处崩溃是独立事件<ul>
+<li>两个极小概率事件同时发生，那就认倒霉吧</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>银行/数据中心在多台计算机上存储了副本</p>
+<ul>
+<li>分布式系统</li>
+<li>另一个计算机系统领域非常重要的主题</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fault-model">持久数据可靠性分析: Fault Model</h2>
+<blockquote>
+<p>抛开 workload 谈设计就是耍流氓。</p>
+</blockquote>
+<p>我们首先需要理解磁盘到底是怎么坏的</p>
+<ul>
+<li>L. Bairavasundaram, et al. An analysis of data corruption in the storage stack. In <em>Proc. of FAST</em>, 2008.</li>
+</ul>
+<hr></hr>
+<p>今天讨论两个简单的情况</p>
+<ul>
+<li>random data corruption<ul>
+<li>数据损坏</li>
+</ul>
+</li>
+<li>fail-stop<ul>
+<li>磁盘好像就 “忽然消失” 了</li>
+</ul>
+</li>
+<li>都假设能立即检测出问题 (例如，磁盘有 block-level 的 checksum)</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="fat">随机损坏和 FAT 备份</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fault-model-random-data-corruption">Fault Model: Random Data Corruption</h2>
+<blockquote>
+<p>磁盘中的一小部分可能 (因为制造缺陷、保存不当等) 损坏。</p>
+</blockquote>
+<p>FAT 文件系统中一个 cluster 损坏的几种情况</p>
+<ul>
+<li>元数据 (FAT) 损坏 ← <span class="red">高破坏性</span><ul>
+<li>碎片的文件 (以当时的技术) 彻底无法恢复</li>
+<li>顺序存储的文件仍能抢救，但需要特殊的还原软件</li>
+</ul>
+</li>
+<li>系统文件损坏<ul>
+<li>可能无法进入系统</li>
+<li>但重新安装系统即可无缝修复</li>
+</ul>
+</li>
+<li>数据文件损坏<ul>
+<li>丢失一个文件</li>
+<li>勉强可以接受 (重要的文件手工备份)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fat-m5-frecov">FAT 损坏恢复 (M5 - frecov)</h2>
+<p>几个重要的提示</p>
+<ol>
+<li>FAT 文件系统以 cluster 为单位存储数据<ul>
+<li>在给定镜像中，你可以假设是 4 KiB</li>
+<li>你甚至不需要解析前 512 字节中的信息</li>
+</ul>
+</li>
+<li>你可以把每个 cluster 进行分类<ul>
+<li>目录文件, bitmap header, data</li>
+</ul>
+</li>
+<li>开始恢复<ul>
+<li>解析目录文件，得到 bitmap 第一个 cluster (和分类的结果互相验证)</li>
+<li>从某一个文件开始，逐个拼接<ul>
+<li>prefer 下一块</li>
+<li>下一块 “实在不合理” 时可以换一个文件</li>
+<li>所有文件都不合理时，找一个 “最合适” 的</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">应对部分数据损坏</h2>
+<p>自动备份<span class="red">最重要的数据</span> (FAT) <math class="inline-math">\times k</math></p>
+<ul>
+<li><math class="inline-math">k</math> 由文件系统初始化 (格式化; mkfs) 时设置</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/fat32_layout.gif" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fat-x-k">FAT x <em>k</em>: 性能分析</h2>
+<p>典型的操作</p>
+<ul>
+<li>FAT 读取<ul>
+<li>从 FAT-1 照常读取</li>
+</ul>
+</li>
+<li>FAT-<math class="inline-math">i</math> 损坏 (磁盘 I/O 会返回失败)<ul>
+<li>从 FAT-<math class="inline-math">(i+1)</math> 读取</li>
+</ul>
+</li>
+<li>FAT 更新<ul>
+<li>需要同时写入 FAT-1, ..., FAT-<math class="inline-math">k</math><ul>
+<li>FAT 更新的速度降低为 <math class="inline-math">1/k</math></li>
+<li>且慢——FAT 是在内存中缓存的 (写入频率非常低)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fat-x-k">FAT x <em>k</em>: 可靠性分析</h2>
+<p>假设 FAT 有 <math class="inline-math">n</math> 个 cluster，每个以 <math class="inline-math">p</math> 独立概率损坏</p>
+<ul>
+<li><math class="inline-math">1-(1-p)^n \Rightarrow 1-(1-p^k)^n</math><ul>
+<li>感觉很划算</li>
+<li>可靠性期望提高 <math class="inline-math">\approx (1/p)^{k-1}</math> 倍</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>假设 FAT 的 cluster 可能连续损坏 (划伤等)</p>
+<ul>
+<li>可以抵抗任何不超过 FAT 大小的连续损坏</li>
+</ul>
+<hr></hr>
+<p>fail-stop?</p>
+<ul>
+<li>hmm....</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="raid">RAID: 备胎的虚拟化</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fault-model-fail-stop">Fault Model: Fail-Stop</h2>
+<blockquote>
+<p>磁盘可能在某个时刻忽然彻底无法访问 (数据好像完全消失)。</p>
+<ul>
+<li>机械故障、芯片故障……</li>
+</ul>
+</blockquote>
+<p>你还敢用这个硬盘做 {教务系统, 支付宝, 银行, …} 吗？</p>
+<ul>
+<li>总有一天，一定有磁盘会坏掉的<ul>
+<li>坏事件一旦发生，就有数据会丢失</li>
+<li>永远不丢失数据似乎是不可能的</li>
+</ul>
+</li>
+<li>我们还能构造可靠的 (单机) 存储系统吗？</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">备胎的虚拟化</h2>
+<blockquote>
+<p>Redundant Array of Inexpensive (<em>Independent</em>) Disks (RAID)</p>
+<ul>
+<li>把多个 (不可靠的) 磁盘虚拟成一块非常可靠的虚拟磁盘</li>
+</ul>
+</blockquote>
+<p>类比我们见过的虚拟化</p>
+<ul>
+<li>进程：把一个 CPU 分时虚拟成多个虚拟 CPU</li>
+<li>虚存：把一份内存通过 MMU 虚拟成多个地址空间</li>
+<li>文件：把一个存储设备虚拟成多个虚拟磁盘</li>
+</ul>
+<p>RAID 的虚拟化是 “反向” 的</p>
+<ul>
+<li>(一个 → 多个) vs. (多个 → 一个)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">怎样用不可靠的磁盘构造更可靠的磁盘？</h2>
+<p>假设我愿意在系统里多接入一块硬盘用于容灾</p>
+<ul>
+<li>通过设备驱动程序抽象成 “一个磁盘” <math class="inline-math">V</math><ul>
+<li>实际上：两块磁盘 <math class="inline-math">A</math>, <math class="inline-math">B</math> 上的数据构成 “镜像”</li>
+</ul>
+</li>
+<li>read(<math class="inline-math">V</math>, blk)<ul>
+<li>可以从 <math class="inline-math">A</math> 或 <math class="inline-math">B</math> 中的任意一个读取</li>
+</ul>
+</li>
+<li>write(<math class="inline-math">V</math>, blk)<ul>
+<li>将同样的数据写入 <math class="inline-math">A</math>, <math class="inline-math">B</math> 的同一位置  </li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>分析 (基于一些不切实际的理想假设)</p>
+<ul>
+<li>1X write (浪费了 1/2 的总带宽)</li>
+<li>2X sequential read (tricky)</li>
+<li>2X random read (使用了 100% 的总带宽)</li>
+<li>抵抗任意一块盘的损坏</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="raid-design-space">RAID: Design Space</h2>
+<blockquote>
+<p>观察 (1): 虚拟化 = “映射”</p>
+</blockquote>
+<p>RAID-0</p>
+<ul>
+<li><math class="inline-math">V_0 \to A_0</math>, <math class="inline-math">V_1 \to B_0</math>, <math class="inline-math">V_{2i} \to A_i</math>, <math class="inline-math">V_{2i+1} \to B_i</math></li>
+<li>完美扩展的高性能虚拟磁盘<ul>
+<li>100% 顺序/随机读写总带宽</li>
+</ul>
+</li>
+<li>零容错</li>
+</ul>
+<p>RAID-1</p>
+<ul>
+<li><math class="inline-math">V_0 \to (A_0, B_0)</math></li>
+<li>容忍一块盘 fail</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="raid-design-space-contd">RAID: Design Space (cont'd)</h2>
+<blockquote>
+<p>观察 (2)：允许 “多对多” 的映射</p>
+<ul>
+<li>一组映射称为一个 “条带”, stripe</li>
+</ul>
+</blockquote>
+<p>RAID-10</p>
+<ul>
+<li><math class="inline-math">(V_0, V_1) \to (A_0, B_0, C_0, D_0)</math><ul>
+<li><math class="inline-math">A_0 = B_0 = V_0</math>, <math class="inline-math">C_0 = D_0 = V_1</math></li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<p>另一种可能的方式</p>
+<ul>
+<li><math class="inline-math">(V_0, V_1, V_2, V_3) \to (A_0, B_0, C_0, D_0, E_0)</math><ul>
+<li>有点似曾相识？</li>
+</ul>
+</li>
+</ul>
+<p>我们不妨假设 <math class="inline-math">V_i, A_i, \ldots</math> 都只有 1-bit</p>
+<ul>
+<li>bit sequence 的一大特点是 “所有的位都是独立的”</li>
+<li>很有趣的 problem solving 技巧</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">做个数学题</h2>
+<p>给一个 bit sequence (例如 <code>10011011</code>)</p>
+<ul>
+<li>在 fail-stop model 中<ul>
+<li>任何一块盘都可以丢失</li>
+<li>任意一个 bit 可能丢失<ul>
+<li><code>10x11011</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>能否通过存储额外的 bits (但这个 bit 也可能丢失)<ul>
+<li>恢复出 <code>x</code> 的值？</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="error-correction-code-ecc">Error Correction Code (ECC)!</h2>
+<p>有若干 bits <math class="inline-math">a_1, a_2, \ldots, a_n</math></p>
+<ul>
+<li>存储 <math class="inline-math">a_{n+1} = a_1 \oplus a_2 \oplus \ldots \oplus a_n</math><ul>
+<li><math class="inline-math">a_1 \oplus a_2 \oplus \ldots \oplus a_n \oplus a_{n+1} = 0</math></li>
+</ul>
+</li>
+<li>任何一个 bit 丢失 (硬件会告诉我们哪个 bit 丢了)<ul>
+<li><math class="inline-math">a_i = a_1 \oplus \ldots \oplus a_{i-1} \oplus a_{i+1} \oplus \ldots \oplus a_n \oplus a_{n+1}</math></li>
+</ul>
+</li>
+</ul>
+<p><span class="center"><img src="../static/wiki/os/2019/img/ecc-ram.jpg" width="500px"></img></span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="raid-4-parity-disk">RAID-4: Parity Disk</h2>
+<blockquote>
+<p>专门留一块磁盘作为奇偶校验盘。</p>
+</blockquote>
+<p><math class="inline-math">(V_0, V_1, V_2, V_3) \to (A_0, B_0, C_0, D_0, E_0)</math></p>
+<ul>
+<li><math class="inline-math">A_0 = V_0</math>, <math class="inline-math">B_0 = V_1</math>, <math class="inline-math">C_0 = V_2</math>, <math class="inline-math">D_0 = V_3</math></li>
+<li><math class="inline-math">E_0 = V_0 \oplus V_1 \oplus V_2 \oplus V_3</math> (奇偶校验)</li>
+</ul>
+<p><math class="inline-math">(V_4, V_5, V_6, V_7) \to (A_1, B_1, C_1, D_1, E_1)</math></p>
+<ul>
+<li><math class="inline-math">E_1 = V_4 \oplus V_5 \oplus V_6 \oplus V_7</math> (奇偶校验)</li>
+</ul>
+<p>性能分析</p>
+<ul>
+<li>sequential/random read: 4x (80% 总带宽)</li>
+<li>sequential write: 4x (80% 总带宽)</li>
+<li>random write (tricky)<ul>
+<li><math class="inline-math">E_0 = V_0 \oplus V_1 \oplus V_2 \oplus V_3</math>; 写入任意 <math class="inline-math">V_0, V_1, V_2, V_3</math> 都需要更新 <math class="inline-math">E_0</math><ul>
+<li>更新 <math class="inline-math">V_0</math> 需要 read(<math class="inline-math">\{A_0,E_0\})</math>, write(<math class="inline-math">\{A_0,E_0\}</math>), 并行发生</li>
+</ul>
+</li>
+<li>奇偶校验盘成为了瓶颈: 0.5x (10% 总带宽); 并且不 scalable</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="raid-5-rotating-parity">RAID-5: Rotating Parity</h2>
+<p>“交错排列” parity block!</p>
+<ul>
+<li><p>让每一块盘都有均等的机会存储 parity</p>
+</li>
+<li><p>sequential read/write: 4x (80% 总带宽)</p>
+</li>
+<li>random read (tricky)<ul>
+<li>(read 足够大，所有磁盘都可以提供数据) 5x (100% 总带宽)</li>
+</ul>
+</li>
+<li>random write (tricky)<ul>
+<li><math class="inline-math">E_0 = V_0 \oplus V_1 \oplus V_2 \oplus V_3</math>; 写入任意 <math class="inline-math">V_0, V_1, V_2, V_3</math> 都需要更新 <math class="inline-math">E_0</math></li>
+<li>奇偶校验依然严重拖慢了随机写入: 1.25x (25% 总带宽)<ul>
+<li>但至少 <math class="inline-math">n</math> 块盘可以获得 <math class="inline-math">n/4</math> 的随机写性能</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">一个未解决的问题</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fault-model">另一种 Fault Model</h2>
+<blockquote>
+<p>系统随时可能崩溃。</p>
+</blockquote>
+<p>多个磁盘的数据写入无法做到完全同步</p>
+<ul>
+<li><math class="inline-math">D</math> = mirror(<math class="inline-math">A, B</math>)<ul>
+<li>如果 <math class="inline-math">A</math> 写入了, <math class="inline-math">B</math> 尚未写入时发生了硬件系统崩溃？</li>
+<li>重启后，<math class="inline-math">A</math>, <math class="inline-math">B</math> 就不再是 mirror 了 😂<ul>
+<li>读取一个文件，会出现 “一半是旧版本，一半是新版本”</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>Crash Consistency 和 Crash Recovery</p>
+<ul>
+<li>下一次课的内容</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="raid">RAID 硬件</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2019/img/raid-card.jpg" width="400px"></img></p>
+<p>提供硬件支持</p>
+<ul>
+<li>DRAM (cache)</li>
+<li>缓冲 & 日志</li>
+<li>在 RAID 硬件上实现奇偶校验</li>
+<li>备用电源<ul>
+<li>在系统故障时保证数据写回</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>持久数据的可靠性: fault model 很重要</p>
+<ul>
+<li>假设磁盘的一部分损坏<ul>
+<li>备胎和 FAT</li>
+</ul>
+</li>
+<li>假设磁盘可能全盘损坏<ul>
+<li>RAID</li>
+<li>从 mirror 到 RAID-5</li>
+</ul>
+</li>
+<li>是否有更合理的假设？<ul>
+<li>latent sector errors, block corruption (并不是随机的), ...<ul>
+<li>L. Bairavasundaram, et al. An analysis of data corruption in the storage stack. In <em>Proc. of FAST</em>, 2008.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>复习题</p>
+<ul>
+<li>阅读教科书和讲义中的阅读材料<ul>
+<li>教科书/论文中有更详细的性能分析</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,6 +1,278 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>M6: Key-Value 数据库 (libkvdb)</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="m6-key-value-libkvdb">M6: Key-Value 数据库 (libkvdb)</h1>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">截止日期</h4>
+<p>(实验指南更新中)</p>
+<p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
+<div class="codehilite"><pre><span></span><span class="err">git pull origin M6</span>
+</pre></div>
+
+
+<p>Soft Deadline: 2020 年 6 月 28 日 23:59:59。</p>
+</div></div></div>
+
+<div plugin="submission(course='OS2020', module='M6')"><div class="accordion submission" id="accordionExample">
+
+  <div class="card">
+    <div class="card-header submit-card">
+      <form action="../upload.html" method="post" enctype="multipart/form-data">
+        <div class="form-row align-items-center">
+            <label class="col-form-label">OS2020-M6</label> 提交结果
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+</div></div>
+
+<div markdown="1"><div class="fenced fenced-green"><div>
+<h4 id="_1">持久数据管理：不只是文件</h4>
+<p>“文件系统” 的抽象在诞生之初，在很大程度上就是方便操作系统的用户管理他们的数据：应用程序、文档……很自然地，文件被设计为 “虚拟的磁盘”，而目录结构则是按名称索引虚拟磁盘的数据结构。</p>
+<p>然而，这样的设计在应对更复杂的持久数据管理时就遇到了挑战。为了可靠地持久化数据，同时高效地支持各类复杂的数据查询/写入操作，我们可以在文件系统层次上构建一层抽象——大家一定听说过无处不在的<a href="https://en.wikipedia.org/wiki/Database">数据库</a>。今天，各大公司在后台都用数据库存储各种数据 (例如你的剁手购物车，或者用户名和登陆信息。攻击数据库的行为也被形象地称为 “<a href="http://www.freebuf.com/articles/database/29267.html">脱裤</a>”)。</p>
+<p>数据库已经是一个无处不在的抽象层，并且逐渐从单机走向分布 (MongoDB, HBase, 以及最近很热门的 OceanBase)。不仅是数据中心，当你随手拿起你的手机的时候，你的联系人、应用数据……全部都存储在应用的内嵌数据库中。在这个实验里，你会在实践中体会如何在文件系统这一层抽象上构建可靠的数据管理系统。</p>
+</div></div></div>
+
+<h2 id="1">1. 背景</h2>
+<p>从文件系统 (文件和目录) 到 SQL 语言 (二维表和它的操作)，再到今天的分布式存储系统，我们到底应该如何为应用持久地存储数据到今天依然没有绝对的 “定论”。但可以知道的是，我们在计算机系统的一个一个层次上进行抽象，最终为应用程序提供高性能、高可靠的存储服务。</p>
+<p>例如，数据库在文件系统 API 的基础上 (通常是 mmap, msync 等，但也有使用 read, write, fsync 建立的数据库系统) 实现可靠、好用的结构化数据存储。有兴趣了解数据库的同学可以参考 <a href="https://sqlite.org">SQLite</a> 项目：一个轻量级但实现得非常健壮的数据库。它甚至已经是 Android, iOS, MacOS 的一部分！它可以把数据库存储在一个文件中，通过 SQL 语言的接口访问它，例如可以使用一个 SQL 指令获得 jyy 用户用于验证的密码信息：</p>
+<div class="codehilite"><pre><span></span><span class="k">SELECT</span> <span class="n">salted_passwd_digest</span> <span class="k">FROM</span> <span class="n">users</span> <span class="k">WHERE</span> <span class="n">name</span> <span class="o">=</span> <span class="s1">'jyy'</span>
+</pre></div>
+
+
+<p>可见，数据库的实现大幅降低了应用程序管理数据的难度。可以说，互联网浪潮的兴起的一个重要原因 (当然也有很多其他原因，例如编程语言、互联网技术等的发展) 是由于数据库技术的成熟，使广大码农能更多地关注业务逻辑而不是底层的数据存储。</p>
+<p>在这个实验里，在这个实验中，我们会在操作系统提供的文件系统 API 的基础上构建可靠 (性能不那么重要) 的 key-value store。我们借鉴 SQLite 的设计，实现一个最简单的 “单文件数据库”，并且具有一个 “库” 应该有的稳定性。类似于 <a href="OS2020_M2.html">M2 (libco)</a>，应用程序通过动态链接 <code>libkvdb.so</code> 调用其中的 API 进行数据的持久访问。在这个实验里，你使用文件 API: read, write, lseek, sync 实现实现磁盘上的一个 key-value 数据库，类似 <code>unordered_map&lt;string,string&gt;</code>。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">编写经得起考验的程序</h4>
+<p>更重要的是，这个实验中，你要真真正正试图动态把一个程序 “写对”——即便在各种并发、崩溃的情况下，你的数据库依然能够经受住考验。试想如果你的数据库系统部署在每一台 Android/iOS 设备上，你晚上还能好好睡觉么？在实际系统中丢失数据可不是闹着玩的。</p>
+<p>造一个轮子很难，造一个好的轮子更难。编写高可靠的系统软件至今仍然是 open problem，各类系统软件中依旧还有很多功能性的 bug、安全漏洞、性能问题……在这个实验里，你实现的功能虽然简单，但却要经受住系统崩溃的考验——你的数据库不能在崩溃时 “躺倒”，而是必须能在再次打开时恢复到一个一致的状态。</p>
+</div></div></div>
+
+<h2 id="2">2. 实验描述</h2>
+<p>在这个实验中，我们实现持久、崩溃一致的 key-value 数据库 API, 它们定义在 <code>libkvdb.h</code>:</p>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">kvdb</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">kvdb</span> <span class="o">*</span><span class="nf">kvdb_open</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">kvdb_close</span><span class="p">(</span><span class="k">struct</span> <span class="n">kvdb</span> <span class="o">*</span><span class="n">db</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">kvdb_put</span><span class="p">(</span><span class="k">struct</span> <span class="n">kvdb</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">value</span><span class="p">);</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">kvdb_get</span><span class="p">(</span><span class="k">struct</span> <span class="n">kvdb</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span><span class="p">);</span>
+</pre></div>
+
+
+<blockquote>
+<p><strong>合法性假设</strong>: kvdb 只接收可打印非空白的 ASCII 字符 (例如字母、数字、下划线、标点符号) 组成的 key 和 value。虽然我们的测试数据保证合法性，但更好的编程方式是对输入进行检查。手册 isprint (3), ascii (7) 可以帮到你。</p>
+</blockquote>
+<p>为了更好地解释 kvdb API，我们不妨假设 kvdb 实现的是在文件中实现的一个 <code>unordered_map&lt;string,string&gt;</code>，即一组 key 到 value 的映射。在下面的解释中，我们假设 <code>db-&gt;kv</code> 是持久化在磁盘上的 key-value mapping 数据结构。</p>
+<ol>
+<li><code>kvdb_open</code> 以读写的方式打开 <code>filename</code> 数据库文件 (例如 <code>filename</code> 为 <code>"a.db"</code>)，返回一个用 <code>malloc</code> 分配的 <code>struct kvdb</code> 结构体指针，并保持数据库文件的打开状态。如果文件不存在，则创建一个新的、空白的数据库，如果文件存在，则在已有数据库的基础上进行操作。失败时返回 <code>NULL</code>。注意每一个数据库文件都是一份独立的数据库，系统中的同一个进程可能打开不同的数据库 (管理多个数据，例如联系人、照片)，系统中不同的进程也可能打开同一个数据库 (例如不同的应用程序希望共享联系人数据)；</li>
+<li><code>kvdb_close</code> 关闭数据库并释放相关资源，包括使用 <code>free</code> 释放分配的 <code>db</code>。失败时返回负数；</li>
+<li><code>kvdb_put</code> 建立 <code>key</code> 到 <code>value</code> 的映射，相当于执行 <code>db-&gt;kv[key] = value;</code>。因此如果在 <code>kvdb_put</code> 执行之前 <code>db[key]</code> 已经有一个对应的字符串，它将被 <code>value</code> 覆盖；<ul>
+<li>我们规定，key 的长度不超过 128 字节；value 的长度不超过 16 MiB，同时，只有极少数的 value 会达到那么大，你可以假设绝大部分 value 都不超过 4 KiB。你需要一定程度优化你的数据结构，在磁盘上使用固定长度的记录 (128 B key + 16 MiB value) 会被 Online Judge 判定为空间效率过低。</li>
+</ul>
+</li>
+<li><code>kvdb_get</code> 获取 <code>key</code> 对应的 value，相当于返回 <code>db-&gt;kv[key]</code>。返回的 value 是通过动态内存分配实现的 (<code>malloc</code> 或 <code>strdup</code> 分配的空间)，因此 kvdb 用户在使用完毕后需要调用 <code>free</code> 释放。<code>key</code> 不存在或内存分配失败时返回 <code>NULL</code>。</li>
+</ol>
+<p>这个实验看起来很简单：我们就是使用文件系统的 API 实现一个数据结构嘛，还是很熟悉的 map。但作为一个 “数据库”，我们对你程序的健壮性有一定的要求：你的库可以允许多个进程同时调用，并且库的任何使用者都可能会 crash (被杀死，或是模拟系统崩溃)。你必须在此前提下保证数据库实现的正确。详情请参考下面的正确性标准部分。</p>
+<h2 id="3">3. 正确性标准</h2>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="api">限制 API 的使用</h4>
+<p>最后，为了便于我们测试你的程序 (模拟进程运行中的崩溃)，请大家在读写文件数据 (以及管理偏移量) 时使用 <code>read</code>, <code>write</code> 和 <code>lseek</code>，同步数据时使用 <code>fsync</code>。我们会根据这些函数调用的 trace 来重现你将数据写入文件系统的过程。因此，如果你使用非标准的 API (例如 <code>mmap</code> 系列函数) 将会导致 Online Judge 不能正确捕捉系统调用的 trace，并将你的程序判定为 “错误”。</p>
+</div></div></div>
+
+<h3 id="31">3.1 线程/进程安全</h3>
+<p>在实际的系统中，同一个进程中的多个线程，甚至是多个进程都允许可以打开同一个数据库读写。在高性能的数据库系统实现中，需要这些访问在没有冲突的时候尽可能地并行。但大家一定已经尝过多处理器编程的苦头了——在这个实验里，我们没有性能的要求，因此用一把数据库级的锁保护即可。要特别注意多个线程/进程在访问数据库时应该有一定的公平性：你不应该在 <code>kvdb_open</code> 时上锁直到 <code>kvdb_close</code> 时才释放，这会导致长时间访问数据库的进程 “霸占” 数据库的使用。为每个操作单独上锁即可。</p>
+<h3 id="32">3.2 崩溃一致性</h3>
+<p>你需要保证数据库的崩溃一致性：访问数据库的进程可能随时被杀死；文件写入操作可能被缓存；系统可能崩溃……无论发生什么，当下次启动后再次打开数据库，总是能回到一个过去的一致状态，而且你应该竭尽所能使这个状态越接近崩溃的时间点越好 (空的数据库总是一致的状态)。</p>
+<p>关于文件系统为应用程序提供的崩溃一致性，请阅读<a href="OS2020_CrashConsistency.html">课程讲义</a>，其中一份推荐的阅读材料是论文 T. S. Pillai, et al. All file systems are not created equal: On the complexity of crafting crash-consistent applications. In <em>Proc. of OSDI</em>, 2014.</p>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">崩溃模型</h4>
+<p>我们假设一旦 fsync 返回，fsync 执行前执行的所有 write 系统调用的数据都被正确写入。除此之外，我们假设对齐的 4 KiB 连续数据写入 (对齐到 4096 字节的连续 4 KiB 数据的写入) 是原子的 (要么全部写入，要么全部不写入)。但数据块的写入可能发生丢失或乱序，只有 fsync 能保证数据的持久性。</p>
+<p>假设当前文件偏移量处于 0 的位置，且数据全部为 0，执行以下代码 (写入 4096 个 a 和 4096 个 b)：</p>
+<div class="codehilite"><pre><span></span><span class="n">write</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s">"aaa....abbb...b"</span><span class="p">,</span> <span class="mi">8192</span><span class="p">);</span>
+<span class="n">fsync</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+</pre></div>
+
+
+
+<p>在 write 后崩溃，磁盘可能是以下四种情况：</p>
+<ul>
+<li><code>[0...0][0...0]</code> (写入全部丢失)</li>
+<li><code>[a...a][0...0]</code> (a 写入成功，b 写入丢失)</li>
+<li><code>[0...0][b...b]</code> (b 写入成功，a 写入丢失，好像执行顺序被乱序)</li>
+<li><code>[a...a][b...b]</code> (写入全部成功)</li>
+</ul>
+<p>但一旦 fsync 返回，则保证，磁盘上会有 4096 个 a 和 4096 个 b。</p>
+</div></div></div>
+
+<p>我们的正确性测试将会拦截这些系统调用，并据此测试你数据库的正确性。具体来说，我们会模拟虚拟机/容器的崩溃，然后在重新启动后再次运行程序，使用<code>kvdb_open</code>打开数据库操作，因此你的数据库应该在打开时带有一致性数据恢复功能。不建议使用其他系统调用修改文件(例如<code>mmap</code>)。</p>
+<p>我们会用类似我们<a href="https://dl.acm.org/doi/10.1145/2950290.2950327">研究工作</a>中的技术测试你的代码 (<a href="https://zhuanlan.zhihu.com/p/25188921">科普版本</a>)。简单来说，因为我们限制了你只能通过 <code>write</code> 和 <code>sync</code> 管理磁盘上的数据，因此我们所做的就是 “劫持” 你向数据库文件的 write 和 sync 系统调用，得到类似于 strace 的序列：</p>
+<div class="codehilite"><pre><span></span>1. write(fd, "...", length);
+2. write(fd, "...", length);
+3. fsync(fd)
+</pre></div>
+
+
+<p>然后，我们可以创造出一些 “合法” 的崩溃数据库文件——我们假设如果 fsync 返回，则之前所有的 write 都会在磁盘上被正确持久化；但 fsync 之前所有的数据都可能被以任意形式被保存到磁盘上——write 操作的数据可能被部分写入、可能被乱序……相当于我们对文件系统数据的写入作出最弱的假设。</p>
+<h3 id="33">3.3 性能要求</h3>
+<p>本次实验主要关注正确性：进程/线程安全性和崩溃一致性。在性能方面，我们允许你使用线性时间的扫描查找 key。因此不用担心，不必实现任何复杂的索引数据结构，关注崩溃一致性的实现即可。</p>
+<h2 id="4">4. 实验指南</h2>
+<h3 id="41-kvdb">4.1 kvdb 的使用</h3>
+<p>以下示例代码展示了如何使用 kvdb:</p>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">kvdb</span> <span class="o">*</span><span class="n">db</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span> <span class="o">=</span> <span class="s">"operating-systems"</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">value</span><span class="p">;</span>
+
+  <span class="n">panic_on</span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">db</span> <span class="o">=</span> <span class="n">kvdb_open</span><span class="p">(</span><span class="s">"a.db"</span><span class="p">)),</span> <span class="s">"cannot open db"</span><span class="p">);</span> <span class="c1">// 打开数据库</span>
+
+  <span class="n">kvdb_put</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="s">"three-easy-pieces"</span><span class="p">);</span> <span class="c1">// db[key] = "three-easy-pieces"</span>
+  <span class="n">value</span> <span class="o">=</span> <span class="n">kvdb_get</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">key</span><span class="p">);</span> <span class="c1">// value = db[key];</span>
+  <span class="n">kvdb_close</span><span class="p">(</span><span class="n">db</span><span class="p">);</span> <span class="c1">// 关闭数据库</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"[%s]: [%s]</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+  <span class="n">free</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>同 libco 一样，这个实验会将 kvdb 编译成共享库。你可以参考 libco 实现自己的测试程序——测试很重要，是从 Online Judge 存活的关键。把编译运行测试作为 Makefile 的一部分，可以使你事半功倍。</p>
+<h3 id="42">4.2 实现进程/线程安全</h3>
+<p>如果希望实现线程安全，使用 <code>pthread</code> 中的互斥锁就可以了。但注意到进程是独立的 “虚拟计算机”，每个进程都有自己的地址空间、文件描述符等。使用互斥锁无法保证进程级别的互斥。</p>
+<p>你一定想到了——如果你有一个合理的需求，操作系统一定提供了一个 API 管理它。大家如果使用 apt 安装软件包，多多少少会遇到 “<code>Could not get lock /var/lib/dpkg/lock - open (11: Resource temporarily unavailable)</code>” 的报错信息。这就是因为我们的 apt 无法获得文件级别的锁。</p>
+<p>Linux 为我们提供了 flock 系统调用，你可以使用它实现文件级别的上锁，这同时保证了进程安全和线程安全。</p>
+<h3 id="43-key-value">4.3 实现 Key-Value 数据库</h3>
+<p>本次实验的要求必须使用 read, write, lseek, fsync 管理数据——这会一定程度降低你编写出的代码。你可以包装一个抽象层，例如你自己的 “缓存” 层，模拟 mmap 的行为，使你可以直接使用指针访问；以及你可以包装自己的 read, write 函数，使它们带上 offset 的参数，这会大幅简化你的代码。不要因为有 Online Judge 就 “面向 OJ 编程”——编写 “更好” 的代码应该始终是你重要的追求。</p>
+<p>实现崩溃一致性的好方法是 journaling: 实现一个 append-only 的 crash-safe 的数据结构，然后在此基础上实现 kvdb。关于这部分内容，我们在课堂上，以及教科书的 42, 43 章已经讲解得非常清楚了，请大家确保理解了这部分内容后再开始试验。就像是文件系统 (文件是虚拟的磁盘；而 kvdb 数据库是在文件上构建的数据库，这非常类似于磁盘上的文件系统)，你需要为你的 “数据库文件” 设置好固定的格式，例如：</p>
+<ol>
+<li>文件的前 32 MiB 用于 journaling (包括 log-head)，使用 write 和 sync 保证同步；</li>
+<li>32 MiB 之后用于存储数据，你可以选择你熟悉的数据结构，例如线性表。</li>
+</ol>
+<p>如果对 journaling 的实现还存有疑问，不妨再去看一下 xv6 的代码 (bio.c 和 log.c)。</p>
+<h3 id="44">4.4 测试崩溃一致性</h3>
+<p>你可能做了一些很酷的崩溃一致性实现——例如在文件中的一部分作为 journaling 的区域。但是你怎么知道你的程序是否写对了呢？你可以在你的程序里插入一些 “可能崩溃” 的数据点，例如：</p>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="nf">kvdb_put</span><span class="p">(</span><span class="n">kvdb_t</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">check_db_open</span><span class="p">(</span><span class="n">db</span><span class="p">))</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="n">journal_write</span><span class="p">();</span>
+  <span class="n">__may_crash</span><span class="p">();</span>
+  <span class="n">data_write</span><span class="p">();</span>
+  <span class="n">__may_crash</span><span class="p">();</span>
+  <span class="n">sync</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>然后这样实现：</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">__may_crash</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">p</span> <span class="o">=</span> <span class="n">flip_a_coin</span><span class="p">();</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">dump_db_file</span><span class="p">();</span>
+    <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span> <span class="c1">// crash</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>反复运行程序，就能得到很多 crash 模拟得到的文件系统镜像。很快，你就能想到，<code>__may_crash</code> 还可以做得更彻底一点，例如你可以让 malloc 每次随机返回出错：</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="nf">malloc</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">flip_a_coin</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="k">return</span> <span class="n">real_malloc</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>这样很可能能暴露出系统里的严重缺陷——这些都是你没有想过的 dark corners，大家可以阅读 OSDI2006 的论文 <a href="https://web.stanford.edu/~engler/explode-osdi06.pdf">EXPLODE: A Lightweight, general system for finding serious storage system errors</a>。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

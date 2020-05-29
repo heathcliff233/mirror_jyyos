@@ -1,0 +1,255 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>文件系统实现</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">文件系统实现</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a> 第 40, 41 章。</p>
+<ul>
+<li>本次课程只是在很宏观的层面上为大家介绍了文件系统实现的思路，因此请大家务必仔细阅读教科书相应的章节——第 40 章是 UNIX 文件系统/ext2 基本原理的 “简化版”，但细节阐述得非常清楚。第 41 章介绍了 FFS，提供了 “如何在给定的模型下优化性能” 的思路。</li>
+<li>如果你对文件系统的其他 (现代) 实现有兴趣，以下讨论了 btrfs 的设计和实现的论文是个非常 comprehensive 的参考：<ul>
+<li>O. Rodeth, et al. <a href="https://dl.acm.org/doi/10.1145/2501620.2501623">BTRFS: The Linux B-tree filesystem</a>. <em>ACM Transactions on Storage</em> (ToS), 9(3), 2013.</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+
+<p>文件系统是实现在一个存储设备上的 (HDD, SSD, NVM, USB Flash 等等)。为了简化讨论，我们不妨假设存储设备为我们提供的接口是按某个大小的 “块” (例如 512B 或 4KiB) 来访问的：</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">block_read</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">blkid</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">block_write</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">blkid</span><span class="p">);</span>
+</pre></div>
+
+
+<p>实际的存储设备通常支持多个块的连续读写，并且通过中断和 DMA 进行管理。但总体来说，我们可以向设备提交请求 (就好像异步的 <code>block_read</code> 和 <code>block_write</code>)，设备会逐个完成提交的读写请求，并在完成后发送中断给处理器。</p>
+<p>在这样以块为单位访问的存储设备上，我们希望实现文件和目录的操作：</p>
+<ul>
+<li><p>目录操作</p>
+<ul>
+<li>mkdir 在目录中创建子目录</li>
+<li>rmdir 在目录中删除子目录(要求子目录为空)</li>
+<li>link 在目录中创建到某个文件的链接</li>
+<li>unlink 在目录中删除到某个文件的链接</li>
+<li>create 在目录中创建一个空白的新文件</li>
+<li>其他 (symlink, mount, ...); 大家不妨在理解了文件系统的基础功能后考虑这些机制如何实现</li>
+</ul>
+</li>
+<li><p>文件操作</p>
+<ul>
+<li>open 打开一个已经存在的文件，返回文件描述符</li>
+<li>close 关闭文件描述符</li>
+<li>read, write, lseek 文件操作</li>
+<li>mmap 到地址空间；操作系统最终会把 mmap 的区域翻译成对磁盘的 read/write</li>
+</ul>
+</li>
+</ul>
+<p>我们将从最简单的情况开始，逐步分析应该怎样在设备上实现持久的文件系统。</p>
+<h2 id="_2">文件：虚拟磁盘</h2>
+<p>我们需要用固定大小的 blocks 实现虚拟磁盘——一个 <code>std::vector&lt;char&gt;</code>。因此我们首先需要一个 block 分配的函数 (<code>balloc()</code>, <code>bfree()</code>)，每次可以分配一个数据块。</p>
+<p>一个最简单的实现是把数据块用链表链接起来，在每一块的末尾保存指向下一块的“指针”：</p>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">block</span> <span class="p">{</span>
+  <span class="kt">uint8_t</span> <span class="n">payload</span><span class="p">[</span><span class="n">BLOCK_SIZE</span> <span class="o">-</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">)];</span>
+  <span class="kt">uint32_t</span> <span class="n">next_block_id</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">));</span>
+</pre></div>
+
+
+<p>另一种方式是类似于我们的页表，使用类似页目录-页表-物理页的多级索引结构实现。这两种实现各有优劣：</p>
+<ul>
+<li>链表在文件小 (尤其是不超过几个块的文件) 时表现较好，尤其是注意到很多文件操作只是读取头部的数据，索引结构则需要读取额外的索引块；</li>
+<li>索引的 lseek 性能更好，例如实现追加打开时，不需要首先遍历整个文件。</li>
+</ul>
+<p>事实上，链表和索引的好处我全都要！在 <a href="../static/wiki/os/2020/demos/ext2.h">ext2 文件系统</a>的 inode (<code>struct ext2_inode</code>) 中，实现了一个 “混合” 的数据结构——前一部分是 “链表”，其实就是存储在数组中的块编号，之后依次是一级、二级、三级索引。这样付出一些 inode 稍稍大那么几十字节的代价，但所有的好处都得到了：对于小文件和文件的头部 (注意文件的头部也是非常频繁访问的部分，因为文件头部通常包含着文件的元数据，甚至是缩略图等信息)，可以在 $O(1)$ 的时间内确定它们在磁盘上的位置；而越大的文件就付出越大的代价：</p>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">ext2_inode</span> <span class="p">{</span>
+    <span class="n">__le16</span> <span class="n">i_mode</span><span class="p">;</span>  <span class="cm">/* File mode */</span>
+  <span class="p">...</span>
+    <span class="n">__le32</span> <span class="n">i_block</span><span class="p">[</span><span class="n">EXT2_N_BLOCKS</span><span class="p">];</span> <span class="cm">/* Pointers to blocks */</span>
+  <span class="p">...</span>
+</pre></div>
+
+
+<h2 id="_3">目录：用文件实现</h2>
+<p>假设系统中的每个文件/目录都有一个唯一的编号 (稍后我们将讨论如何为每个文件维护这个编号)，那么目录就可以看成是文件名 (目录名) 到编号的映射：</p>
+<div class="codehilite"><pre><span></span><span class="k">using</span> <span class="n">dir_t</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span><span class="kt">uint64_t</span><span class="o">&gt;</span><span class="p">;</span>
+</pre></div>
+
+
+<p>既然目录也是数据，我们不妨用普通的文件 (<code>std::vector&lt;char&gt;</code>) 来存储目录中的 key-value pair (每一个 key-value pair 称为一个目录项，directory entry)，相当于 “用目录实现文件”，让每个目录对应一个 “目录文件”，存储 key-value mapping。</p>
+<p>这个设计可以天然地支持文件系统中的链接——只要允许目录中存在到相同编号的映射即可。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">实现链接</h4>
+<p>仅仅允许目录中存在到相同编号的映射还不够实现链接。试想以下的操作序列：</p>
+<div class="codehilite"><pre><span></span>touch a.txt # 假设之前不存在
+link a.txt b.txt
+rm b.txt
+rm a.txt # a.txt占用的存储空间应当被释放
+</pre></div>
+
+<p>为了确保在 unlink 时，能正确地知道是否可以回收文件占用的存储空间，我们还需要每个文件的链接计数。链接计数存储在 inode 中，例如 ext2 中的链接计数存储在 inode 中的 <code>i_links_count</code> 中。</p>
+</div></div></div>
+
+<p>在 vector 上实现 key-value mapping 的数据结构不少，例如：</p>
+<ul>
+<li>线性表，直接按顺序存储所有目录项。在目录操作时，需要遍历所有已有的目录项。</li>
+<li>哈希表，查找效率高 (路径解析时不需要遍历目录项)，但可能有一定程度的空间浪费。</li>
+<li>索引数据结构，实现效率-空间的权衡，实现相对复杂。</li>
+</ul>
+<p>实际上，在现代的文件系统中，目录可能以多种方式存储索引，例如存储：(1) 按文件名排序的列表，方便查看； (2) 按 inode 编号排序的列表，增加 sequential access 的性能 (尽管今天最新的存储设备上 sequential 和 random 4K block 读写的性能已经趋近于相同)。</p>
+<h2 id="_4">文件和目录元数据</h2>
+<p>最后，每个文件和目录有属于它的一些“固有属性”，例如：</p>
+<ul>
+<li>文件的唯一 id；</li>
+<li>文件的类型，用于区分普通文件和目录文件；</li>
+<li>访问权限，就是大家熟知的 <code>rwxrwxrwx</code>；</li>
+<li>所有者信息 (uid, gid)，但这在跨系统访问时成为很大的麻烦；</li>
+<li>文件大小；</li>
+<li>文件访问的时间信息：创建时间、访问时间、修改时间；</li>
+<li>链接数量 (刚才已经提到)；</li>
+<li>一些其他信息，例如文件的第一个数据块的编号等。</li>
+</ul>
+<p>这些属性也保存在 inode 中。使用 <code>ls -i</code> 可以查看文件的 inode 编号，哪怕是 Windows 系统里的文件 (好吧，还是有一些不是文件的文件)：</p>
+<div class="codehilite"><pre><span></span><span class="err">  844424930132006 '$Recycle.Bin'</span>
+<span class="err">  844424930135623 'Documents and Settings'</span>
+<span class="err"> 2251799814000425  Intel</span>
+<span class="err">  281474976928166  MSOCache</span>
+<span class="err">10977524091732747  OneDriveTemp</span>
+<span class="err"> 1407374883934010  PerfLogs</span>
+<span class="err"> 1125899907223355 'Program Files'</span>
+<span class="err">  562949953803473 'Program Files (x86)'</span>
+<span class="err">  562949953803574  ProgramData</span>
+<span class="err">  281474976713152  Recovery</span>
+<span class="err">  562949953459436 'System Volume Information'</span>
+<span class="err">  562949953803728  Users</span>
+<span class="err">  844424930514441  Windows</span>
+<span class="err">                ?  hiberfil.sys</span>
+<span class="err">                ?  pagefile.sys</span>
+<span class="err">                ?  swapfile.sys</span>
+</pre></div>
+
+
+<p>inode 也有若干种存储方式：</p>
+<ul>
+<li>连续存储在文件系统中的某个区域，这样可以直接根据 inode 的编号计算出 inode 在磁盘中的位置，这也是实现文件唯一 id 的一个途径；</li>
+<li>存储在文件头部，文件唯一 id = 第一个数据块的编号；</li>
+<li>存储在目录文件中，文件唯一 id = 第一个数据块的编号，在支持链接的文件系统中，文件的元数据会有多份拷贝。</li>
+</ul>
+<p>当然，UNIX 文件系统会集中存储 inodes，从而获得最好的缓存局部性。</p>
+<h2 id="_5">实现文件系统</h2>
+<p>经过之前的讨论，我们已经知道，考虑一个文件系统的实现，我们主要要关注以下的问题：</p>
+<ul>
+<li>如何在磁盘上分配/回收数据块</li>
+<li>如何用数据块表示文件(链表、树、……)</li>
+<li>如何用文件表示目录(线性表、哈希表、索引、……)</li>
+<li>文件的元数据如何存储、如何管理文件的id</li>
+</ul>
+<p>在理解了文件系统文件大小、文件在目录中的分布以及访问 workload 的模式 (这并不是件容易的事情，而是一个非常严肃的研究问题)，你就可以着手设计 “在实际场景中表现优良” 的文件系统了，例如你会考虑这些文件系统在各种意义上的好坏，甚至为了 “不支持某些场景” 做出取舍，以使得你的文件系统在其他场景表现得更好：</p>
+<ul>
+<li>性能<ul>
+<li>在存在超大的文件、目录下上百万个文件时各个操作的性能表现</li>
+<li>在各种类型 workload 的读/写文件 (顺序/随机、读/写分布等)、目录操作比例下的性能表现</li>
+<li>多进程并发时的文件系统表现 (例如多个进程在同一个目录中创建/删除文件)</li>
+</ul>
+</li>
+<li>可靠性<ul>
+<li>在系统可能因为意外崩溃 (例如断电) 时，文件系统实现的正确性</li>
+<li>在磁盘可能损坏的前提下，文件系统的可靠性</li>
+</ul>
+</li>
+<li>功能<ul>
+<li>能否支持加密 (现代文件系统的必要功能)、快照 (使用 copy-on-write 技术)、透明压缩 (能减少文本等类型文件的空间占用)、文件打包 (减少空间浪费)、去重 (相同的数据块只需一份拷贝；但这有时候会降低加密的强度)、……这些功能很有可能是互相冲突的</li>
+</ul>
+</li>
+</ul>
+<p>因此你会发现，文件系统的实现远飞想象中的那么简单。我们经历了 UNIX 文件系统、FAT、ext2, ext3 (提供了崩溃一致性), ext4 (更先进的 ext3), ZFS, XFS, btrfs, ... 它们各自的设计都有独特之处。有兴趣的同学可以阅读讲义开头关于 btrfs 的论文。</p>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

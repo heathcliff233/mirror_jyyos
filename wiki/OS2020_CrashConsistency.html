@@ -1,0 +1,161 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+<link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../static/css/bootstrap-theme.min.css"/>
+
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+    
+
+    <title>崩溃一致性</title>
+  </Head>
+  <body>
+   
+   
+<nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-barnd" href="index.html">Yanyan's Wiki</a>
+  <div class="collapse navbar-collapse">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="OS2020.html">
+        <img class="textimg" src="../static/wiki/logo-n.png"/>
+        操作系统 (2020)</a>
+      <a class="nav-item nav-link active" href="SysLab2020.html">
+        计算机系统综合实验 (2020)</a>
+      <a class="nav-item nav-link active" href="ICS_NJU.html"><img class="textimg" height="18px" src="../static/img/ics.png"/> 加入我们</a>
+    </div>
+    <form class="form-inline" autocomplete="off">
+      <input id="token-input" type="text" oninput="login();" maxlength="16"
+        data-toggle="tooltip" data-placement="bottom"
+        title="用于确定身份的作业提交 SHA-1 hash digest。更改后回车或刷新网页生效"></input>
+    </form>
+  </div>
+</nav>
+
+<center>
+  <div class="article-container">
+    <div class="article">
+      <h1 id="_1">崩溃一致性</h1>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">本讲阅读材料</h4>
+<p><a href="http://pages.cs.wisc.edu/~remzi/OSTEP/">教科书 (Operating Systems: Three Easy Pieces, OSTEP)</a> 第 42-43 章。其中 LFS 部分包含了非常细节的分析，也有很多不错的参考文献。有兴趣的同学还可以阅读以下材料：</p>
+<ul>
+<li>H. S. Gunawi, et al. SQCK: A declarative file system checker. In <em>Proc. of OSDI</em>, 2008.</li>
+<li>O. R. Gatla, et al. Towards robust file system checkers. In <em>Proc. of FAST</em>, 2018.</li>
+<li>T. S. Pillai. All file systems are not created equal: On the complexity of crafting crash-consistent applications. In <em>Proc. of OSDI</em>, 2014.</li>
+<li>D. E. Porter, et al. Operating system transactions. In <em>Proc. of SOSP</em>, 2009. </li>
+</ul>
+</div></div></div>
+
+<p>磁盘和文件系统是用来<strong>持久</strong>地存储用户数据的——磁盘是一种 non-volatile storage。因此我们对它的要求自然也比内存要高一些：当系统掉电以后，我们很自然地认为内存中的数据会全部丢失，但我们却希望无论在何种情况下，磁盘都能正确保存用户的数据。</p>
+<p>文件系统看似简单——不过是磁盘上的数据结构，而文件系统的实现是把文件系统操作翻译成一系列磁盘块的 read/write 操作。因为 read 不会影响磁盘上的数据，我们只需考虑向磁盘的所有写操作。然而在任何时刻，计算机系统都有可能崩溃 (软件 bug、断电、……)，考虑上次课介绍过的一些具体文件系统的实现，此时磁盘上数据的状态还正确吗？</p>
+<h2 id="multi-write">数据结构更新和 Multi-Write</h2>
+<p>我们在更新磁盘上的数据结构时，为了完成一个操作，可能会涉及多个数据块的写入。一个例子是如果我们希望在一个类似 UNIX 文件系统的实现中，在目录 <code>/home/jyy</code> 中创建一个新的目录 <code>test</code>。此时，我们需要写入以下数据块：</p>
+<ol>
+<li><code>/home/jyy</code> 的 inode</li>
+<li><code>/home/jyy</code> 的数据 (更新目录文件，相当于另一个数据结构的操作，有可能涉及到数据块的分配)</li>
+<li>在文件系统的 inode bitmap 中为 <code>/home/jyy/test</code> 分配一个 bit</li>
+<li><code>/home/jyy/test</code> 的 inode</li>
+<li>在文件系统的 data bitmap 中为 <code>/home/jyy/test</code> 分配一个数据块</li>
+<li><code>/home/jyy/test</code> 的数据 (空目录需要包括 <code>.</code> 和 <code>..</code>)</li>
+</ol>
+<p>我们希望的是<strong>所有</strong>这些写入在磁盘上要么同时发生，要么同时不发生 (atomicity)，这样才能确保磁盘上的数据结构处于正确的状态。你可以试想任何一个数据块的缺失会导致什么问题。</p>
+<h2 id="_2">物理磁盘的崩溃行为</h2>
+<p>简单来看，磁盘是一个以块为单位读写的数据块的 “数组”，就支持三种操作：</p>
+<ol>
+<li><code>read(#blk, data)</code>, 从磁盘中读出一块；</li>
+<li><code>write(#blk, data)</code>, 向磁盘写入一块；</li>
+<li><code>flush</code>, 保证在 <code>flush</code> 之前的所有写操作都进入磁盘才返回。换言之，当 <code>flush</code> 返回以后，<code>flush</code> 之前的数据保证在磁盘中被持久化。</li>
+</ol>
+<p>如果假设系统不会崩溃，我们根本不需要 <code>flush</code>: 磁盘本身就能保证 read 能返回最近一次写入的数据。但实际上磁盘的实现也许比你想象得复杂一些。为了让磁盘的速度看起来更快，硬件中通常都内置了缓存，并且可能根据磁盘实际的机械/物理特性进行优化，调换读写操作的顺序。这和编译器/CPU 很像: <code>x = 1; y = 2;</code> 两个写操作允许被调换顺序，同样的，两个先后到达的对磁盘块的写操作也可以被调换顺序 (也许是因为后到达的那个请求可以立即被执行)。</p>
+<p>物理磁盘崩溃后，我们保证：</p>
+<ol>
+<li><code>flush</code> 返回前的数据都正确落盘；</li>
+<li>在崩溃时到上一次 <code>flush</code> 之前的数据块可能被部分写入 (可能会发生某个数据块的一部分被写入，但我们假设可以通过 checksum 检测到这种情况，因此好像这一块没有写入)；</li>
+<li>有极小概率会发生磁盘上其他数据块的物理损坏。</li>
+</ol>
+<p>如果我们假设系统任何时候都可能崩溃，实现崩溃一致性就像实现一个正确的并发数据结构——你立即发现事情没那么简单了 😁</p>
+<h2 id="_3">实现崩溃一致性</h2>
+<h3 id="_4">实现崩溃一致性的挑战</h3>
+<p>实现 crash-safe 的文件系统 (multi-write 的原子性) 还有若干方面的因素需要考虑：</p>
+<ol>
+<li><strong>性能</strong>：文件系统的访问必须尽可能地快，目前因为内存比磁盘快得多 (更重要的是延迟小得多)，因此对文件系统的读写操作通常都发生在内存中的缓存里。</li>
+<li><strong>(崩溃) 一致性</strong>：希望文件系统在系统任意时刻崩溃后，磁盘上保存的数据都能恢复到最近某个 “实际存在过的” 的文件系统状态。</li>
+<li><strong>持久性</strong>：同时我们也希望对文件系统的操作在执行完毕后就立即反映到磁盘上——这才符合程序员对 “文件系统” 的认识。例如满足性能和一致性的最简单实现就是把所有数据都缓存在内存且绝不写回磁盘。“空的” 磁盘也是一致的，但这显然不是我们想要的。</li>
+</ol>
+<p>如你所预料的，这些多方面的因素是相互冲突的。例如，如果我们希望持久性，即对文件系统的操作立即反映到磁盘，允许向脏缓存中写数据 (提高了性能) 无疑破坏了这种持久性。同样，为了满足一致性，我们需要在磁盘上写入额外的数据，也降低了性能。</p>
+<div markdown="1"><div class="fenced fenced-blue"><div>
+<h4 id="_1">计算机系统中作出的权衡</h4>
+<p>计算机系统领域最重要的就是“把一件重要的事情做成”。在这门课程中，我们已经看过了很多这样精彩的例子：分时多线程、虚拟存储、文件系统……而在一个实际的环境中搭建一个实际的系统，难免会遇到很多限制：硬件能力的限制 (因为只有有限的电路，因此硬件只能提供比较有限的机制)、互相冲突的需求 (在文件系统中性能、一致性、持久性的需求) 等等，因此计算机系统设计和实现面临着对很多选择的<strong>权衡</strong> (trade-off)。</p>
+<p>阅读更多参考文献，并且把自己带到那个历史的时间点 (例如 CPU/内存的速度、磁盘的容量等)，你就能理解系统设计者作出权衡的理由。</p>
+</div></div></div>
+
+<h3 id="_5">实现崩溃一致性</h3>
+<p>实现崩溃一致性有两个重要的主题：</p>
+<ol>
+<li>在文件系统已经发生损坏 (或者在文件系统层不提供崩溃一致性) 时进行抢救性地检查 (file system checking)；</li>
+<li>假设崩溃不会损坏 sync 落盘的数据，在文件系统层巧妙地实现数据结构，提供崩溃一致性 (journaling)。</li>
+</ol>
+<p>请阅读教科书第 42, 43 章。除了 journaling, 实现完全 copy-on-write 的文件系统也是一个有趣的途径。有兴趣的同学可以了解 <a href="https://en.wikipedia.org/wiki/Btrfs">btrfs</a>，它基于 “everything is a B-tree” 的思路实现。</p>
+<ul>
+<li>O. Rodeth, et al. <a href="https://dl.acm.org/doi/10.1145/2501620.2501623">BTRFS: The Linux B-tree filesystem</a>. <em>ACM Transactions on Storage</em> (ToS), 9(3), 2013.</li>
+</ul>
+    </div>
+  </div>
+</center>
+
+<div class="footer-bottom">
+  <center>
+    <div class="copyright"> © 2020 Yanyan Jiang, All rights reserved </div>
+  </center>
+</div>
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
