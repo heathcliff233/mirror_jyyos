@@ -1,0 +1,680 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>Operating Systems: Three Easy Pieces</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="operating-systems-three-easy-pieces">Operating Systems: Three Easy Pieces</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>考试涉及的内容到上次课为止结束</p>
+<ul>
+<li>我们到底学了什么？</li>
+</ul>
+</blockquote>
+<p>本讲概述</p>
+<ul>
+<li>Operating systems: three easy pieces</li>
+<li>理解 Android 系统</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="virtualization">Virtualization</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">操作系统：设计</h2>
+<blockquote>
+<p>(应用视角) 操作系统：为应用程序提供执行环境的系统软件。</p>
+<ul>
+<li>关于 “程序”，你们想到了什么？</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>一些联想</p>
+<ul>
+<li>程序是由机器指令描述的状态机<ul>
+<li>绝大部分指令行为是确定 (deterministic) 的 (call, push, ...)</li>
+<li>rdrand, syscall <span class="green">[minilabs]</span></li>
+</ul>
+</li>
+<li>程序是 ELF Binary<ul>
+<li>描述了代码、数据、符号……</li>
+<li>由操作系统加载 (execve <span class="green">[M3 - sperf]</span>, dlopen <span class="green">[M4 - crepl]</span>) 执行<ul>
+<li>静态链接：直接从 entry 开始执行</li>
+<li>动态链接调用 interpreter</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">操作系统：实现</h2>
+<blockquote>
+<p>(硬件视角) 操作系统：一个直接运行在硬件 (bare-metal) 上的程序。</p>
+<ul>
+<li>关于 “bare-metal 上的程序” 你们想到了什么？</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>一些联想</p>
+<ul>
+<li>NEMU 实验<ul>
+<li>fetch-decode-execute 的循环</li>
+</ul>
+</li>
+<li>Boot sequence <span class="green">[L0 - amgame]</span><ul>
+<li>Firmware → bootloader → ...</li>
+</ul>
+</li>
+<li>AbstractMachine 做出的抽象<ul>
+<li>I/O (通过指令访问设备寄存器)</li>
+<li>中断 (异步执行流)</li>
+<li>虚拟存储 (地址翻译函数 <math class="inline-math">f</math>)</li>
+</ul>
+</li>
+<li><span class="red">虚拟化</span>: Bridging the gap (<a href="../static/wiki/os/2020/demos/trivial-os.c">trivial-os.c</a>)</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="concurrency">Concurrency</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">“多线程” 状态机</h2>
+<p>假设库函数/操作系统为我们提供了 create/join (<a href="../static/wiki/os/2020/demos/threads.h">threads.h</a>)</p>
+<div class="codehilite"><pre><span></span><span class="kt">void</span> <span class="nf">create</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">fn</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">join</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">fn</span><span class="p">)());</span>
+</pre></div>
+
+<p>状态机模型 (应用/硬件) 也相应改变</p>
+<ul>
+<li>在 <span class="green">[M2 - libco]</span> 中使用 setjmp/longjmp 实现了 “主动切换” 的线程</li>
+<li>在 <span class="green">[L2 - kmt]</span> 中实现了中断驱动上下文切换的线程</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/concurrent-state.png" width="900px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">并发带来的挑战</h2>
+<blockquote>
+<p>原子性、顺序、可见性的丧失。</p>
+</blockquote>
+<p>并发的来源</p>
+<ul>
+<li>中断驱动的异步执行/上下文切换</li>
+<li>多处理器硬件 (并行)</li>
+</ul>
+<hr></hr>
+<p><span class="red">掌控并发</span></p>
+<ul>
+<li>互斥 (自旋锁、互斥锁) <span class="green">[L1 - pmm; M6 - libkvdb]</span></li>
+<li>同步 (条件变量、信号量) <span class="green">[L2 - kmt; midterm]</span></li>
+<li>并发 bugs (你们一直在和它们战斗)<ul>
+<li>好的编程习惯 <span class="green">[L3 - vfs]</span></li>
+<li>sanitizers/canaries; trace/log <span class="green">[all labs]</span></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="persistence">Persistence</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">文件系统：设计</h2>
+<p><span class="red">持久化</span>：存储设备的虚拟化</p>
+<ul>
+<li>everything is a file <span class="green">[minilabs; L3 - vfs]</span><ul>
+<li>文件系统 “顺便” 提供了访问操作系统对象的 API</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/dir-tree.png" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1-bit">文件系统：实现 (从 1-Bit 到崩溃一致性)</h2>
+<p><img alt="" class="center" src="img/linux-storage-4.10.png.html" width="510px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">两门系统方向课程的小结</h2>
+<p>花了整整两个学期，我们到底学到了什么？</p>
+<ul>
+<li>程序 (状态机) 的精确行为<ul>
+<li>在《计算机系统基础》中，理解了 “指令执行” <span class="green">[NEMU PAs]</span></li>
+<li>在《操作系统》中，理解了 “系统调用” <span class="green">[minilabs]</span></li>
+</ul>
+</li>
+<li>也知道了如何用硬件 (指令) 实现所有的系统调用<ul>
+<li>代码课 (xv6) 和让你们痛不欲生的实验 <span class="green">[oslabs]</span></li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<blockquote>
+<p>你理解了如何在 “上帝视角” 观察 “用户” 和 “硬件” 眼中的应用程序</p>
+<ul>
+<li>解释 “Hello World” 程序的执行过程</li>
+<li>理解任何一个未知系统调用的动机和实现方法</li>
+<li>用系统化的方法去解释程序的 “诡异” 行为</li>
+<li>……</li>
+</ul>
+</blockquote>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="android">一个真实的例子: <a href="https://developer.android.google.cn/">Android</a></h1>
+<p><br></br>
+<p>(看看我们学完这门课，对 “操作系统” 的理解会有什么变化)</p></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android">Android 系统：诞生</h2>
+<p>2008: 满街都还是 Nokia，我们刚刚告别短信，开始用 2G 网络上手机 QQ</p>
+<ul>
+<li>HTC Dream (G1)<ul>
+<li>3.17" 480 x 320; 528 MHz single-core CPU (MSM7201A, ARM11)</li>
+<li>Google 预见了低功耗处理器的性能要暴涨 (Moore 定律)</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/Google-G1.jpg" width="400px"></img></p>
+<p><span class="center">(和同时代的 iPhone 3G 开启了移动互联网的时代)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android">从 “操作系统” 的角度理解 Android</h2>
+<blockquote>
+<p>操作系统 (Android) 的功能是管理硬件 (手机/平板/...)，为应用程序 (Android App) 提供服务。</p>
+</blockquote>
+<p>移动互联网时代的主角：“Apps”</p>
+<ul>
+<li><p>Android 系统上的应用程序</p>
+<ul>
+<li>开发门槛低 (Java/Kotlin)<ul>
+<li>对比死掉的 Symbian: 要么是 C++ 要么是阉割的 Java</li>
+</ul>
+</li>
+<li>代码编译成 Dalvik bytecode、app 打包成 “apk” (zip archive)<ul>
+<li><a href="https://ibotpeaches.github.io/Apktool/">apktool</a> 可以实现 “解包”</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>运行在 “Android Runtime” (ART)</p>
+<ul>
+<li>managed runtime</li>
+<li>丰富的系统服务、运行库 (框架、游戏引擎……)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>App 即流量，流量即金钱</p>
+<ul>
+<li><del>这才是最重要的</del></li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android-apps">Android Apps</h2>
+<p>每个 App 都是一个 Linux 进程</p>
+<ul>
+<li>你可以想象成是每个 App 都是一个 NEMU<ul>
+<li>执行 <a href="https://source.android.google.cn/devices/tech/dalvik/dalvik-bytecode">Dalvik bytecode</a> (类似 JVM)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>App 启动：“Zygote process”</p>
+<ul>
+<li>并不是在 shell 中 fork-execve</li>
+<li>而是预先准备好状态的 “快照”<ul>
+<li>状态初始化好的虚拟机<ul>
+<li>好像是在 NEMU 中先完成仙剑奇侠传的载入</li>
+</ul>
+</li>
+<li>a <code>fork()</code> in the road! (<code>forkAndSpecializeCommon</code> in <code>Zygote.cpp</code>)<ul>
+<li><code>DetachDescriptors(env, fdsToClose)</code></li>
+<li><code>gOpenFdTable-&gt;ReopenOrDetach()</code></li>
+<li>(挂载虚拟存储、注销信号、……)</li>
+<li><code>env-&gt;CallStaticVoidMethod(.., gCallPostForkChildHooks, ..);</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android-apps-api">Android Apps 使用的 API</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/android-arch.png" width="400px"></img></p>
+<p>Linux 系统调用</p>
+<ul>
+<li>库函数包裹了系统调用</li>
+<li>App 中的本地 (native) 代码<ul>
+<li>Android NDK; JNI</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>Android Framework APIs</p>
+<ul>
+<li>“high-level” 系统调用<ul>
+<li>基于 Binder IPC 实现<ul>
+<li>通话/短信/联系人</li>
+<li>设备管理</li>
+<li>界面 (Activity) 管理</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="binder">Binder: 实现</h2>
+<p>Binder 设备 (<code>/dev/binder</code>)</p>
+<ul>
+<li><p>支持一个操作: <code>ioctl(fd, BINDER_WRITE_READ, buf);</code> </p>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">binder_write_read</span> <span class="p">{</span>
+  <span class="kt">ssize_t</span>      <span class="n">write_size</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span> <span class="n">write_buffer</span><span class="p">;</span>
+  <span class="kt">ssize_t</span>      <span class="n">read_size</span><span class="p">;</span>
+  <span class="kt">void</span>       <span class="o">*</span> <span class="n">read_buffer</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+
+</li>
+<li><p>类似对另一个进程的 function call (remote procedure call, RPC)</p>
+<ul>
+<li>copy-once (通过浪费一些内存可以做到 zero-copy; 但风险大于收益)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hal">系统服务和 HAL: 海量的代码</h2>
+<p>此处省略千万行级的代码</p>
+<ul>
+<li>graphics, camera, ... 等都是非常 heavy 的 subsystem</li>
+<li>兼顾 API 的易用、性能、安全性……</li>
+</ul>
+<hr></hr>
+<p>在系统服务之下就是大家熟悉的 Linux 系统调用了</p>
+<ul>
+<li>回到大家熟悉的领域了</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1-widget">例子 (1)：控件 (Widget) 绘制</h2>
+<blockquote>
+<p>回顾: GPU 是一种接受数据/代码，可以执行 “计算” 命令的 I/O 设备。</p>
+</blockquote>
+<p>App 需要准备的是各种 “绘制命令” <span class="green">[L0 - amgame]</span></p>
+<ul>
+<li>非常复杂：图形、Unicode 字符、OpenGL 命令……<ul>
+<li>例子：系统支持自定义字体</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/android-draw.png" width="450px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="2">例子 (2): 持久数据管理</h2>
+<p>使用高级语言 (Kotlin) 编写</p>
+<ul>
+<li>(还记得 Symbian 是怎么死的吗？)</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="n">@Entity</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">User</span><span class="p">(</span>
+  <span class="n">@PrimaryKey</span> <span class="k">val</span> <span class="py">uid</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span>
+  <span class="n">@ColumnInfo</span><span class="p">(</span><span class="n">name</span> <span class="p">=</span> <span class="s">"first_name"</span><span class="p">)</span> <span class="k">val</span> <span class="py">firstName</span><span class="p">:</span> <span class="n">String</span><span class="p">?,</span>
+  <span class="n">@ColumnInfo</span><span class="p">(</span><span class="n">name</span> <span class="p">=</span> <span class="s">"last_name"</span><span class="p">)</span> <span class="k">val</span> <span class="py">lastName</span><span class="p">:</span> <span class="n">String</span><span class="p">?</span>
+<span class="p">)</span>
+
+<span class="n">@Dao</span>
+<span class="k">interface</span> <span class="nc">UserDao</span> <span class="p">{</span>
+  <span class="n">@Query</span><span class="p">(</span><span class="s">"SELECT * FROM user"</span><span class="p">)</span>
+  <span class="k">fun</span> <span class="nf">getAll</span><span class="p">():</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">User</span><span class="p">&gt;</span>
+
+  <span class="n">@Query</span><span class="p">(</span><span class="s">"SELECT * FROM user WHERE first_name LIKE :first AND "</span> <span class="p">+</span>
+         <span class="s">"last_name LIKE :last LIMIT 1"</span><span class="p">)</span>
+  <span class="k">fun</span> <span class="nf">findByName</span><span class="p">(</span><span class="n">first</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="n">last</span><span class="p">:</span> <span class="n">String</span><span class="p">):</span> <span class="n">User</span>
+
+  <span class="p">...</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android-room-apis">Android Room APIs: 实现</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/android-room.png" width="800px"></img></p>
+<p><span class="center">(都在进程的地址空间里)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="sqlite"><a href="https://sqlite.org/"><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/sqlite.gif"></img></a> SQLite</h2>
+<p>SQLite: A small, fast, self-contained, high-reliability, full-featured, SQL database engine</p>
+<ul>
+<li>“most widely deployed and used database engine” (Android, iOS, macOS, Windows 10, Chrome, Firefox, Safari, ...)</li>
+<li>1 trillion (<math class="inline-math">10^{12}</math>) SQLite databases in active use<ul>
+<li>“嵌入式” 数据库 <span class="green">[M6 - libkvdb]</span></li>
+<li>(可以以一个 <code>.c</code> 文件的形式嵌入你的代码)</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">sqlite3</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">'a.db'</span><span class="p">)</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+<span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">'CREATE TABLE kvdb (key TEXT PRIMARY KEY, value CLOB)'</span><span class="p">)</span>
+<span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+<span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">'INSERT INTO kvdb VALUES ("hello", "world")'</span><span class="p">)</span>
+<span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+<span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android-apps">小结: Android 和 Apps</h2>
+<p>你看到的 App 不过是 Linux 上的一个进程</p>
+<ul>
+<li>大部分时候在执行 Dalvik bytecode (来自 Java/Kotlin)<ul>
+<li>ahead-of-time 编译成 ARM (AArch64) 指令序列</li>
+</ul>
+</li>
+<li>可以执行库函数/系统调用<ul>
+<li>binder (<code>ioctl</code>)</li>
+<li>sqlite (<code>pread</code>, <code>pwrite</code>, <code>fdatasync</code>, ...)</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>学完操作系统之后，你对 “程序” 的视角和理解更本质了。</p>
+</blockquote></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统知识的应用</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="app">国内 App 厂商的流氓趣事</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/android-wakeups.png" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="diehard-apps">“Diehard Apps”</h2>
+<p>应用</p>
+<ul>
+<li>为了我的 ￥￥￥，我希望活着<ul>
+<li>推送广告、采集隐私、……</li>
+<li>让全家桶/友商互相唤醒：只要有一个活着，全家都活着！</li>
+</ul>
+</li>
+</ul>
+<p>系统</p>
+<ul>
+<li>为了用户体验，你们不能太过分<ul>
+<li>< 5.0: native 代码 fork 出的进程无法杀死 😂</li>
+<li>5.0: 系统杀进程以 uid 为标识，一个 App 一个 uid，一起全杀死</li>
+<li>8.0: per-app 后台执行限制</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>博弈的结果：App 厂商和 ROM 厂商之间的大战 (<del> 保平安</del>)</p>
+</blockquote>
+<ul>
+<li>Y. Shao, et al. A lightweight framework for fine-grained lifecycle control of Android applications. In <em>Proc. of EuroSys</em>, 2019.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="app">也有杀不掉的 App</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/qq-force-stop.jpeg" width="300px"></img>
+在 Linux 里，大不了 <code>kill -9</code>, 进程也死了</p>
+<ul>
+<li>一键清理、强力清理等各大招都无法彻底杀掉 TIM，系统的自启动拦截都没能阻止 TIM 的永生 (<a href="http://gityuan.com/2018/02/24/process-keep-forever/">——gityuan's blog</a>)</li>
+<li>一般 “强行停止” 以后按钮就灰了<ul>
+<li>得靠全家桶 (或者友商) 唤醒</li>
+<li>但 TIM 根本无法强行停止 😂</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="app">App 强行保活：原理</h2>
+<blockquote>
+<p>Android App 可以有不止一个进程 (甚至有 detach 的孤儿进程)</p>
+</blockquote>
+<p>ActivityManagerService “强行终止” 应用</p>
+<ul>
+<li>遍历进程列表，找到 App uid 匹配的进程 <span class="green">[M1 - pstree]</span></li>
+<li>使用 SIGKILL 强行杀死 (<code>Process.killProcessQuiet</code>)<ul>
+<li>此时有可能有新创建的进程</li>
+<li>等 5ms，重复此过程 40 次</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>如果在这 40 x 5ms 里每次都能再次拉起进程就能免死 😂😂😂</p>
+<ul>
+<li>“TOCTTOU” <span class="green">[C3 - “并发 bugs”]</span></li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="app">App 强行保活：实现</h2>
+<p>App 正常运行的时候，分配几个弟兄 (进程)</p>
+<ul>
+<li>互相检测对方被杀死</li>
+<li>如果杀死，第一时间向系统拉起一个新的 Service<ul>
+<li>生死时速：因为它马上也要被杀掉了 😂</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>怎样高效地检测到兄弟被杀掉了？</p>
+<ul>
+<li>两个进程<ul>
+<li>A - 持有锁 (flock) 不释放 <span class="green">[M6 - libkvdb]</span></li>
+<li>B - acquire (flock) 阻塞<ul>
+<li>A 被 kill → 锁释放 → B 唤醒 (是时候大干一场了)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>怎样拉起一个 Service/Activity?</p>
+<ul>
+<li>向 ActivityManagerService 发送消息 (IPC)<ul>
+<li>通过 binder (对 <code>/dev/binder</code> 的 ioctl)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">为什么讲这个例子？</h2>
+<blockquote>
+<p>你在《操作系统》课程里学习了足够的知识分析这个案例！</p>
+</blockquote>
+<p><a href="http://gityuan.com/2018/02/24/process-keep-forever/">gityuan's blog</a> 中的分析</p>
+<ul>
+<li>使用了各种 log/trace 分析 </li>
+<li>Android 提供 traceview, systrace<ul>
+<li>有时 strace 可能更有效</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>我们到底学到了什么？</p>
+<ul>
+<li>操作系统的三个重要组成部分<ul>
+<li>virtualization, concurrency 和 persistence</li>
+</ul>
+</li>
+<li>对整个计算机系统 (软件/硬件) 运行通透的理解<ul>
+<li>今天的例子: Android<ul>
+<li>随处可见 labs 的影子 <span class="green">[oslabs; minilabs]</span></li>
+<li>你们写过的代码让你们真正理解了 “什么是操作系统”</li>
+</ul>
+</li>
+<li>你们已经 (几乎) 有了足够的知识储备，进入严肃的 research work 了</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<ul>
+<li><del>后悔没有好好听课/做实验了吧</del><ul>
+<li><del>还来得及</del></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

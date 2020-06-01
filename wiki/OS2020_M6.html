@@ -50,7 +50,6 @@
       <h1 id="m6-key-value-libkvdb">M6: Key-Value 数据库 (libkvdb)</h1>
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">截止日期</h4>
-<p>(实验指南更新中)</p>
 <p>关于实验环境设置、提交方法、评分规则等，请阅读<a href="OS2020_Labs.html">实验须知</a>。获取代码，在 <code>os-workbench</code> 中执行：</p>
 <div class="codehilite"><pre><span></span><span class="err">git pull origin M6</span>
 </pre></div>
@@ -98,7 +97,7 @@
 </div></div></div>
 
 <h2 id="2">2. 实验描述</h2>
-<p>在这个实验中，我们实现持久、崩溃一致的 key-value 数据库 API, 它们定义在 <code>libkvdb.h</code>:</p>
+<p>在这个实验中，我们实现持久、崩溃一致的 key-value 数据库 API, 它们定义在 <code>kvdb.h</code>:</p>
 <div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">kvdb</span><span class="p">;</span>
 <span class="k">struct</span> <span class="n">kvdb</span> <span class="o">*</span><span class="nf">kvdb_open</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">);</span>
 <span class="kt">int</span> <span class="nf">kvdb_close</span><span class="p">(</span><span class="k">struct</span> <span class="n">kvdb</span> <span class="o">*</span><span class="n">db</span><span class="p">);</span>
