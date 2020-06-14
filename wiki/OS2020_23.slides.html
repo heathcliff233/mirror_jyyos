@@ -1,0 +1,338 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>《操作系统》课程总结</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">《操作系统》课程总结</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>祝贺，终于要结束了！</p>
+</blockquote>
+<p>本讲内容</p>
+<ul>
+<li>课程复习</li>
+<li>三周目总结</li>
+<li>课后八卦<ul>
+<li>是时候灌点鸡汤了</li>
+</ul>
+</li>
+<li>在线答疑/交流 (Zoom)</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">我们到底学了个啥？</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">计算机系统 = 程序 = 状态机</h2>
+<blockquote>
+<p>《计算机系统基础》课程最重要的 “takeaway message”</p>
+</blockquote>
+<p>理解方法: AbstractMachine</p>
+<ul>
+<li>C Runtime</li>
+<li>中断 (上下文管理)</li>
+<li>I/O 设备访问</li>
+<li>虚拟存储</li>
+<li>多处理器</li>
+</ul>
+<p>而操作系统就是状态机的 “模拟者”</p>
+<ul>
+<li>提供虚拟化的状态机和其他服务<ul>
+<li>设备/持久数据管理、进程间通信、网络……</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">从逻辑门到计算机系统</h2>
+<p>刷一下手机，你的计算机系统经历了非常复杂的过程</p>
+<ul>
+<li>应用程序 (app) → 库函数 (Android Framework) → 系统调用 → 操作系统中的对象 → 操作系统实现 (C 程序) → 设备驱动程序 → 硬件抽象层 (AbstractMachine) → 指令集 (x86-64) → CPU, RAM, I/O设备 → 门电路 → 另一台计算机 → 分布式系统 → ...</li>
+</ul>
+<blockquote>
+<p>这个复杂的过程，已经有一个清晰的 (原理性的) 轮廓了。</p>
+</blockquote>
+<div class="fragment">
+<p><span class="center"><img src="../static/wiki/ics/2019/img/CV-41.jpg" height="200px"></img> <img src="../static/wiki/ics/2019/img/CV-1.jpg" height="200px"></img> <img src="../static/wiki/ics/2019/img/santa_maria.jpg" height="200px"></img></span></p>
+<p><span class="center">Midway (CV-41, 1955); Langley (CV-1; 1921); Santa María, 1492</span></p>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">所以你到底学到了什么？</h2>
+<blockquote>
+<p>Operating systems (最重要的那个 piece): you're <em>delighted</em></p>
+</blockquote>
+<p>你不再惧怕任何 “system”</p>
+<ul>
+<li>嵌入式系统</li>
+<li>通用操作系统</li>
+<li>分布式系统</li>
+<li>……</li>
+</ul>
+<p>也不再惧怕任何 “需求” 的实现</p>
+<ul>
+<li>找到合适的系统调用实现</li>
+<li>做不到？可以自己加个系统调用</li>
+<li>软件上实现不了？可以改 CPU 来支持！</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hackers-delights">Hacker's Delights: 新的“理解”</h2>
+<p>“计算机的本质是状态机”——fork 拷贝了一份状态机</p>
+<ul>
+<li>“一份拷贝” 能有怎样的 power？<ul>
+<li>recovery, testing, ...</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>“死锁检测: lockdep 在每次 lock/unlock 的时候插入一条 printf”</p>
+<ul>
+<li>这就是 dynamic analysis 的本质<ul>
+<li>如何减少 printf 的数量、怎么巧妙地记录、怎样分析日志……</li>
+<li>如何调控程序的执行？找到 bug 还是绕开 bug？</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>“文件系统是磁盘上的一个数据结构”</p>
+<ul>
+<li>通过 append-only 实现 journaling, copy-on-write, 分布式系统……</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="topics">和操作系统相关的 Topics</h2>
+<p>对这门课中的内容 (以及写代码) 感兴趣？可以考虑以下研究方向</p>
+<ul>
+<li>Computer Architecture<ul>
+<li>计算机硬件的设计、实现与评估</li>
+</ul>
+</li>
+<li>Computer Systems<ul>
+<li>系统软件 (软件) 的设计、实现与评估</li>
+</ul>
+</li>
+<li>Network Systems<ul>
+<li>网络与分布式系统的设计、实现与评估</li>
+</ul>
+</li>
+<li>Programming Languages<ul>
+<li>状态机 (计算过程) 的描述方法、分析和运行时支持</li>
+</ul>
+</li>
+<li>Software Engineering<ul>
+<li>程序/系统的构造、理解和经验</li>
+</ul>
+</li>
+<li>System/Software Security<ul>
+<li>系统软件的安 (safety) 全 (integrity)</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">三周目总结</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">上操作系统课的乐趣</h2>
+<blockquote>
+<p>在课堂上时，你可以思考一些已经很清楚的基本东西。这些知识是很有趣、令人愉快的，重温一遍又何妨？另一方面，有没有更好的介绍方式？有什么相关的新问题？你能不能赋予这些旧知识新生命？……但如果你真的有什么新想法，能从新角度看事物，你会觉得很愉快。</p>
+<p>学生问的问题，有时也能提供新的研究方向。他们经常提出一些我曾经思考过、但暂时放弃、却都是些意义很深远的问题，重新想想这些问题，看看能否有所突破，也很有意思。</p>
+<p>学生未必理解我想回答的方向，或者是我想思考的层次；但他们问我这个问题，却往往提醒了我相关的问题。单单靠自己，是不容易获得这种启示的。 <span class="float-right">—— Richard Feynman</span></p>
+<p><del>我有个大目标，是和 Feynman 教得一样好</del></p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">三周目的主要改进</h2>
+<p>课程主线</p>
+<ul>
+<li>有了灵魂 (一个严谨的 “状态机” 视角)</li>
+<li>增加了更多阅读材料 (整改项目)</li>
+<li>增加了代码讲解 (整改项目)</li>
+<li>诸多更合理的微调<ul>
+<li><del>第一次感觉是一门不错的操作系统课了！</del></li>
+</ul>
+</li>
+</ul>
+<p>Labs</p>
+<ul>
+<li>延续了 soft/hard deadline 的机制</li>
+<li>改进了文档</li>
+<li>加入了 Online Judge<ul>
+<li>之前整改项目基本都实现了</li>
+<li>很多惊喜</li>
+</ul>
+</li>
+<li>加入了 x86-64 的 AbstractMachine (整改项目)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">自我批评与四周目</h2>
+<blockquote>
+<p>2019 级 AI 混入普通班已确定；匡亚明学院脑科学方向已报备。</p>
+</blockquote>
+<p><del>前几次课对者屏幕讲很不习惯</del></p>
+<p>课程主线</p>
+<ul>
+<li>(因此考虑保持难度)</li>
+<li>更明确地问题驱动 (先抛出具体的问题)</li>
+<li>增加更多的代码 demos</li>
+<li>重写课程网站：课后 quiz (整改项目，未能如愿)</li>
+</ul>
+<p>更多的内容</p>
+<ul>
+<li>增加一些代码 sessions?</li>
+<li>欢迎大家提出建议 (互动/线下/开学后)</li>
+</ul>
+<p>其他都属于细节改动</p>
+<ul>
+<li>我都记下来了</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="zoom-96382767579">Zoom 答疑/交流 (#96382767579)</h1></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

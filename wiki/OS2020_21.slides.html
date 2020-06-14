@@ -1,6 +1,727 @@
-
+<html>
+  <Head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>操作系统设计与实现</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统设计与实现</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>操作系统：应用和硬件之间的抽象层</p>
+<ul>
+<li>Android app 和 Linux 进程都是 “应用程序”<ul>
+<li>但它们位于不同的抽象层</li>
+<li>操作系统的设计和实现都不是唯一的</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>本讲概述</p>
+<ul>
+<li>操作系统：设计与实现<ul>
+<li>Monolithic/micro/exo/unikernel</li>
+</ul>
+</li>
+<li>实现可靠的操作系统</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统：设计与实现</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android">回顾: Android</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/android-arch.png" width="400px"></img></p>
+<p>Android 设计</p>
+<ul>
+<li>App = 进程 & 虚拟机<ul>
+<li>大部分是 Java/Kotlin 代码</li>
+<li>通过 binder 调用系统服务 (ActivityManager, Camera, ...)</li>
+<li>也可以使用 Linux 系统调用 (open, socket, read, write, ...)</li>
+</ul>
+</li>
+</ul>
+<p>Android 实现 (参考 <a href="https://aosp-mirror.github.io/">AOSP</a>)</p>
+<ul>
+<li>在 Linux 上实现<ul>
+<li>硬件抽象层</li>
+<li>系统服务 (Java/Kotlin)</li>
+</ul>
+</li>
+<li>你一定不觉得在 Linux Kernel 里实现 Android Framework API 是个好主意</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="android-api">Android: 操作系统 API 不实现在内核里？</h2>
+<blockquote>
+<p>Linux 内核的其他部分也可以不实现在内核里！</p>
+</blockquote>
+<p>例子：文件系统是 “存储设备上的数据结构”</p>
+<ul>
+<li>如果一个进程拥有存储设备的访问权限，那它完全可以在上面实现文件系统的所有功能</li>
+<li>例如：读/写文件<ul>
+<li>向 “文件系统” 服务进程进行 RPC</li>
+<li>依然是 <code>write(fd, buf, size);</code> 的接口</li>
+</ul>
+</li>
+<li>系统中只需有一个 “文件系统” 服务进程<ul>
+<li>拥有磁盘设备的读写权限 (<code>/dev/sda</code>)，但运行在用户态 (进程)</li>
+<li>根据收到的消息，执行数据结构的维护</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="linux-fuse">例子：文件系统 (Linux FUSE)</h2>
+<p>Userspace file system (<a href="https://www.kernel.org/doc/html/latest/filesystems/fuse.html">FUSE</a>)</p>
+<ul>
+<li>FUSE 内核模块会在 vfs 中注册文件系统<ul>
+<li>FUSE 对应用程序完全透明</li>
+<li>open 会由 vfs 找到 FUSE “文件系统”</li>
+</ul>
+</li>
+<li>FUSE 提供虚拟设备 <code>/dev/fuse</code> (类似 binder)<ul>
+<li>filesystem daemon 从 <code>/dev/fuse</code> 中获取事件 (read)</li>
+<li>执行文件系统操作</li>
+<li>通知 <code>/dev/fuse</code> 完成</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/linux-FUSE.png" width="400px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="linux-fuse">例子：文件系统 (Linux FUSE)</h2>
+<p>“null file system”</p>
+<ul>
+<li>来自 <a href="https://github.com/libfuse/libfuse/tree/master/example">libfuse examples</a></li>
+<li>代码看起来和你们的 Lab3 很像</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="k">static</span> <span class="kt">int</span> <span class="nf">null_write</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span>
+                      <span class="kt">off_t</span> <span class="n">offset</span><span class="p">,</span> <span class="k">struct</span> <span class="n">fuse_file_info</span> <span class="o">*</span><span class="n">fi</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span><span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s">"/"</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">ENOENT</span><span class="p">;</span>
+  <span class="k">return</span> <span class="n">size</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="p">...</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">fuse_operations</span> <span class="n">null_oper</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="p">.</span><span class="n">getattr</span>  <span class="o">=</span> <span class="n">null_getattr</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">truncate</span> <span class="o">=</span> <span class="n">null_truncate</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">open</span>     <span class="o">=</span> <span class="n">null_open</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">read</span>     <span class="o">=</span> <span class="n">null_read</span><span class="p">,</span>
+  <span class="p">.</span><span class="n">write</span>    <span class="o">=</span> <span class="n">null_write</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="fuse">FUSE: 分析</h2>
+<p>并不是完美的 (而是一个 trade-off)</p>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/win98.jpg" width="300px"></img></p>
+<ul>
+<li>优点<ul>
+<li>权限隔离<ul>
+<li>FUSE daemon 只能 corrupt 存储设备</li>
+<li>文件系统实现的问题不再会 crash 内核</li>
+<li>有没有经历过 “插上设备就死机”？</li>
+</ul>
+</li>
+<li>安全的 “user mount” 支持</li>
+</ul>
+</li>
+<li>缺点<ul>
+<li>性能下降<ul>
+<li>多余的额外数据拷贝 (数据 buffer) 和进程同步/上下文切换</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">重新思考 “操作系统设计与实现”</h2>
+<blockquote>
+<p>“系统调用” (操作系统 API) 是个模糊、丰富的概念</p>
+<ul>
+<li>我们学习的是原理 (principles)，不是知识 (knowledge)<ul>
+<li>(但 knowledge 和 familiarity 是通往 principle 的必要途径)</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<div class="fragment">
+<p>关于系统调用 (应用视角的操作系统；操作系统 API)</p>
+<ul>
+<li>实际的实现可能并不在内核中<ul>
+<li>例子: vdso (不需要 trap)</li>
+<li>例子: FUSE (实现不在内核中；内核只负责转发)</li>
+</ul>
+</li>
+<li>也可以不需要设计成 POSIX 那样<ul>
+<li>例子: fork 和 spawn 之争</li>
+<li>例子: binder + system services (Android)</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">重新思考 “操作系统设计与实现” (cont'd)</h2>
+<blockquote>
+<p>操作系统应该如何设计？</p>
+</blockquote>
+<ul>
+<li>操作系统 (各个抽象层) 中有哪些对象？</li>
+<li>这些对象上有什么操作？</li>
+</ul>
+<blockquote>
+<p>操作系统应该怎样实现？</p>
+</blockquote>
+<ul>
+<li>哪些抽象层实现在用户态、哪些实现在内核态？</li>
+<li>如何利用好 CPU 提供的机制？<ul>
+<li>hardware virtualization (Ring -1)</li>
+<li>fine-grained virtual memory</li>
+<li>硬件 IPC 支持</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">重新思考 “操作系统设计与实现” (cont'd)</h2>
+<blockquote>
+<p>“操作系统如何设计/实现”：回到 “应用” 和 “硬件”</p>
+</blockquote>
+<div class="fragment">
+<ul>
+<li>Linux (monolithic kernel): 做足对现代处理器特性的支持；对硬件进行足够的高性能抽象，让所有应用都满意</li>
+</ul>
+<p>有没有别的设计？</p>
+<ul>
+<li>应用 (gcc, vi, gedit, vscode, QQ, 微信, 支付宝, X11, httpd, mysql, Tomcat, strace, perf, ...)<ul>
+<li>操作系统设计可能需要 “favor” 一些特定的应用<ul>
+<li>移动操作系统倾向于支持 apps;</li>
+<li>unikernel 倾向于支持云服务...</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>硬件 (AbstractMachine: 多处理器、中断、I/O、虚存……)<ul>
+<li>以及更多硬件提供的机制</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="microexounikernel">Micro/Exo/Unikernel</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="microkernel">Microkernel</h2>
+<p>设计理念: <em>run (almost) everything as user-mode processes</em></p>
+<ul>
+<li>实现最大程度的权限隔离<ul>
+<li>文件系统进程只对它管理的设备 (甚至是分区) 有访问权</li>
+<li>设备驱动进程只对它管理的设备有访问权</li>
+</ul>
+</li>
+<li>Kernel 只提供最少的系统调用<ul>
+<li>(相当于对 AbstractMachine 作出最少的封装)<ul>
+<li>进程抽象/进程间通信</li>
+<li>地址空间管理</li>
+<li>设备访问</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="minix-3">Minix 3</h2>
+<p>可能是最广泛使用的 microkernel?</p>
+<p><img alt="" class="float-right" height="400px" src="../static/wiki/os/2020/slides/img/osdi-book.jpg"></img>
+<img alt="" class="center" height="400px" src="../static/wiki/os/2020/slides/img/minix3.jpg"></img></p>
+<p>每一个 Intel 处理器的 Management Engine 都运行了 (魔改版) Minix 3</p>
+<ul>
+<li>ME: 另一台 “计算机”，有自己的内存，但可以访问设备</li>
+<li>连操作系统都无法访问</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="minix-3">Minix 3: 设计</h2>
+<p>内核：提供 “kernel calls”</p>
+<ul>
+<li>除了进程之外，几乎没有复杂的抽象 (几乎是 AbstractMachine 的封装)</li>
+</ul>
+<p>用户空间 servers (高权限，但运行在用户态)</p>
+<ul>
+<li>驱动, virtual memory, virtual file system, network stack, ...</li>
+</ul>
+<p>用户进程 user-land (低权限，只能 IPC)</p>
+<ul>
+<li>POSIX API 实现</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/minix3-arch.jpg" width="600px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="minix-3">Minix 3: 内核</h2>
+<p>Kernel calls</p>
+<ul>
+<li>消息传递: send, receive, sendrec</li>
+<li>进程管理: fork, exec, clear, exit, update, schedule, privctl, ...<ul>
+<li>fork 的行为比 Linux 简单的多：进程不需要管理文件描述符等资源</li>
+</ul>
+</li>
+<li>信号管理: kill, getksig, endksig, sigsend, sigreturn</li>
+<li>内存管理: newmap, memset, vmctl, padconf</li>
+<li>数据传送: umap, vumap, vircopy, physcopy, ...</li>
+<li>设备 I/O: devio, sdevio, vdevio, irqctl, ...<ul>
+<li>权限管理：只有有权限的进程才能访问设备</li>
+</ul>
+</li>
+<li>系统控制: abort, getinfo, ...</li>
+<li>时钟管理: setalarm, times, stime, ...</li>
+</ul>
+<hr></hr>
+<p>It works!</p>
+<ul>
+<li>这些 API 足够实现一个 POSIX 兼容的系统</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="1992">一场关于操作系统内核设计的讨论 (1992)</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/debate.png" width="700px"></img></p>
+<blockquote>
+<p>Andrew Tanenbaum: LINUX is obsolete... the debate is essentially over... Microkernels have won... (Linux) is like taking an existing, working C program and rewriting it in BASIC.</p>
+<p>Linus Torvalds: I can only hope (and assume) that Amoeba doesn't suck like minix does... Linux wins heavily on points of being available now.</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="30">30 年之后……到底谁赢了？</h2>
+<blockquote>
+<p>谁都没有。</p>
+</blockquote>
+<p>Monolithic kernel 活着</p>
+<ul>
+<li>Linux 依然是性能和特性的王者</li>
+<li>从 microkernel 里吸收了很多特性<ul>
+<li>loadable kernel module, FUSE, ...</li>
+<li>在 Linux Kernel 上叠加更多的抽象层 (Android)</li>
+</ul>
+</li>
+</ul>
+<p>Microkernel 也活着</p>
+<ul>
+<li>Windows 和 Mach (macOS/iOS) 也生存得很好<ul>
+<li>Mach 3.0: task, thread, address space, memory object, ports, IPC, time (和 Minix 很像，但对 modern systems 做了很多适配，例如多处理器)</li>
+</ul>
+</li>
+<li>Google 也加入了 (Zircon/Fuschia)<ul>
+<li>“大而全” 意味着浪费</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="exokernel">Exokernel</h2>
+<p>Monolithic/micro kernel 并不是实现操作系统的唯一方法</p>
+<ul>
+<li>可以把硬件资源虚拟化后作为操作系统 API<ul>
+<li>想象成是 AbstractMachine</li>
+</ul>
+</li>
+<li>进程可以直接访问虚拟后的硬件资源<ul>
+<li>应用所需的 API (例如 POSIX 系统调用) 通过库 (Library OS) <span class="red">按需定制</span><ul>
+<li>D. R. Engler, et al. Exokernel: An operating system architecture for application-level resource management. In <em>Proc. of SOSP</em>, 1995.</li>
+<li>你们的操作系统运行在 native 上就像是一个 “Library OS”</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/exokernel.png" width="500px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="unikernel">Unikernel</h2>
+<blockquote>
+<p>Exokernel 的主要功能：硬件的虚拟化</p>
+<ul>
+<li>今天我们不是有虚拟机了吗？</li>
+</ul>
+</blockquote>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/unikernel.png" width="400px"></img></p>
+<p>直接拿虚拟机当 exokernel 不就完了？</p>
+<ul>
+<li>应用程序直接看到完整的计算机硬件<ul>
+<li>链接上 Library OS, 直接在 Ring 0 上执行 😂</li>
+<li>对服务器程序来说不挺好吗？</li>
+</ul>
+</li>
+<li>云服务：省去了虚拟机里的操作系统<ul>
+<li>小 (KiB 级)、快 (硬件虚拟化支持)、安全 (性能越少越不容易出问题)</li>
+<li>但不好调试……<ul>
+<li>M. A. Madhavapeddy, et al. Unikernels: Library operating systems for the cloud. In <em>Proc. of ASPLOS</em>, 2013.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">实现可靠的操作系统</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="oslabs">你感受到 OSLabs 的恶意了吗？</h2>
+<blockquote>
+<p>不仅是你，任何操作系统开发者都倍感压力。</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/labs/compile-error.jpg" width="200px"></img></p>
+</blockquote>
+<p>如何提高操作系统的可靠性？</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="level-1-stress-testing">Level 1: (Stress) Testing</h2>
+<p><a href="https://github.com/google/syzkaller">syzkaller</a></p>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/syzkaller.png" width="400px"></img></p>
+<ul>
+<li>kernel fuzzer (“模糊” 测试)</li>
+<li>生成目标：系统调用的序列 (C 程序)<ul>
+<li>kcov 提供覆盖率信息</li>
+<li>覆盖新代码的程序 → 更有价值<ul>
+<li>进行修改 (mutation)，再次执行</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>syzbot: 自动报告了数千个 kernel bugs</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="level-2-software-model-checking">Level 2: (Software) Model Checking</h2>
+<p>还记得 “程序/计算机系统” 就是状态机吗？</p>
+<ul>
+<li>我们用状态机 “证明” 算法的正确性<ul>
+<li>枚举所有可达的状态，逐个检查是否存在 “坏” 的状态</li>
+</ul>
+</li>
+<li>一些优化<ul>
+<li>状态合并 (例如路径)、搜索剪枝、……</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/tla-mem-spec.png" width="300px"></img>
+<img alt="" class="center" src="../static/wiki/os/2020/slides/img/tla-mem.png" width="600px"></img></p>
+<p><a href="http://lamport.azurewebsites.net/tla/tla.html">TLA+</a>: 一种建模/描述语言 (TLC checker)</p>
+<ul>
+<li>L. Lamport. <em>Specifying systems</em>. Pearson Educations, 2003.<ul>
+<li>Intel, Microsoft, Amazon 都在用</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="level-3-formal-verification">Level 3: Formal Verification</h2>
+<p>测试和枚举都是有穷的</p>
+<ul>
+<li>受限于运行时间，很可能做不完整</li>
+<li>能不能一劳永逸地<span class="red">证明</span>程序是对的？<ul>
+<li>(你别测了，劳资证明了系统不会 crash!)</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<blockquote>
+<p>这也行？没错。Computer Science 不仅是 “写代码”。</p>
+</blockquote></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">计算机辅助证明</h2>
+<blockquote>
+<p>给定一个证明，用程序检查证明是否存在瑕疵。</p>
+</blockquote>
+<p>例子：初等代数；多项式的推导</p>
+<p><math class="inline-math">x + 1 = 0</math></p>
+<p><math class="inline-math">\quad\Rightarrow x = -1</math> ✔️</p>
+<hr></hr>
+<p><math class="inline-math">x^2 + x + 1 = 0</math></p>
+<p><math class="inline-math">\quad\Rightarrow (x-1)(x^2+x+1)=0</math></p>
+<p><math class="inline-math">\quad\Rightarrow x^3-1 = 0</math></p>
+<p><math class="inline-math">\quad\Rightarrow x = 1</math></p>
+<p><math class="inline-math">\quad\Rightarrow 1^2 + 1 + 1 = 0</math></p>
+<p><math class="inline-math">\quad\Rightarrow 3 = 0</math> ???</p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">计算机辅助证明 (cont'd)</h2>
+<blockquote>
+<p><em>Four Color Theorem</em>: 任意平面图均可用 4 种颜色着色顶点，使相邻的顶点不同色。</p>
+</blockquote>
+<p><span class="center"><math class="inline-math">\forall G(V, E).\ \exists C: V \mapsto [4].\ \forall (u,v) \in E. C(u) \ne C(v)</math></span></p>
+<hr></hr>
+<p><a href="https://people.math.gatech.edu/~thomas/FC/fourcolor.html">证明 (outline)</a></p>
+<ul>
+<li>假设 <math class="inline-math">G</math> 是最小的反例 (<math class="inline-math">\chi(G) > 4)</math><ul>
+<li>有一些 patterns 一定不会出现在 <math class="inline-math">G</math> 中</li>
+<li>但 <math class="inline-math">G</math> 必须包含至少一个 pattern<ul>
+<li><math class="inline-math">G</math> (反例) 不存在！</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>数千个 patterns<ul>
+<li>计算机可以帮助我们验证！</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="sel4">证明程序是正确的: seL4</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2019/img/sel4.svg" width="220px"></img></p>
+<p>为程序定义 “specification”, 即我们希望证明的性质</p>
+<ul>
+<li>为了证明 specification 和实现保持一致，我们需要对 C 的每个语句的行为建模</li>
+</ul>
+<hr></hr>
+<ul>
+<li>整数运算没有溢出</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="n">spec_violation_when</span><span class="p">(</span><span class="n">x</span> <span class="o">==</span> <span class="n">INT_MAX</span><span class="p">);</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+</pre></div>
+
+<hr></hr>
+<ul>
+<li>调度器总是返回一个线程 (<math class="inline-math">t\in T</math> 或者是 idle)</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="k">struct</span> <span class="n">task</span> <span class="o">*</span><span class="n">schedule</span> <span class="p">{</span> <span class="p">...</span>
+  <span class="n">spec_violation_when</span><span class="p">(</span><span class="o">!</span><span class="n">is_thread</span><span class="p">(</span><span class="n">task</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="p">(</span><span class="n">task</span> <span class="o">==</span> <span class="n">idle</span> <span class="o">||</span> <span class="n">task</span> <span class="n">in</span> <span class="n">T</span><span class="p">));</span>
+  <span class="k">return</span> <span class="n">task</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>证明 “high-level” 状态机的行为 (建模语言中的执行流) 和 “low-level” 状态机 (C 代码) 的行为始终同步</p>
+<ul>
+<li>G. Klein, et al. seL4: Formal verification of an operating-system kernel. <em>Communications of the ACM</em>, 53(6), 107-115, 2010.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="crash-consistency-fscq">证明文件系统的 Crash Consistency: FSCQ</h2>
+<p>先写证明，再从证明中提取代码</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/FSCQ.png" width="450px"></img></p>
+<ul>
+<li>H. Chen, et al. Using Crash Hoare Logic for certifying the FSCQ file system. In <em>Proc. of OSDI</em>, 2016.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">剩下的部分？</h2>
+<blockquote>
+<p>无休止的测试 → 穷举 → 证明 → ...?</p>
+<ul>
+<li>不如承认我们做不对就好了……</li>
+</ul>
+</blockquote>
+<p>这时候，微内核/隔离的优势就体现了</p>
+<ul>
+<li>G. Candea, et al. Microreboot – A technique for cheap recovery. In <em>Proc. of OSDI</em>, 2004.</li>
+<li>J. N. Herder, et al. Minix3: A highly reliable, self-repairing operating system. In <em>ACM SIGOPS Operating Systems Review</em>, 40(3), 2006.</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="bug">小结：与 Bug 旷日持久的战斗</h2>
+<p>如何让你的操作系统更可靠？</p>
+<ul>
+<li>(stress) testing: 我在运行的这些情况上没有观测到问题</li>
+<li>(software) model checking: 我跑遍了 XX 路径，都没有问题</li>
+<li>formal verification: 我证明了程序执行和预期的模型保持一致</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>形式化验证的系统也被测试出 bugs</p>
+<ul>
+<li>CompCert (csmith; PLDI'11)</li>
+<li>FSCQ (Hydra; SOSP'19)<ul>
+<li>但 Verified systems 依然更可靠！<ul>
+<li>CompCert 找到的所有 bug 都是未进行 specification 的部分</li>
+<li>“验证” 过的部分还没有出错</li>
+</ul>
+</li>
+<li><span class="green">下一个 10 年会发生什么？</span></li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>操作系统</p>
+<ul>
+<li>硬件和应用之间的桥梁</li>
+</ul>
+<hr></hr>
+<p>操作系统内核设计与实现</p>
+<ul>
+<li>Monolithic kernel 需要模块化<ul>
+<li>内核是高度 modularized system</li>
+</ul>
+</li>
+<li>Microkernel 依然紧耦合<ul>
+<li>新的 feature 牵动多个模块，进程隔离 (强行解耦) 反而更难维护</li>
+</ul>
+</li>
+<li>Library OS (Exo/unikernel) 在云平台上的应用</li>
+</ul>
+<p>世界还不完美</p>
+<ul>
+<li>没有一个 single best design</li>
+<li>还要和 bugs 搏斗<ul>
+<li><del>所以码农还值钱</del></li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>

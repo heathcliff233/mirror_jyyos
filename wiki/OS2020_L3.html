@@ -50,7 +50,7 @@
       <h1 id="l3-vfs">L3: 文件系统实现 (vfs)</h1>
 <div markdown="1"><div class="fenced fenced-red"><div>
 <h4 id="_1">常见问题</h4>
-<p>(正确性标准/实验指南更新中)</p>
+<p>(已更新实验指南，暂时不能提交 Online Judge)</p>
 <p>如果你的实验提交到了 L2, 请修改 Makefile 中的 <code>MODULE := L3</code>。</p>
 </div></div></div>
 
@@ -218,7 +218,8 @@
 <blockquote>
 <p>ufs 是建立在设备 <code>sda</code> (磁盘) 上的持久数据结构。设备驱动提供了对 sda 的读写操作。你需要支持在 ufs 中创建目录、文件和链接。</p>
 </blockquote>
-<p>当我们从 <code>/</code> 开始</p>
+<p>ufs 默认挂载在 <code>/</code>，即除了 <code>/proc</code> 和 <code>/dev</code> 中的文件和目录之外，其他的文件和目录都属于 ufs；注意如果使用 open 打开 <code>/</code> (ufs)，并且读取其中的目录项，你能够读到 <code>dev</code> 和 <code>proc</code> (两个目录)，但它们的 inode 编号并不重要，你可以根据你的实现自行确定。</p>
+<p>使用目录管理/文件管理的 API 可以修改 ufs 文件系统的结构，并且这些修改会最终被持久化到磁盘上——ufs 是磁盘上 (<code>sda</code>) 设备上的文件系统，你需要将文件系统这一数据结构，翻译成对 I/O 设备的读/写操作。注意我们的 dev 模块已经对磁盘进行了封装，将磁盘封装成了一个字节序列，可以支持任意位置的读写——这可能会简化你的编程，但要注意非对齐的读/写会引起额外的 I/O 操作——例如你希望写入磁盘的某个字节，就会导致包含这个字节的数据块被读取，然后再次被写入。鼓励你在你的系统中实现一层基于数据块 (块大小可以由你自行定义，例如 4 KiB) 的缓存。</p>
 <h3 id="227-procfs">2.2.7 procfs</h3>
 <blockquote>
 <p>procfs 是虚拟的文件系统，不涉及任何设备。<span class="red">不支持在 procfs 中使用 vfs API 创建文件/目录/链接</span>。procfs 中的目录 (<code>/proc</code> 本身，以及形如 <code>/proc/[id]</code> 的目录) 需要支持 fstat 和read 操作，能读出正确的大小 (<code>struct ufs_stat</code> 中的 <code>size</code> 字节数)，和 <code>struct ufs_dirent</code> 结构体。</p>
@@ -283,7 +284,101 @@
 <p>你不妨在 Linux 系统里试一试，如果处于一个被删除的目录会发生什么——无论如何可以肯定的是，Linux 系统不会 crash，但你的操作系统可能就会了。当然，我们的测试用例中没有这种情况——我们的测试用例中所有的访问都是合法的。做对所有的 error handling 是个极具挑战的问题，甚至 Linux Kernel 都做得不够好。</p>
 <p>文件系统的 API 看似简单，但其实随处都充满了各种各样的坑 (例如如何进行路径解析、如何将操作转发到对应的文件系统实现等等)。在这里 jyy 要警告大家：请留意你项目代码的组织和设计。如果你直接 “不管一切” 地编程，很快就会得到膨胀且难以维护的代码。冷静下来读一读 xv6 的代码是个不错的选择。</p>
 <h2 id="3">3. 正确性标准</h2>
+<h3 id="31">3.1 文件系统实现</h3>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<p>同上一个实验，请尽量<strong>不要打印多余的输出</strong>。虽然我们的检查代码会进行一定的过滤，但因为多处理器的并发，你在其他处理器上的输出可能会影响我们的检查输出，从而导致 Wrong Answer。因此我们建议你使用自己的 log 或 printk 函数 (而不是 printf; 我们的测试程序会使用 printf)，且它们的行为由预编译指令控制，仅在你本地编译时才打印数据。</p>
+<p>当然了，系统启动时 (<code>_mpe_init</code> 之前) 打印少量日志是没问题的。</p>
+</div></div></div>
+
+<p>在这个实验中，我们会首先使用你的 mkfs 工具初始化文件系统，然后启动虚拟机、创建若干线程，连续调用文件系统 API，根据文件系统 API 的输出决定你实现的正确性。在 easy tests 中，我们只创建一个线程，顺序地执行文件系统操作，并检查文件系统的功能实现。在 hard tests 中，我们会创建若干线程执行一系列的文件系统操作。执行的操作可能有一定的随机性，并且因为并发程序的不确定性，你将会预期每次执行的结果都有一些不同，但你需要实现可串行化 (serializable) 的文件系统：文件系统操作的结果看起来像是所有执行过的文件系统操作排成某个顺序执行的。最简单的实现可串行化的方式就是为文件系统操作加上互斥锁，可以使用信号量的 P/V 操作实现。</p>
+<div markdown="1"><div class="fenced fenced-red"><div>
+<h4 id="_1">注意：上锁的粒度</h4>
+<p>磁盘是慢速设备；一个文件系统的操作可能较长，使用自旋锁可能会导致中断丢失、饥饿等后果 (饥饿意味着你无法达到最小的性能要求从而 Wrong Answer)。如果你希望借用 Lab2 中的同步原语，请使用信号量实现的互斥锁，在线程无法获得锁时睡眠。</p>
+</div></div></div>
+
+<p>所有测试用例的文件系统调用均在使用 <code>kmt-&gt;create</code> 创建的线程中调用——因为文件描述符是线程的一部分，我们不会在操作系统启动/初始化/中断时执行对文件系统的操作。</p>
+<p>为了尽可能地让所有同学能完成 Lab3，我们的测试用例虽然会创建线程，但线程不会终止 (执行完所有操作的线程会执行死循环或 yield)，也不调用信号量 (会调用自旋锁)，这样即便你的 Lab2 实现有一定问题，也可以通过一定的测试用例。注意这意味着你使用上课时讲解的 <a href="../static/wiki/os/2020/demos/trivial-os.c">trivial-os.c</a> 类似的实现作为 Lab2 就可以完成 Lab3。</p>
+<h3 id="32">3.2 数据的持久性</h3>
+<p>在这个实验中，我们不要求你实现满足崩溃一致性的文件系统 (崩溃一致性在 <a href="OS2020_M6.html">M6 - libkvdb</a> 中实现)，也没有提供 fsync 的接口：我们假设你的数据满足 “eventual consistency”，即磁盘上的数据结构在没有更多操作到来时，会达到一致的状态。我们的测试数据会在所有的磁盘操作之后等待一秒钟 (1000ms)，然后关闭虚拟机。再次重启后，ufs 文件系统中的数据应当被正确持久化，例如之前创建的目录和文件此时应该能够正确访问，能读取出正确的数据。如果你使用了类似 buffer cache 的结构对磁盘的读写进行了缓存，请你确保在在进行文件系统调用之后的 1s 内将数据持久化到磁盘。例如：</p>
+<ol>
+<li>你可以选择最简单的实现，即每个文件系统操作都立即写入磁盘，在最后一个系统操作返回时，磁盘即处于 consistent 的状态。</li>
+<li>你可以构建自己的缓存，有一个后台的 daemon (类似 jbd) 完成磁盘的写回。我们建议写回的频率在 500ms，这样有足够的时间将持久数据写入磁盘 (虽然对于实际的系统，写回的频率会更低一些，以减少磁盘的带宽)。</li>
+</ol>
 <h2 id="4">4. 实验指南</h2>
+<h3 id="41">4.1 文件系统实现：基础</h3>
+<p>实现文件系统中最 “基础” 的操作是给定一个路径 (绝对或相对当前线程的当前路径)，对路径进行解析，然后返回相应的 inode。道理看起来简单，但却涉及文件系统的各个部分，也许有些细节就是你没有考虑到的。</p>
+<p>首先，inode 不仅是存储在磁盘上的数据结构 (针对 ufs 而言)，还需要在内存中分配；虚拟的文件系统 (例如 procfs) 还需要维护一些 inode 私有的内存数据 (例如 procfs)。如何管理这些数据？如何管理内存中 inode 的生存周期？你立即会想到一些问题：</p>
+<ol>
+<li>在解析路径时，例如 <code>/this/is/a/very/long/path</code> 时，我们会历经多个 inode 的访问，例如 <code>/</code>, <code>/this</code>, <code>/this/is</code>, ... 我们会在这些 inode 上分别执行 open 操作，直到确定要打开的 inode 为止；</li>
+<li>线程 (进程) 有自己的 “当前目录”，所有涉及路径的系统调用，当给定的路径不是以 <code>/</code> 开头时，都是相对当前进程的 “当前目录” 进行解析的；</li>
+<li>打开的 inode 会历经各种操作，例如从文件系统中 unlink。此时可能有一个进程持有该 inode 的文件描述符，并且正在向文件读写数据。此时会发生什么？是否会有一方返回失败？请你在 Linux 中试一试。</li>
+</ol>
+<p>只要你在内存中实现 <code>struct inode</code>, 你就必须小心地管理它的生存周期——当线程创建、销毁、文件关闭……各种时刻，你都要小心地维护内存中的 inodes，使得它们在不再使用时 (或者是在可以释放后一段时间后) 能被安全地释放，并且不引起 double-free, use-after-free 等问题。引用计数是个很好的机制，但你必须要小心地管理引用——一旦某个引用发生复制时你忘记增加引用计数，就意味着程序里可能会出现严重的问题。</p>
+<p>路径解析的核心是给定一个 inode (假设你已经载入内存，并且确保是一个目录文件)，然后读取这个目录文件中的目录项 (通过文件系统的 read 操作)，找到名字匹配的 inode 编号，递归这个过程就能完成路径解析——我们也鼓励你实现成递归的，这会大大简化你的实现。</p>
+<p>路径解析的另一个有趣的问题是处理 <code>/proc</code>, <code>/dev</code> 这样的挂载点 (mount point)。你应该能想到一个通用的实现挂载的方案，这样你的文件系统能挂载到目录树的任何地方——Linux/UNIX 的确就是这样实现的。</p>
+<h3 id="42">4.2 多个文件系统的共存</h3>
+<p>在路径解析的过程中，你会意识到我们每个文件系统的 “数据结构” 都不太一样：</p>
+<ol>
+<li>ufs 的文件和目录都以一个类似 UNIX 文件系统的设计方式存储在磁盘上，因此对 ufs 文件和目录的修改需要翻译成 <code>sda</code> 设备上的读写操作；</li>
+<li>procfs 的目录是动态创建的 (并且不在持久存储上，而是根据当前的线程)，因此你需要遍历系统中的 <code>struct task</code>，并且将线程信息写入缓冲区中，然后返回给对 procfs 的 read；</li>
+<li>devfs 的每个文件都有一个对应的设备 (可能是虚拟的、可能是实际存在的)，对于实际存在的设备，你需要调用设备的 read/write; 而对于虚拟的设备，你需要向读者提供正确的数据，或是模拟向设备的写入。</li>
+</ol>
+<p>你需要为每一个文件系统的都实现一套文件/目录的 API——这也就是为什么这个实验显得复杂的原因。如果你使用紧耦合的方式实现，你的代码很容易会陷入不可维护的泥潭；例如仅仅是写一个 “代码框架” 就已经在视觉上看起来不太友好了：</p>
+<div class="codehilite"><pre><span></span><span class="kt">int</span> <span class="n">vfs_write</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">f</span> <span class="o">=</span> <span class="n">current</span><span class="o">-&gt;</span><span class="n">oflies</span><span class="p">[</span><span class="n">fd</span><span class="p">];</span> <span class="c1">// 取出数据结构</span>
+  <span class="k">struct</span> <span class="n">dev</span> <span class="o">*</span><span class="n">d</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">f</span><span class="p">)</span> <span class="k">goto</span> <span class="n">abort</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="k">switch</span> <span class="p">(</span><span class="n">f</span><span class="o">-&gt;</span><span class="n">inode</span><span class="o">-&gt;</span><span class="n">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="nl">FS_PROCFS</span><span class="p">:</span>
+      <span class="p">...</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="nl">FS_DEVFS</span><span class="p">:</span>
+      <span class="n">d</span> <span class="o">=</span> <span class="n">getdev</span><span class="p">(</span><span class="n">f</span><span class="p">);</span>
+      <span class="k">switch</span> <span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="nl">DEV_NULL</span><span class="p">:</span>
+          <span class="p">...</span>
+        <span class="k">case</span> <span class="nl">DEV_RANDOM</span><span class="p">:</span>
+          <span class="p">...</span>
+        <span class="k">default</span><span class="o">:</span>
+          <span class="c1">// 其他设备，转发给设备驱动</span>
+          <span class="p">...</span>
+      <span class="p">}</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="nl">FS_UFS</span><span class="p">:</span>
+      <span class="p">...</span>
+      <span class="k">break</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+<span class="nl">abort</span><span class="p">:</span>
+  <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>因此，在这里有必要做一点 “面向对象编程”。我们不妨把 “文件系统” 和 “文件系统中的文件 (包括目录文件)” 都以对象的形式包装起来。你立即就想到了，我们的框架代码其实已经做了很多面向对象的封装了！例如我们的整个操作系统的 “模块” 就是面向对象的，一个模块就是一个对象。另外一个值得大家参考的是我们对 I/O 设备进行的封装：</p>
+<div class="codehilite"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="n">devops</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">init</span><span class="p">)(</span><span class="n">device_t</span> <span class="o">*</span><span class="n">dev</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">read</span><span class="p">)</span> <span class="p">(</span><span class="n">device_t</span> <span class="o">*</span><span class="n">dev</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">);</span>
+  <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">write</span><span class="p">)(</span><span class="n">device_t</span> <span class="o">*</span><span class="n">dev</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">offset</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">devops_t</span><span class="p">;</span>
+</pre></div>
+
+
+<p>然后我们就能进行 “面向对象” 的调用了：</p>
+<div class="codehilite"><pre><span></span><span class="n">d</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">read</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span> <span class="c1">// d: pointer to struct dev</span>
+</pre></div>
+
+
+<p>这样的写法在 C++ 中可以更精简，例如 C++ 的对象自带函数，可以省略 “this” 的调用。以及 C++ 支持类的继承和虚函数——虚函数就是用类似 <code>devops_t</code> 实现的！每个对象的头部都有一个称为 “vtable” 的数据结构，指向了它虚函数实现的地址。 </p>
+<div class="codehilite"><pre><span></span><span class="n">d</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span> <span class="c1">// d: reference of a Device object</span>
+</pre></div>
+
+
+<p>你也可以对文件系统/文件的操作做出类似的封装，可以大幅增加你代码的可维护性，你在阅读时也更容易梳理你实现的正确性。</p>
+<h3 id="43">4.3 文件系统实现</h3>
+<p>这里有很多微妙的坑 (甚至测试用例无法完整地覆盖到它们)。例如，当你遍历 procfs 时，你需要遍历系统中所有的线程；而与此同时，线程可能被创建/回收。一个复杂系统的实现很容易在这种情况下产生数据竞争 (几乎总是 bug，例如你可能会读取一个尚未初始化好的线程) 或是死锁。这样的问题在测试中恰恰是很难暴露的：你很难会想到构造这样的测试用例，以及实际的系统可能会在更 subtle 的情况下出错。</p>
+<p>我们无法完整列举你所有可能遇到的坑——但你在完成实验的过程中，你一定会感叹做好一定的设计是多么重要。以及，无论你做了多少设计，在实际中都可能遇到奇奇怪怪的问题，你也真正理解了 lockdep, AddressSanitizer/ThreadSanitizer 这样的工具存在的必要性。总之这个 “编程大实验” 会让你真正体会一些计算机系统设计/实现的困难。Happy hacking!</p>
     </div>
   </div>
 </center>

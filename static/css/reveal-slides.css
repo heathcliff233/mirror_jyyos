@@ -6,7 +6,7 @@ body {
 
 .reveal {
   font-size: 28px;
-  font-family: 'Crimson', 'Cambria', 'Times', 'STXihei', 'CMU Serif', 'STSong', 'STSongTi', 'SimSun', 'Serif';
+  font-family: 'Crimson', 'Cambria', 'Times', 'Heiti TC', 'STXihei', 'CMU Serif', 'STSong', 'STSongTi', 'SimSun', 'Serif';
   font-weight: normal;
   color: #222;
 }
@@ -284,7 +284,7 @@ section {
 }
 
 .author-block {
-  font-family: 'STKaiti', 'Serif', 'Times', 'Times New Roman';
+  font-family: 'Kaiti', 'STKaiti', 'Serif', 'Times', 'Times New Roman';
   margin-top: 65px;
 }
 .author-block img {

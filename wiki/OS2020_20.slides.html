@@ -338,6 +338,7 @@
 <li><p>类似对另一个进程的 function call (remote procedure call, RPC)</p>
 <ul>
 <li>copy-once (通过浪费一些内存可以做到 zero-copy; 但风险大于收益)</li>
+<li>Linux Kernel: <a href="https://www.kernel.org/doc/html/v5.5-rc2/admin-guide/binderfs.html">binderfs</a></li>
 </ul>
 </li>
 </ul></div></div>
@@ -446,14 +447,17 @@
 
 <section>
 <section>
-<div class="slide-container"><div class="center middle"><h1 id="_1">操作系统知识的应用</h1></div></div>
+<div class="slide-container"><div class="center middle"><h1 id="app">“App 启动” 的一些趣事</h1></div></div>
 </section>
 <section>
-<div class="slide-container"><div class=""><h2 id="app">国内 App 厂商的流氓趣事</h2>
-<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/android-wakeups.png" width="600px"></img></p></div></div>
+<div class="slide-container"><div class=""><h2 id="_1">你们手机的背后……</h2>
+<blockquote>
+<p>李彦宏：“中国人对隐私问题的态度更开放，也相对来说没那么敏感。如果他们可以用隐私换取便利、安全或者效率。在很多情况下，他们就愿意这么做。”<span class="float-right">(<del>我不愿意，我是被迫的</del>)</span></p>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/android-wakeups.png" width="500px"></img></p></div></div>
 </section>
 <section>
-<div class="slide-container"><div class=""><h2 id="diehard-apps">“Diehard Apps”</h2>
+<div class="slide-container"><div class=""><h2 id="diehard-apps">为什么会有这些 “Diehard Apps”?</h2>
 <p>应用</p>
 <ul>
 <li>为了我的 ￥￥￥，我希望活着<ul>

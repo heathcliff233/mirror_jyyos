@@ -1,0 +1,531 @@
+<html>
+  <Head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    
+    
+
+    <link rel="stylesheet" href="../static/css/fonts/crmison.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/fira_code.css"/>
+    <link rel="stylesheet" href="../static/css/fonts/ptsans.css"/>
+    <link rel="stylesheet" href="../static/css/katex.min.css"/>
+    <link rel="stylesheet" href="../static/css/wiki.css"/>
+    <link rel="stylesheet" href="../static/css/codehilite.css"/>
+
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/katex.min.js"></script>
+    
+<link rel="stylesheet" href="../static/css/reveal.css"/>
+<link rel="stylesheet" href="../static/css/reveal-slides.css"/>
+
+
+    <title>嵌入式和分布式系统</title>
+  </Head>
+  <body>
+   
+   
+
+<div class="reveal">
+  <div class="slides">
+    <section>
+<div class="slide-container"><div class="center middle"><h1 id="_1">嵌入式和分布式系统</h1>
+<div plugin="include(page='Slides_Author')"><div class="hidden-in-outline author-block author-affiliation">
+<p><a href="http://ics.nju.edu.cn/~jyy">蒋炎岩</a></p>
+</div>
+<div class="row hidden-in-outline author-block justify-content-md-center">
+<p><div class="author-affiliation">    <a href="http://www.nju.edu.cn/"><p>南京大学</p>    <img alt="" class="inline-img" height="64px" src="../static/wiki/common/slides-author/nju-logo.png"></img></a>
+  </div>
+  <div class="author-affiliation">
+   <a href="http://cs.nju.edu.cn/"><p>计算机科学与技术系</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/njucs.jpg"></img></a>
+  </div>
+  <div class="author-affiliation">
+    <a href="http://moon.nju.edu.cn/"><p>计算机软件研究所</p>
+    <img alt="" class="inline-img" height="64px" src="../static/img/ics-nju.png"></img></a>
+  </div></p>
+</div></div></div></div>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">本讲概述</h2>
+<blockquote>
+<p>操作系统：应用和硬件之间的抽象层</p>
+<ul>
+<li>不妨想一想我们的 “应用” 可以是什么？</li>
+</ul>
+</blockquote>
+<p>本讲概述</p>
+<ul>
+<li>Going smaller<ul>
+<li>嵌入式系统</li>
+</ul>
+</li>
+<li>Going bigger<ul>
+<li>分布式系统</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="going-smaller">Going Smaller: 嵌入式系统</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">无处不在的计算机</h2>
+<p>即便是 “非智能” 的设备，里面都有</p>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/embedded-systems.jpeg" width="600px"></img></p>
+<p>它们都是 “计算机”</p>
+<ul>
+<li>通用处理器 (非常简单的指令集)</li>
+<li>RAM (寄存器)/ROM (例如声音)</li>
+<li>I/O 设备 (传感器、收发器、音箱……)</li>
+</ul>
+<hr></hr>
+<p>你们日常生活中任何涉及 “自动控制” 的物件，几乎都有计算机</p>
+<ul>
+<li>充电宝/电饭锅/洗衣机/键盘/鼠标...<ul>
+<li>主控芯片 (SoC) 的成本低至几毛钱</li>
+</ul>
+</li>
+<li>机床/飞机/火箭...</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">无处不在的计算机 (cont'd)</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/mi-band.jpg" width="250px"></img></p>
+<p>一个更复杂的例子：智能手环</p>
+<ul>
+<li>硬件<ul>
+<li>ARM Cortex-M0+<ul>
+<li>< 100 MHz 主频; 3 µW/MHz</li>
+<li>3 级流水线；无 MMU</li>
+</ul>
+</li>
+<li>512 KiB RAM; 16 MiB ROM</li>
+<li>240 x 120 触摸屏</li>
+<li>蓝牙、NFC、麦克风</li>
+</ul>
+</li>
+<li>供电<ul>
+<li>135mAh 电池</li>
+<li>续航要求: 20 天</li>
+</ul>
+</li>
+<li>IoT: “万物皆互联”</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">嵌入式操作系统</h2>
+<blockquote>
+<p>这些 “只做一件事” 的设备上应该运行怎样的操作系统？</p>
+<ul>
+<li>对比: Linux/Android 属于 “通用操作系统”</li>
+</ul>
+</blockquote>
+<p>高可靠性</p>
+<ul>
+<li>高优先级任务必须能得到执行 (real-time)<ul>
+<li>例子：手环失去响应时的自动重启</li>
+<li>例子：安全相关的熔断机制</li>
+<li>例子：高优先级的飞行器稳定性控制</li>
+</ul>
+</li>
+</ul>
+<p>支持功能定制</p>
+<ul>
+<li>可裁剪的子系统，以适配不同的硬件和需求<ul>
+<li>红绿灯/玩具/遥控器/冰箱/洗衣机：极简配置</li>
+<li>IoT: 无线互联</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="rt-thread">例子：RT-Thread</h2>
+<p>最小系统: 1.2 KiB RAM, 3 KiB Flash</p>
+<ul>
+<li>应用程序和操作系统内核一起链接<ul>
+<li>可配置的模块 (LibraryOS)</li>
+<li>最小的内核：线程、消息/信号量、时钟/中断管理<ul>
+<li>就像你们的 OSLab!</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/RT-Thread.png" width="700px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="rt-thread">RT-Thread 应用</h2>
+<p>更多的特性支持</p>
+<ul>
+<li>多处理器/MMU</li>
+<li>POSIX 文件系统 (L3 - vfs)</li>
+<li>pthreads API (L2 - kmt)</li>
+<li>网络协议栈 (希望在未来的 OSLab 里加入; lwip)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/rt-shell.png" width="700px"></img></p>
+<p><span class="center">(shell 是一个线程; 是不是很熟悉？)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="rt-thread-contd">RT-Thread 应用 (cont'd)</h2>
+<p>GUI 也是可以的</p>
+<ul>
+<li>只要有相应的图形驱动 (framebuffer, 2D 加速, ...) 就行了</li>
+<li>真的就像你们的实验！</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/MiniGUI.png" width="700px"></img></p>
+<p><span class="center">MiniGUI: 熟悉的味道？</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">嵌入式操作系统的未来</h2>
+<p>编译器/虚拟机等对嵌入式系统的影响</p>
+<ul>
+<li>“非常小的硬件” 会长期存在<ul>
+<li>尽可能低的成本</li>
+<li>只运行一个应用程序</li>
+</ul>
+</li>
+<li>IoT 时代下的嵌入式硬件？<ul>
+<li>至少要支持 “联网”</li>
+<li>处理器的计算能力不会太低</li>
+</ul>
+</li>
+<li>如何开发？<ul>
+<li>C/汇编/C++<ul>
+<li>很合适</li>
+<li>但开发效率很低</li>
+<li>很容易有 bug/安全漏洞</li>
+</ul>
+</li>
+<li><a href="https://www.rust-lang.org/what/embedded">Rust</a>? Javascript? Python?</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="contd">嵌入式操作系统的未来 (cont'd)</h2>
+<p>当我们有足够成本的时候，没有理由不用更通用的操作系统</p>
+<ul>
+<li><p>增加的少量硬件成本带来的是软件成本的降低和用户体验的大幅提升</p>
+<ul>
+<li>但隔离、高可靠 (verified?) 的 “嵌入式” 部分可能仍然是需要的</li>
+</ul>
+</li>
+<li><p>SpaceX “Dragon” 载人飞船</p>
+<ul>
+<li>传说: Linux, Chromium 和 Javascript<ul>
+<li>Javascript 真的 “上天” 了；“科幻片” 里的感觉</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/dragon.jpg" width="600px"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<section>
+<div class="slide-container"><div class="center middle"><h1 id="going-bigger">Going Bigger: 分布式系统</h1></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">这学期没有涉及的部分：网络</h2>
+<blockquote>
+<p>网络 (TCP/IP)：给定一个网络上另一个进程 (IP + 端口)，建立高速可靠的进程间通信连接。</p>
+<ul>
+<li>理解为任意 (可以不在同一台计算机上) 两个进程之间的管道</li>
+</ul>
+</blockquote>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/packet.png" width="900px"></img></p>
+<p><span class="center">(其实今天的网络 API 对延迟/网络变化等支持并不好)</span></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="the-internet">The Internet</h2>
+<p><img alt="" class="float-right" src="../static/wiki/os/2020/slides/img/IE1-0.jpg" width="300px"></img></p>
+<p>Web 1.0</p>
+<ul>
+<li>HTML, vbscript, javascript</li>
+</ul>
+<hr></hr>
+<p>“Web 2.0”: blogs, Wiki, social network, ...</p>
+<ul>
+<li>AJAX, jQuery (万能的 <code>$</code>)</li>
+</ul>
+<hr></hr>
+<p>直到今天</p>
+<ul>
+<li>HTML5, CSS3, ECMAScript 6, Node.js, react/Vue, WebAssembly, ...</li>
+<li>没什么不能在浏览器里做的 (ChromeOS; 浏览器即操作系统) 😂</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/coder-dot-com.png" width="700px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="internet">Internet 背后的 “应用程序”</h2>
+<p>海量数据上的计算</p>
+<ul>
+<li>为 TiB 量级的文档生成索引</li>
+<li>对数千万张图片进行深度神经网络的训练</li>
+<li>为数亿级的用户生成画像 (分类)</li>
+</ul>
+<hr></hr>
+<p>大规信息管理系统 (MIS, 一个 “过气” 的名词)</p>
+<ul>
+<li>网络数据的缓存 (CDN, Content Delivery Network)</li>
+<li>对互联网页面索引的查询</li>
+<li>实时个性化广告推送</li>
+<li>QQ/微信的聊天记录管理</li>
+<li>支付宝/淘宝的订单系统</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="internet">Internet 应用下的分布式系统</h2>
+<blockquote>
+<p>操作系统：提供硬件机制的抽象 (虚拟化)，为应用提供服务。</p>
+</blockquote>
+<p>操作系统课</p>
+<ul>
+<li>“硬件” 是一台计算机</li>
+</ul>
+<p>分布式系统</p>
+<ul>
+<li>“硬件” 是多个运行单机操作系统的计算机</li>
+<li>在分布式系统基础上实现分布式应用 (业务)</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">实现分布式系统：挑战</h2>
+<blockquote>
+<p>Failures matter! Performance matter!</p>
+</blockquote>
+<p>单机系统中硬件的可靠性假设不再成立</p>
+<ul>
+<li>网路延迟 (几毫秒 ~ 几秒)</li>
+<li>网络中断/软件硬件故障重启 (几十秒 ~ 几分钟)</li>
+<li>严重硬件故障 (永远不能再工作)<ul>
+<li>假设运行 5 年故障，1,000 台机器的系统，每天都有很大概率要故障</li>
+</ul>
+</li>
+</ul>
+<hr></hr>
+<p>如何利用好多台机器的计算能力，提供高可靠低延迟的服务？</p>
+<ul>
+<li>分布式应用主要关注两个问题<ul>
+<li>海量数据的存储</li>
+<li>数据上的计算</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">分布式存储：本质困难</h2>
+<blockquote>
+<p><strong>CAP Theorem (Brewer's Theorem)</strong>. No system can simultaneously deliver <em>consistency</em>, <em>availability</em>, and <em>partition tolerance</em>.</p>
+</blockquote>
+<p>解释</p>
+<ul>
+<li>一致性 (consistency; safety): 系统行为看起来 read/write 都是 atomic 的 (linearizable)</li>
+<li>可用性 (availability; liveness): 节点 eventually 返回数据</li>
+<li>容错 (partition tolerance; unreliability): 允许任意的通信被无限延迟</li>
+</ul>
+<div class="fragment">
+<hr></hr>
+<p>直观上很容易理解</p>
+<ul>
+<li>把系统分成两部分，一部分能完成 consistent 且 available 的读写<ul>
+<li>另一部分要么不 consistent，要么不 available<ul>
+<li>S. Gilbert and N. A. Lynch. <a href="https://ieeexplore.ieee.org/document/6122006">Perspectives on the CAP Theorem</a>. <em>IEEE Computer</em>, 45(2), 2012. </li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="cap">(分布式) 存储系统：对 CAP 的回应</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/CAP-theorem.png" width="850px"></img></p>
+<p>假设 partition (fault) 总是有限的</p>
+<ul>
+<li>(假设数据中心之间的连接是可靠的；数据中心内节点失联就换一个)<ul>
+<li>要 availability: 容忍轻微的 inconsistency (eventual consistency)</li>
+<li>要 consistency: 容忍轻微的延迟</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hdfs">例子: HDFS</h2>
+<p>用我们课上讲过的文件系统去理解 HDFS</p>
+<ul>
+<li>metadata 在一个 NameNode 集中管理 (write-ahead logging)</li>
+<li>数据分布存储在 DataNode (可配置为 <math class="inline-math">k</math>-replica)</li>
+</ul>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/hdfs-arch.png" width="700px"></img></p></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hdfs-fault-tolerance">HDFS Fault Tolerance</h2>
+<p>DataNode 整机故障/网络分区</p>
+<ul>
+<li>Heartbeat (10 分钟认为 DataNode 损坏)</li>
+<li>NameNode 重新协调 DataNode 副本数据，以满足 <math class="inline-math">k</math>-replica</li>
+</ul>
+<p>NameNode 可靠性</p>
+<ul>
+<li>类似 RAID-1 的同步副本</li>
+<li>由 ZooKeeper (高可靠的集群管理服务) 完成管理<ul>
+<li>Zab 协议: F. P. Junqueira, et al. Zab: High-performance broadcast for primary-backup systems. In <em>Proc. of DSN</em>, 2011.</li>
+</ul>
+</li>
+</ul>
+<p>数据损坏</p>
+<ul>
+<li>通过 checksum 检测</li>
+<li>NameNode 协调 DataNode 副本数据，以满足 <math class="inline-math">k</math>-replica 要求</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="_1">分布式计算：相对简单一些</h2>
+<blockquote>
+<p><strong>Church-Turing Thesis</strong>. Any real-world computation can be translated into an equivalent computation involving a Turing machine (and <math>\lambda</math>-calculus).</p>
+</blockquote>
+<p>两种计算模型</p>
+<ul>
+<li>Turing machine: RAM + 状态机 → 实现成今天的计算机</li>
+<li><math class="inline-math">\lambda</math>-calculus: “函数求值” 可以实现任何形式的计算</li>
+</ul>
+<hr></hr>
+<p>如果能解决数据存储问题，可以用 “函数式编程” 实现可并行化的计算</p>
+<ul>
+<li>第一个获得广泛成功的例子: MapReduce/Hadoop<ul>
+<li>拉开 “BigData” 的序幕<ul>
+<li>J. Dean and S. Ghemawat. MapReduce: Simpliﬁed data processing on large clusters. In <em>Proc. of OSDI</em>, 2004.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></div>
+</section>
+<section>
+<div class="slide-container"><div class=""><h2 id="hadoop-ecosystem">Hadoop Ecosystem</h2>
+<p><img alt="" class="center" src="../static/wiki/os/2020/slides/img/Hadoop-Ecosystem.png" width="800px"></img></p></div></div>
+</section>
+</section>
+
+<section>
+<div class="slide-container"><div class=""><h2 id="takeaways-and-wrap-up">Takeaways and Wrap-up</h2>
+<p>本学期的课程：是一个关于 “抽象” 的故事</p>
+<ul>
+<li>System: 对底层系统进行抽象 (虚拟化)、对上层业务提供服务<ul>
+<li>操作性系统<ul>
+<li>底层 = 计算机硬件机制</li>
+<li>上层 = 本地应用程序</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>扩展 “应用” 的定义<ul>
+<li>going smaller: IoT/嵌入式应用</li>
+<li>going larger: 分布式 (存储/计算) 业务系统</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>大家在这门课里学习了 system 设计和实现的基本原理！</p>
+</blockquote></div></div>
+</section>
+  </div>
+</div>
+
+<script src="../static/js/reveal.js"></script>
+<script>
+  slide_num = -1;
+  function update_slide_num(n) {
+    if (slide_num == -1) {
+      setTimeout(function() {
+        if (slide_num != -1) {
+          while (!Reveal.isFirstSlide()) {
+            Reveal.prev();
+          }
+          while (Reveal.getSlidePastCount() + 1 < slide_num && !Reveal.isLastSlide()) {
+            Reveal.next();
+          }
+          slide_num = -1;
+        }
+      }, 500);
+      slide_num = 0;
+    }
+    slide_num = slide_num * 10 + n;
+  }
+
+  Reveal.initialize({
+    width: 1024,
+    height: 768,
+    margin: 0,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: false,
+    maxScale: 10,
+    fragments: true,
+    hash: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'slide',
+    hideCursorTime: 1000,
+    navigationMode: 'default',
+    keyboard: {
+      13: 'next',
+      48: function() { update_slide_num(0) },
+      49: function() { update_slide_num(1) },
+      50: function() { update_slide_num(2) },
+      51: function() { update_slide_num(3) },
+      52: function() { update_slide_num(4) },
+      53: function() { update_slide_num(5) },
+      54: function() { update_slide_num(6) },
+      55: function() { update_slide_num(7) },
+      56: function() { update_slide_num(8) },
+      57: function() { update_slide_num(9) },
+    }
+  });
+</script>
+
+
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+
+      $("math").each(function() {
+        var tex = $(this).text();
+        var html = katex.renderToString(tex, {
+          displayMode: $(this).attr('class') == 'block-math',
+          throwOnError: false
+        });
+        $(this).replaceWith(html);
+      });
+
+      function get_token() {
+        var match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) return match[2];
+        else return "";
+      }
+
+      var token = get_token();
+      var hint = "token", box = $("#token-input");
+
+      if (token == "") { box.val(hint); }
+      else { box.val(token); }
+
+      function login() {
+        var token = box.val()
+        document.cookie = 'token=' + token + '; expires=Fri, 31 Dec 9999 23:59:59 GMT;';
+        if (token == '') {
+          box.val(hint);
+        }
+      }
+    </script>
+  </body>
+</html>
